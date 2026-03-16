@@ -1,0 +1,45 @@
+{
+    "name": "dndark/laravel-logic-map",
+    "description": "Understand, audit, and visualize your Laravel application's logic and workflows.",
+    "keywords": ["laravel", "architecture", "static-analysis", "graph", "visualization", "code-quality", "metrics"],
+    "homepage": "https://github.com/DNDark12/laravel-logic-map",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "dndark"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "nikic/php-parser": "^5.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^10.0|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "dndark\\LogicMap\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "dndark\\LogicMap\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:unit": "phpunit --testsuite=Unit",
+        "test:feature": "phpunit --testsuite=Feature"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "dndark\\LogicMap\\LogicMapServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}
