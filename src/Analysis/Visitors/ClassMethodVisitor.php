@@ -10,6 +10,7 @@ use dndark\LogicMap\Domain\Edge;
 use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Enums\EdgeType;
 use dndark\LogicMap\Domain\Enums\Confidence;
+use dndark\LogicMap\Analysis\Support\IntentExtractor;
 
 class ClassMethodVisitor extends NodeVisitorAbstract
 {
@@ -99,6 +100,7 @@ class ClassMethodVisitor extends NodeVisitorAbstract
 
         // Methods inherit kind from parent class context
         $methodKind = $parentKind !== NodeKind::UNKNOWN ? $parentKind : NodeKind::UNKNOWN;
+        $intent = IntentExtractor::extractFromMethod($node->name->toString(), $this->currentClass);
 
         $methodNode = new DomainNode(
             id: $methodId,
@@ -108,6 +110,11 @@ class ClassMethodVisitor extends NodeVisitorAbstract
             metadata: [
                 'visibility' => $this->getVisibility($node),
                 'is_static' => $node->isStatic(),
+                'action' => $intent['action'],
+                'domain' => $intent['domain'],
+                'result' => $intent['result'],
+                'shortLabel' => $intent['short'],
+                'trigger' => $intent['trigger'],
             ]
         );
 

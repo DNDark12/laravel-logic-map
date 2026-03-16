@@ -15,8 +15,23 @@ Laravel Logic Map uses deterministic AST analysis (`nikic/php-parser`) + Laravel
 - **5 built-in analyzers** — fat controllers, circular dependencies, orphans, high instability, high coupling
 - **Health scoring** — A-F grade with explainable risk per node
 - **Export** — JSON & CSV download for CI integration
-- **Interactive UI** — Cytoscape.js graph viewer at `/logic-map`
-- **Build-time analysis** — cached snapshots, zero runtime overhead
+- **Interactive UI** — Overhauled Cytoscape.js viewer with dual panels and theme toggle
+- **Keyboard Shortcuts** — 1-4 (Layouts), S (Subgraph), F (Fit), T (Theme), M (Modules), Ctrl+K (Search)
+- **Business Intent** — Semantic mapping of code to human purpose (Action, Domain, Trigger)
+- **Modular Assets** — Extracted CSS/JS for easier UI customizability
+- **Build-time analysis** — Cached snapshots, zero runtime overhead
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `1` - `4` | Switch Layout (Flow, Force, LR, Tree) |
+| `S` | **SubGraph Mode** (Isolate selected nodes) |
+| `F` | Fit Graph to view |
+| `T` | Toggle Dark/Light Theme |
+| `M` | Toggle Module Explorer |
+| `Ctrl + K` | Focus Search |
+| `Esc` | Clear selection / Close panels |
 
 ## Requirements
 

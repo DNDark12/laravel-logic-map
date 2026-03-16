@@ -10,6 +10,7 @@ use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\NodeVisitorAbstract;
+use dndark\LogicMap\Analysis\Support\IntentExtractor;
 
 class RouteVisitor extends NodeVisitorAbstract
 {
@@ -84,18 +85,37 @@ class RouteVisitor extends NodeVisitorAbstract
         }
 
         if ($uri) {
+            $action = $node->args[1]->value ?? null;
+            $verb = strtolower($node->name->toString());
+
+            $controllerName = '';
+            if ($action instanceof Node\Expr\Array_ && isset($action->items[0]) && $action->items[0]->value instanceof Node\Expr\ClassConstFetch) {
+                $controllerName = $action->items[0]->value->class->toString();
+            } elseif ($action instanceof Node\Scalar\String_ || $action instanceof Node\Expr\StaticCall) {
+                $val = $this->extractString($action);
+                if ($val && str_contains($val, '@')) {
+                    [$controllerName,] = explode('@', $val);
+                }
+            }
+
+            $intent = IntentExtractor::extractFromRoute($uri, $verb, $controllerName);
+
             $routeNode = new DomainNode(
                 id: 'route:' . $uri,
                 kind: NodeKind::ROUTE,
                 name: $uri,
                 scope: 'web', // Default, logic can be added to detect group/file context
+                metadata: [
+                    'action' => $intent['action'],
+                    'domain' => $intent['domain'],
+                    'result' => $intent['result'],
+                    'shortLabel' => $intent['short'],
+                    'trigger' => $intent['trigger'],
+                ]
             );
 
             $this->graph->addNode($routeNode);
 
-            // Try to extract controller/action if it's an array or string
-            // e.g. [Controller::class, 'index'] or 'Controller@index'
-            $action = $node->args[1]->value ?? null;
             $this->linkToController($routeNode, $action);
         }
     }
