@@ -36,9 +36,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     'font-size': '9px', 'font-family': '"SF Mono","Fira Code",monospace',
                     'text-valign': 'center', 'text-halign': 'center',
                     'border-width': 1, 'border-color': '#9ca3af',
-                    'padding': '6px', 'shape': 'round-rectangle',
-                    'min-width': '80px', 'min-height': '36px',
-                    'text-max-width': '160px', 'text-wrap': 'ellipsis',
+                    'padding': '8px', 'shape': 'round-rectangle',
+                    'width': '120px', 'height': '40px',
+                    'text-max-width': '110px', 'text-wrap': 'ellipsis',
+                    'text-overflow-wrap': 'anywhere',
                     'min-zoomed-font-size': 6
                 }
             },
@@ -506,7 +507,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     let added = false;
                     json.data.nodes.forEach(n => {
                         if (!cy.getElementById(n.id).length) {
-                            cy.add({data: {...n, label: n.name || n.id}});
+                            const shortLabel = formatShortLabel(n.name || n.id);
+                            cy.add({data: {...n, label: shortLabel, fullLabel: n.name || n.id}});
                             added = true;
                         }
                     });
@@ -548,7 +550,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const tip = document.getElementById('tip');
     cy.on('mouseover', 'node', function (evt) {
         const d = evt.target.data();
-        tip.innerHTML = `<strong>${d.label || d.id}</strong><br><span style="color:var(--tx3)">${d.kind}</span>`;
+        const fullName = d.fullLabel || d.label || d.id;
+        tip.innerHTML = `<strong>${d.label}</strong><br><span style="color:#7380a0;font-size:9px">${fullName}</span><br><span style="color:#7380a0">${d.kind}</span>`;
         tip.classList.add('show');
     });
     cy.on('mouseout', 'node', () => tip.classList.remove('show'));
@@ -979,24 +982,66 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => tip.remove(), 6000);
     }
 
+    // ── Warning message stacking ──
+    let warningOffset = 0;
+
+    function showWarning(html, bgColor, borderColor, textColor, duration = 8000) {
+        const warn = document.createElement('div');
+        warn.className = 'lm-warning';
+        warn.style.cssText = `position:fixed;top:${56 + warningOffset}px;right:16px;background:${bgColor};border:1px solid ${borderColor};padding:8px 14px;border-radius:6px;font-size:10px;color:${textColor};z-index:30;max-width:320px;transition:opacity 0.3s`;
+        warn.innerHTML = html;
+        document.body.appendChild(warn);
+        warningOffset += 44;
+
+        setTimeout(() => {
+            warn.style.opacity = '0';
+            setTimeout(() => {
+                warn.remove();
+                warningOffset = Math.max(0, warningOffset - 44);
+            }, 300);
+        }, duration);
+    }
+
     // ── Show Disconnected Components Warning ──
     function showDisconnectedWarning(componentCount) {
-        const warn = document.createElement('div');
-        warn.style = 'position:fixed;top:56px;right:16px;background:rgba(245,158,11,.12);border:1px solid var(--orange);padding:8px 14px;border-radius:6px;font-size:10px;color:var(--orange);z-index:30';
-        warn.innerHTML = `⚠ ${componentCount} disconnected components detected. Some modules may not be linked.`;
-        document.body.appendChild(warn);
-        setTimeout(() => warn.remove(), 8000);
+        showWarning(
+            `⚠ ${componentCount} disconnected components. Some modules may not be linked.`,
+            'rgba(245,158,11,.12)', '#ef7d38', '#ef7d38'
+        );
     }
 
     // ── Show Cyclic Dependencies Warning ──
     function showCyclicWarning(cycles) {
-        const warn = document.createElement('div');
-        warn.id = 'cyclic-warning';
-        warn.style = 'position:fixed;top:56px;right:16px;background:rgba(239,68,68,.12);border:1px solid var(--red);padding:8px 14px;border-radius:6px;font-size:10px;color:var(--red);z-index:30;max-width:300px';
-        const firstCycle = cycles[0].map(id => id.split('\\').pop()).join(' → ');
-        warn.innerHTML = `🔄 Cyclic dependency detected: <span style="font-weight:700">${firstCycle}</span>${cycles.length > 1 ? ` (+${cycles.length - 1} more)` : ''}`;
-        document.body.appendChild(warn);
-        setTimeout(() => warn.remove(), 10000);
+        const firstCycle = cycles[0].map(id => formatShortLabel(id)).join(' → ');
+        showWarning(
+            `🔄 Cycle: <b>${firstCycle}</b>${cycles.length > 1 ? ` (+${cycles.length - 1})` : ''}`,
+            'rgba(239,68,68,.12)', '#ef4444', '#ef4444', 10000
+        );
+    }
+
+    // ── Format short label from full ID ──
+    function formatShortLabel(id) {
+        if (!id) return '';
+        // Handle method:Namespace\Class@method format
+        if (id.includes('@')) {
+            const parts = id.split('@');
+            const methodName = parts[parts.length - 1];
+            // Get class short name
+            const classPart = parts[0].replace(/^(method|class):/, '');
+            const className = classPart.split('\\').pop();
+            return `${className}::${methodName}`;
+        }
+        // Handle class:Namespace\Class format
+        if (id.startsWith('class:')) {
+            return id.replace('class:', '').split('\\').pop();
+        }
+        // Handle route:VERB /path format
+        if (id.startsWith('route:')) {
+            return id.replace('route:', '');
+        }
+        // Default: get last part after backslash or colon
+        const clean = id.replace(/^(method|class|route):/, '');
+        return clean.split('\\').pop() || clean;
     }
 
     // ── Load Data ──
@@ -1062,7 +1107,8 @@ document.addEventListener('DOMContentLoaded', function () {
             // Add elements
             cy.startBatch();
             filteredNodes.forEach(n => {
-                cy.add({data: {...n, label: n.name || n.id}});
+                const shortLabel = formatShortLabel(n.name || n.id);
+                cy.add({data: {...n, label: shortLabel, fullLabel: n.name || n.id}});
             });
             allEdgesData.forEach(e => {
                 // Only add edge if both nodes exist
