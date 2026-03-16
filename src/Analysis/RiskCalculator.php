@@ -51,12 +51,12 @@ class RiskCalculator
             $instabilityThreshold = $thresholds['high_instability'] ?? 0.9;
             $couplingThreshold = $thresholds['high_coupling'] ?? 20;
 
-            if ($instability > $instabilityThreshold && ! $this->hasViolationType($nodeViolations, 'high_instability')) {
+            if ($instability > $instabilityThreshold && !$this->hasViolationType($nodeViolations, 'high_instability')) {
                 $score += ($weights['medium'] ?? 5);
                 $reasons[] = "instability={$instability} (threshold={$instabilityThreshold})";
             }
 
-            if ($coupling > $couplingThreshold && ! $this->hasViolationType($nodeViolations, 'high_coupling')) {
+            if ($coupling > $couplingThreshold && !$this->hasViolationType($nodeViolations, 'high_coupling')) {
                 $score += ($weights['medium'] ?? 5);
                 $reasons[] = "coupling={$coupling} (threshold={$couplingThreshold})";
             }
@@ -82,9 +82,9 @@ class RiskCalculator
         return match (true) {
             $score >= 20 => 'critical',
             $score >= 15 => 'high',
-            $score >= 5  => 'medium',
-            $score >= 1  => 'low',
-            default      => 'healthy',
+            $score >= 5 => 'medium',
+            $score >= 1 => 'low',
+            default => 'healthy',
         };
     }
 

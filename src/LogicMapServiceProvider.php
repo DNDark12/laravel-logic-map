@@ -2,20 +2,24 @@
 
 namespace dndark\LogicMap;
 
-use Illuminate\Support\ServiceProvider;
-use dndark\LogicMap\Contracts\GraphRepository;
+use dndark\LogicMap\Analysis\ArchitectureAnalyzer;
+use dndark\LogicMap\Analysis\AstParser;
+use dndark\LogicMap\Analysis\MetricsCalculator;
+use dndark\LogicMap\Analysis\RiskCalculator;
 use dndark\LogicMap\Contracts\GraphExtractor;
 use dndark\LogicMap\Contracts\GraphProjector;
-use dndark\LogicMap\Repositories\CacheGraphRepository;
-use dndark\LogicMap\Analysis\AstParser;
-use dndark\LogicMap\Projectors\OverviewProjector;
-use dndark\LogicMap\Projectors\SubgraphProjector;
-use dndark\LogicMap\Projectors\SearchProjector;
+use dndark\LogicMap\Contracts\GraphRepository;
 use dndark\LogicMap\Projectors\MetaProjector;
-use dndark\LogicMap\Support\FileDiscovery;
-use dndark\LogicMap\Support\Fingerprint;
+use dndark\LogicMap\Projectors\OverviewProjector;
+use dndark\LogicMap\Projectors\SearchProjector;
+use dndark\LogicMap\Projectors\SubgraphProjector;
+use dndark\LogicMap\Repositories\CacheGraphRepository;
 use dndark\LogicMap\Services\BuildLogicMapService;
 use dndark\LogicMap\Services\QueryLogicMapService;
+use dndark\LogicMap\Support\FileDiscovery;
+use dndark\LogicMap\Support\Fingerprint;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class LogicMapServiceProvider extends ServiceProvider
 {
@@ -25,7 +29,7 @@ class LogicMapServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__.'/../config/logic-map.php', 'logic-map'
+            __DIR__ . '/../config/logic-map.php', 'logic-map'
         );
 
         // Core contracts
@@ -44,9 +48,9 @@ class LogicMapServiceProvider extends ServiceProvider
         $this->app->singleton(MetaProjector::class);
 
         // Analysis services (Sprint 4)
-        $this->app->singleton(\dndark\LogicMap\Analysis\MetricsCalculator::class);
-        $this->app->singleton(\dndark\LogicMap\Analysis\ArchitectureAnalyzer::class);
-        $this->app->singleton(\dndark\LogicMap\Analysis\RiskCalculator::class);
+        $this->app->singleton(MetricsCalculator::class);
+        $this->app->singleton(ArchitectureAnalyzer::class);
+        $this->app->singleton(RiskCalculator::class);
 
         // Application services
         $this->app->singleton(BuildLogicMapService::class);
@@ -60,15 +64,15 @@ class LogicMapServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__.'/../config/logic-map.php' => config_path('logic-map.php'),
+                __DIR__ . '/../config/logic-map.php' => config_path('logic-map.php'),
             ], 'logic-map-config');
 
             $this->publishes([
-                __DIR__.'/../resources/views' => resource_path('views/vendor/logic-map'),
+                __DIR__ . '/../resources/views' => resource_path('views/vendor/logic-map'),
             ], 'logic-map-views');
 
             $this->publishes([
-                __DIR__.'/../resources/dist' => public_path('vendor/logic-map'),
+                __DIR__ . '/../resources/dist' => public_path('vendor/logic-map'),
             ], 'logic-map-assets');
 
             $this->commands([
@@ -78,7 +82,14 @@ class LogicMapServiceProvider extends ServiceProvider
             ]);
         }
 
-        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
-        $this->loadViewsFrom(__DIR__.'/../resources/views', 'logic-map');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'logic-map');
+
+        // Share resource paths with views
+        $packagePath = __DIR__ . '/..';
+        View::composer('logic-map::*', function ($view) use ($packagePath) {
+            $view->with('logicMapCss', file_get_contents($packagePath . '/resources/css/logic-map.css'));
+            $view->with('logicMapJs', file_get_contents($packagePath . '/resources/js/logic-map.js'));
+        });
     }
 }

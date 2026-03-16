@@ -2,8 +2,8 @@
 
 namespace dndark\LogicMap\Domain;
 
-use dndark\LogicMap\Domain\Enums\EdgeType;
 use dndark\LogicMap\Domain\Enums\Confidence;
+use dndark\LogicMap\Domain\Enums\EdgeType;
 
 class Edge
 {
@@ -13,7 +13,8 @@ class Edge
         public EdgeType $type,
         public Confidence $confidence = Confidence::HIGH,
         public array $metadata = [],
-    ) {}
+    ) {
+    }
 
     public function toArray(): array
     {

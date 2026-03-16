@@ -17,7 +17,7 @@ class CacheGraphRepository implements GraphRepository
     {
         $data = Cache::get($this->getSnapshotKey($fingerprint));
 
-        if (! $data) {
+        if (!$data) {
             return null;
         }
 
@@ -28,7 +28,7 @@ class CacheGraphRepository implements GraphRepository
     {
         $fingerprint = Cache::get(self::LATEST_KEY);
 
-        if (! $fingerprint) {
+        if (!$fingerprint) {
             return null;
         }
 
@@ -47,7 +47,7 @@ class CacheGraphRepository implements GraphRepository
 
         // Track fingerprint in registry for 'clear' command
         $registry = Cache::get(self::REGISTRY_KEY, []);
-        if (! in_array($fingerprint, $registry)) {
+        if (!in_array($fingerprint, $registry)) {
             $registry[] = $fingerprint;
             Cache::put(self::REGISTRY_KEY, $registry, $ttl);
         }
@@ -69,7 +69,7 @@ class CacheGraphRepository implements GraphRepository
 
         // Track analysis keys for cleanup
         $registry = Cache::get(self::ANALYSIS_REGISTRY_KEY, []);
-        if (! in_array($key, $registry)) {
+        if (!in_array($key, $registry)) {
             $registry[] = $key;
             Cache::put(self::ANALYSIS_REGISTRY_KEY, $registry, $ttl);
         }

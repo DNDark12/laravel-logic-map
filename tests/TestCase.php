@@ -17,7 +17,7 @@ class TestCase extends Orchestra
     protected function getEnvironmentSetUp($app)
     {
         // Set app key for encryption
-        $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
+        $app['config']->set('app.key', 'base64:' . base64_encode(random_bytes(32)));
 
         // Configure scan paths
         $app['config']->set('logic-map.scan_paths', [

@@ -11,7 +11,8 @@ class AnalysisReport
         public array $summary,
         public array $nodeRiskMap,
         public array $metadata = [],
-    ) {}
+    ) {
+    }
 
     public function toArray(): array
     {

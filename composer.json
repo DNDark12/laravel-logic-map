@@ -1,7 +1,15 @@
 {
     "name": "dndark/laravel-logic-map",
     "description": "Understand, audit, and visualize your Laravel application's logic and workflows.",
-    "keywords": ["laravel", "architecture", "static-analysis", "graph", "visualization", "code-quality", "metrics"],
+    "keywords": [
+        "laravel",
+        "architecture",
+        "static-analysis",
+        "graph",
+        "visualization",
+        "code-quality",
+        "metrics"
+    ],
     "homepage": "https://github.com/DNDark12/laravel-logic-map",
     "type": "library",
     "license": "MIT",

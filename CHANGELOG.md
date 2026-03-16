@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.0.0] - 2026-03-16
 
 ### Added
+
 - **Graph Engine**: AST-based code analysis with `nikic/php-parser`
 - **Domain Model**: Node (10 kinds), Edge (4 types), Graph with helper methods
 - **Projectors**: Overview, Subgraph, Search, Meta — projection-first API design

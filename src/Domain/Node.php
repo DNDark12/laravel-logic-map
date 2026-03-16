@@ -15,7 +15,8 @@ class Node
         public array $metrics = [],
         public array $positionCache = [],
         public array $metadata = [],
-    ) {}
+    ) {
+    }
 
     public function toArray(): array
     {

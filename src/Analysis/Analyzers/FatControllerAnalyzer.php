@@ -41,6 +41,6 @@ class FatControllerAnalyzer implements ViolationAnalyzer
 
     public function isEnabled(): bool
     {
-        return (bool) config('logic-map.analysis.analyzers.fat_controller', true);
+        return (bool)config('logic-map.analysis.analyzers.fat_controller', true);
     }
 }

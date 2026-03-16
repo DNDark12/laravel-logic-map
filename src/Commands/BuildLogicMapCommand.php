@@ -2,8 +2,8 @@
 
 namespace dndark\LogicMap\Commands;
 
-use Illuminate\Console\Command;
 use dndark\LogicMap\Services\BuildLogicMapService;
+use Illuminate\Console\Command;
 
 class BuildLogicMapCommand extends Command
 {
@@ -63,7 +63,7 @@ class BuildLogicMapCommand extends Command
             }
         }
 
-        if (! empty($result['analysis'])) {
+        if (!empty($result['analysis'])) {
             $analysis = $result['analysis'];
             $summary = $analysis['summary'] ?? [];
             $totalViolations = array_sum($summary);

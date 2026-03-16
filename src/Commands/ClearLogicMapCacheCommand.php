@@ -2,8 +2,8 @@
 
 namespace dndark\LogicMap\Commands;
 
-use Illuminate\Console\Command;
 use dndark\LogicMap\Contracts\GraphRepository;
+use Illuminate\Console\Command;
 
 class ClearLogicMapCacheCommand extends Command
 {

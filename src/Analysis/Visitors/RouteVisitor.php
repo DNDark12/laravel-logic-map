@@ -2,7 +2,10 @@
 
 namespace dndark\LogicMap\Analysis\Visitors;
 
+use dndark\LogicMap\Analysis\Support\IntentExtractor;
 use dndark\LogicMap\Domain\Edge;
+use dndark\LogicMap\Domain\Enums\Confidence;
+use dndark\LogicMap\Domain\Enums\EdgeType;
 use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node as DomainNode;
@@ -10,11 +13,12 @@ use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\NodeVisitorAbstract;
-use dndark\LogicMap\Analysis\Support\IntentExtractor;
 
 class RouteVisitor extends NodeVisitorAbstract
 {
-    public function __construct(protected Graph $graph) {}
+    public function __construct(protected Graph $graph)
+    {
+    }
 
     public function enterNode(Node $node)
     {
@@ -35,7 +39,7 @@ class RouteVisitor extends NodeVisitorAbstract
 
     protected function isRouteClass($class): bool
     {
-        if (! $class instanceof Node\Name) {
+        if (!$class instanceof Node\Name) {
             return false;
         }
 
@@ -150,8 +154,8 @@ class RouteVisitor extends NodeVisitorAbstract
             $this->graph->addEdge(new Edge(
                 source: $routeNode->id,
                 target: $targetId,
-                type: \dndark\LogicMap\Domain\Enums\EdgeType::ROUTE_TO_CONTROLLER,
-                confidence: \dndark\LogicMap\Domain\Enums\Confidence::HIGH
+                type: EdgeType::ROUTE_TO_CONTROLLER,
+                confidence: Confidence::HIGH
             ));
         }
     }

@@ -8,6 +8,7 @@ use dndark\LogicMap\Analysis\Analyzers\OrphanAnalyzer;
 use dndark\LogicMap\Analysis\ArchitectureAnalyzer;
 use dndark\LogicMap\Analysis\MetricsCalculator;
 use dndark\LogicMap\Analysis\RiskCalculator;
+use dndark\LogicMap\Domain\AnalysisReport;
 use dndark\LogicMap\Domain\Edge;
 use dndark\LogicMap\Domain\Enums\EdgeType;
 use dndark\LogicMap\Domain\Enums\NodeKind;
@@ -352,7 +353,7 @@ class AnalyzersTest extends TestCase
         $report = $analyzer->analyze($graph);
 
         $array = $report->toArray();
-        $restored = \dndark\LogicMap\Domain\AnalysisReport::fromArray($array);
+        $restored = AnalysisReport::fromArray($array);
 
         $this->assertEquals($report->healthScore, $restored->healthScore);
         $this->assertEquals($report->grade, $restored->grade);

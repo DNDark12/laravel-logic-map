@@ -2,17 +2,18 @@
 
 namespace dndark\LogicMap\Http\Controllers;
 
+use dndark\LogicMap\Services\QueryLogicMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Routing\Controller;
-use dndark\LogicMap\Services\QueryLogicMapService;
+use Symfony\Component\HttpFoundation\Response;
 
 class LogicMapController extends Controller
 {
     public function __construct(
         protected QueryLogicMapService $queryService
-    ) {}
+    ) {
+    }
 
     public function index()
     {

@@ -3,6 +3,7 @@
 namespace dndark\LogicMap\Tests\Unit;
 
 use dndark\LogicMap\Analysis\AstParser;
+use dndark\LogicMap\Contracts\GraphExtractor;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Tests\TestCase;
 
@@ -143,7 +144,7 @@ class AstParserTest extends TestCase
     public function it_implements_graph_extractor_contract()
     {
         $this->assertInstanceOf(
-            \dndark\LogicMap\Contracts\GraphExtractor::class,
+            GraphExtractor::class,
             $this->parser
         );
     }

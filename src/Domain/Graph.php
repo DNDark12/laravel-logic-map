@@ -12,6 +12,9 @@ class Graph
     /** @var array<Edge> */
     protected array $edges = [];
 
+    /** @var array<string, bool> Track added edge keys for deduplication */
+    protected array $edgeKeys = [];
+
     public function addNode(Node $node): void
     {
         $this->nodes[$node->id] = $node;
@@ -19,7 +22,12 @@ class Graph
 
     public function addEdge(Edge $edge): void
     {
-        $this->edges[] = $edge;
+        // Deduplicate edges by source+target+type
+        $key = "{$edge->source}->{$edge->target}:{$edge->type->value}";
+        if (!isset($this->edgeKeys[$key])) {
+            $this->edges[] = $edge;
+            $this->edgeKeys[$key] = true;
+        }
     }
 
     public function getNodes(): array
@@ -30,6 +38,26 @@ class Graph
     public function getEdges(): array
     {
         return $this->edges;
+    }
+
+    /**
+     * Get unique edges (deduplicated by source+target+type).
+     * This is useful when edges may have been added from multiple sources.
+     *
+     * @return Edge[]
+     */
+    public function getUniqueEdges(): array
+    {
+        $seen = [];
+        $unique = [];
+        foreach ($this->edges as $edge) {
+            $key = "{$edge->source}->{$edge->target}:{$edge->type->value}";
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $unique[] = $edge;
+            }
+        }
+        return $unique;
     }
 
     // ─── Helper Methods (Sprint 4) ────────────────────────────

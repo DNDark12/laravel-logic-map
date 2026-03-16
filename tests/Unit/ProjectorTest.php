@@ -2,16 +2,16 @@
 
 namespace dndark\LogicMap\Tests\Unit;
 
+use dndark\LogicMap\Domain\Edge;
+use dndark\LogicMap\Domain\Enums\Confidence;
+use dndark\LogicMap\Domain\Enums\EdgeType;
+use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
-use dndark\LogicMap\Domain\Edge;
-use dndark\LogicMap\Domain\Enums\NodeKind;
-use dndark\LogicMap\Domain\Enums\EdgeType;
-use dndark\LogicMap\Domain\Enums\Confidence;
-use dndark\LogicMap\Projectors\OverviewProjector;
-use dndark\LogicMap\Projectors\SubgraphProjector;
-use dndark\LogicMap\Projectors\SearchProjector;
 use dndark\LogicMap\Projectors\MetaProjector;
+use dndark\LogicMap\Projectors\OverviewProjector;
+use dndark\LogicMap\Projectors\SearchProjector;
+use dndark\LogicMap\Projectors\SubgraphProjector;
 use dndark\LogicMap\Tests\TestCase;
 
 class ProjectorTest extends TestCase

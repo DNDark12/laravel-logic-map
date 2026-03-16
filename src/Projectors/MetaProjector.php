@@ -2,10 +2,10 @@
 
 namespace dndark\LogicMap\Projectors;
 
-use dndark\LogicMap\Domain\Graph;
-use dndark\LogicMap\Domain\Enums\NodeKind;
-use dndark\LogicMap\Domain\Enums\EdgeType;
 use dndark\LogicMap\Domain\Enums\Confidence;
+use dndark\LogicMap\Domain\Enums\EdgeType;
+use dndark\LogicMap\Domain\Enums\NodeKind;
+use dndark\LogicMap\Domain\Graph;
 
 class MetaProjector
 {

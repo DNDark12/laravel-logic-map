@@ -52,6 +52,6 @@ class HighInstabilityAnalyzer implements ViolationAnalyzer
 
     public function isEnabled(): bool
     {
-        return (bool) config('logic-map.analysis.analyzers.high_instability', false);
+        return (bool)config('logic-map.analysis.analyzers.high_instability', false);
     }
 }

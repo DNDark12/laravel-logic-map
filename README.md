@@ -6,7 +6,9 @@
 [![Tests](https://img.shields.io/github/actions/workflow/status/dndark/laravel-logic-map/tests.yml?label=tests)](https://github.com/dndark/laravel-logic-map/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Laravel Logic Map uses deterministic AST analysis (`nikic/php-parser`) + Laravel runtime metadata to build an interactive, layered map of how logic flows through your application — routes, controllers, services, jobs, events, and models.
+Laravel Logic Map uses deterministic AST analysis (`nikic/php-parser`) + Laravel runtime metadata to build an
+interactive, layered map of how logic flows through your application — routes, controllers, services, jobs, events, and
+models.
 
 ## Features
 
@@ -23,15 +25,15 @@ Laravel Logic Map uses deterministic AST analysis (`nikic/php-parser`) + Laravel
 
 ## Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `1` - `4` | Switch Layout (Flow, Force, LR, Tree) |
-| `S` | **SubGraph Mode** (Isolate selected nodes) |
-| `F` | Fit Graph to view |
-| `T` | Toggle Dark/Light Theme |
-| `M` | Toggle Module Explorer |
-| `Ctrl + K` | Focus Search |
-| `Esc` | Clear selection / Close panels |
+| Key        | Action                                     |
+|------------|--------------------------------------------|
+| `1` - `4`  | Switch Layout (Flow, Force, LR, Tree)      |
+| `S`        | **SubGraph Mode** (Isolate selected nodes) |
+| `F`        | Fit Graph to view                          |
+| `T`        | Toggle Dark/Light Theme                    |
+| `M`        | Toggle Module Explorer                     |
+| `Ctrl + K` | Focus Search                               |
+| `Esc`      | Clear selection / Close panels             |
 
 ## Requirements
 
@@ -63,28 +65,28 @@ php artisan logic-map:build
 
 ## CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `logic-map:build` | Scan project and build graph snapshot |
-| `logic-map:build --force` | Force rebuild (ignore cache) |
-| `logic-map:analyze` | Re-run analysis without rebuilding |
-| `logic-map:analyze --show-violations` | Show violation details |
-| `logic-map:clear-cache` | Clear all cached snapshots |
+| Command                               | Description                           |
+|---------------------------------------|---------------------------------------|
+| `logic-map:build`                     | Scan project and build graph snapshot |
+| `logic-map:build --force`             | Force rebuild (ignore cache)          |
+| `logic-map:analyze`                   | Re-run analysis without rebuilding    |
+| `logic-map:analyze --show-violations` | Show violation details                |
+| `logic-map:clear-cache`               | Clear all cached snapshots            |
 
 ## API Endpoints
 
 All endpoints return `{ ok, data, message, errors }` envelope.
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /logic-map/overview` | Full graph (nodes + edges) |
-| `GET /logic-map/subgraph/{id}` | Node neighborhood |
-| `GET /logic-map/search?q=` | Search nodes by name |
-| `GET /logic-map/meta` | Graph statistics |
-| `GET /logic-map/violations` | Architecture violations |
-| `GET /logic-map/health` | Health score + grade |
-| `GET /logic-map/export/json` | Full export (graph + analysis) |
-| `GET /logic-map/export/csv` | Node metrics CSV download |
+| Endpoint                       | Description                    |
+|--------------------------------|--------------------------------|
+| `GET /logic-map/overview`      | Full graph (nodes + edges)     |
+| `GET /logic-map/subgraph/{id}` | Node neighborhood              |
+| `GET /logic-map/search?q=`     | Search nodes by name           |
+| `GET /logic-map/meta`          | Graph statistics               |
+| `GET /logic-map/violations`    | Architecture violations        |
+| `GET /logic-map/health`        | Health score + grade           |
+| `GET /logic-map/export/json`   | Full export (graph + analysis) |
+| `GET /logic-map/export/csv`    | Node metrics CSV download      |
 
 ### Filters
 

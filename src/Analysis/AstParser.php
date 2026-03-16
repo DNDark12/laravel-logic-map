@@ -2,12 +2,17 @@
 
 namespace dndark\LogicMap\Analysis;
 
-use PhpParser\ParserFactory;
-use PhpParser\NodeTraverser;
-use PhpParser\Error as ParseError;
-use dndark\LogicMap\Domain\Graph;
+use dndark\LogicMap\Analysis\Visitors\ClassMethodVisitor;
+use dndark\LogicMap\Analysis\Visitors\RouteVisitor;
 use dndark\LogicMap\Contracts\GraphExtractor;
+use dndark\LogicMap\Domain\Graph;
+use dndark\LogicMap\Support\FileDiscovery;
 use Illuminate\Support\Facades\Log;
+use PhpParser\Error as ParseError;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitor\NameResolver;
+use PhpParser\ParserFactory;
+use Throwable;
 
 class AstParser implements GraphExtractor
 {
@@ -29,7 +34,7 @@ class AstParser implements GraphExtractor
         // Re-use logic or delegate
         $files = [];
         foreach ($scanPaths as $path) {
-            $files = array_merge($files, (new \dndark\LogicMap\Support\FileDiscovery())->findFiles([$path]));
+            $files = array_merge($files, (new FileDiscovery())->findFiles([$path]));
         }
 
         return $this->parse($files);
@@ -53,13 +58,13 @@ class AstParser implements GraphExtractor
         $graph = new Graph();
         $traverser = new NodeTraverser();
 
-        $traverser->addVisitor(new \PhpParser\NodeVisitor\NameResolver());
-        $traverser->addVisitor(new \dndark\LogicMap\Analysis\Visitors\RouteVisitor($graph));
-        $traverser->addVisitor(new \dndark\LogicMap\Analysis\Visitors\ClassMethodVisitor($graph));
+        $traverser->addVisitor(new NameResolver());
+        $traverser->addVisitor(new RouteVisitor($graph));
+        $traverser->addVisitor(new ClassMethodVisitor($graph));
 
         foreach ($files as $file) {
             try {
-                if (! file_exists($file)) {
+                if (!file_exists($file)) {
                     $this->diagnostics['skipped_files']++;
                     $this->diagnostics['error_files'][] = [
                         'file' => $file,
@@ -100,7 +105,7 @@ class AstParser implements GraphExtractor
                     'error' => $e->getMessage(),
                     'line' => $e->getStartLine(),
                 ]);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $this->diagnostics['skipped_files']++;
                 $this->diagnostics['error_files'][] = [
                     'file' => $file,

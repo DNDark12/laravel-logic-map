@@ -28,7 +28,7 @@ class SearchProjector implements GraphProjector
         $kindFilter = $filters['kind'] ?? null;
         $scopeFilter = $filters['scope'] ?? null;
 
-        if ($query === '' && ! $kindFilter && ! $scopeFilter) {
+        if ($query === '' && !$kindFilter && !$scopeFilter) {
             // Return all nodes up to limit if no query
             return [
                 'nodes' => array_slice(

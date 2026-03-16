@@ -17,7 +17,7 @@ class FileDiscovery
         $files = [];
 
         foreach ($paths as $path) {
-            if (! is_dir($path) && ! is_file($path)) {
+            if (!is_dir($path) && !is_file($path)) {
                 continue;
             }
 

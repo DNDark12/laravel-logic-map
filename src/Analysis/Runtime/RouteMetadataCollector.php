@@ -2,10 +2,10 @@
 
 namespace dndark\LogicMap\Analysis\Runtime;
 
-use Illuminate\Support\Facades\Route;
+use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node as DomainNode;
-use dndark\LogicMap\Domain\Enums\NodeKind;
+use Illuminate\Support\Facades\Route;
 
 class RouteMetadataCollector
 {

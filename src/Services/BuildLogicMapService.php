@@ -3,12 +3,13 @@
 namespace dndark\LogicMap\Services;
 
 use dndark\LogicMap\Analysis\ArchitectureAnalyzer;
-use dndark\LogicMap\Analysis\MetricsCalculator;
-use dndark\LogicMap\Contracts\GraphRepository;
 use dndark\LogicMap\Analysis\AstParser;
+use dndark\LogicMap\Analysis\MetricsCalculator;
+use dndark\LogicMap\Analysis\Runtime\RouteMetadataCollector;
+use dndark\LogicMap\Contracts\GraphRepository;
+use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Support\FileDiscovery;
 use dndark\LogicMap\Support\Fingerprint;
-use dndark\LogicMap\Domain\Graph;
 
 class BuildLogicMapService
 {
@@ -17,10 +18,11 @@ class BuildLogicMapService
         protected Fingerprint $fingerprint,
         protected AstParser $parser,
         protected GraphRepository $repository,
-        protected \dndark\LogicMap\Analysis\Runtime\RouteMetadataCollector $routeMetadata,
+        protected RouteMetadataCollector $routeMetadata,
         protected MetricsCalculator $metricsCalculator,
         protected ArchitectureAnalyzer $architectureAnalyzer,
-    ) {}
+    ) {
+    }
 
     /**
      * Build the logic map from the project files.
@@ -34,7 +36,7 @@ class BuildLogicMapService
         $files = $this->discovery->findFiles($scanPaths);
         $currentFingerprint = $this->fingerprint->generate($files);
 
-        if (! $force) {
+        if (!$force) {
             $snapshot = $this->repository->getSnapshot($currentFingerprint);
             if ($snapshot) {
                 // Check if analysis also cached with current config

@@ -2,14 +2,16 @@
 
 namespace dndark\LogicMap\Analysis\Resolvers;
 
-use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Edge;
-use dndark\LogicMap\Domain\Enums\EdgeType;
 use dndark\LogicMap\Domain\Enums\Confidence;
+use dndark\LogicMap\Domain\Enums\EdgeType;
+use dndark\LogicMap\Domain\Graph;
 
 class CallEdgeResolver
 {
-    public function __construct(protected Graph $graph) {}
+    public function __construct(protected Graph $graph)
+    {
+    }
 
     public function resolveCall(string $sourceId, string $targetClass, ?string $targetMethod = null)
     {

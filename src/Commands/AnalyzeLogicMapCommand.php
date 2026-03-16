@@ -2,10 +2,11 @@
 
 namespace dndark\LogicMap\Commands;
 
-use Illuminate\Console\Command;
 use dndark\LogicMap\Analysis\ArchitectureAnalyzer;
 use dndark\LogicMap\Analysis\MetricsCalculator;
 use dndark\LogicMap\Contracts\GraphRepository;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Standalone analysis command — re-runs analysis on cached graph without rebuilding.
@@ -25,7 +26,7 @@ class AnalyzeLogicMapCommand extends Command
     ): int {
         $graph = $repository->getLatestSnapshot();
 
-        if (! $graph) {
+        if (!$graph) {
             $this->error('No graph snapshot found. Run `php artisan logic-map:build` first.');
             return self::FAILURE;
         }
@@ -39,7 +40,7 @@ class AnalyzeLogicMapCommand extends Command
         $report = $architectureAnalyzer->analyze($graph);
 
         // Get fingerprint for cache storage
-        $fingerprint = \Illuminate\Support\Facades\Cache::get('logic-map.latest_fingerprint', 'unknown');
+        $fingerprint = Cache::get('logic-map.latest_fingerprint', 'unknown');
         $report->metadata['graph_fingerprint'] = $fingerprint;
         $repository->putAnalysisReport($fingerprint, $report);
 

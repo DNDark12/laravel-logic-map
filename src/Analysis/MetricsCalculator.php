@@ -3,10 +3,7 @@
 namespace dndark\LogicMap\Analysis;
 
 use dndark\LogicMap\Domain\Edge;
-use dndark\LogicMap\Domain\Enums\EdgeType;
-use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
-use dndark\LogicMap\Domain\Node;
 
 class MetricsCalculator
 {
@@ -39,13 +36,13 @@ class MetricsCalculator
                 : 0.0;
 
             $node->metrics = [
-                'in_degree'   => $inDegree,
-                'out_degree'  => $outDegree,
-                'fan_in'      => $fanIn,
-                'fan_out'     => $fanOut,
+                'in_degree' => $inDegree,
+                'out_degree' => $outDegree,
+                'fan_in' => $fanIn,
+                'fan_out' => $fanOut,
                 'instability' => $instability,
-                'coupling'    => $fanIn + $fanOut,
-                'depth'       => $depths[$node->id] ?? null,
+                'coupling' => $fanIn + $fanOut,
+                'depth' => $depths[$node->id] ?? null,
             ];
         }
     }
@@ -78,13 +75,13 @@ class MetricsCalculator
         }
 
         // BFS from all entrypoints simultaneously
-        while (! empty($queue)) {
+        while (!empty($queue)) {
             $currentId = array_shift($queue);
             $currentDepth = $depths[$currentId];
 
             foreach ($graph->getEdgesFrom($currentId) as $edge) {
                 // Only traverse configured edge types
-                if (! in_array($edge->type->value, $traversalEdgeTypes, true)) {
+                if (!in_array($edge->type->value, $traversalEdgeTypes, true)) {
                     continue;
                 }
 

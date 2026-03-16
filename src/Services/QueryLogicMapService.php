@@ -24,7 +24,8 @@ class QueryLogicMapService
         protected FileDiscovery $discovery,
         protected Fingerprint $fingerprint,
         protected ArchitectureAnalyzer $architectureAnalyzer,
-    ) {}
+    ) {
+    }
 
     /**
      * Get overview projection.
@@ -35,7 +36,7 @@ class QueryLogicMapService
     {
         $graph = $this->getCurrentGraph();
 
-        if (! $graph) {
+        if (!$graph) {
             return $this->errorResponse('No snapshot found. Run `php artisan logic-map:build` first.');
         }
 
@@ -53,12 +54,12 @@ class QueryLogicMapService
     {
         $graph = $this->getCurrentGraph();
 
-        if (! $graph) {
+        if (!$graph) {
             return $this->errorResponse('No snapshot found. Run `php artisan logic-map:build` first.');
         }
 
         $nodes = $graph->getNodes();
-        if (! isset($nodes[$id])) {
+        if (!isset($nodes[$id])) {
             return $this->errorResponse("Node '{$id}' not found.", 404);
         }
 
@@ -76,7 +77,7 @@ class QueryLogicMapService
     {
         $graph = $this->getCurrentGraph();
 
-        if (! $graph) {
+        if (!$graph) {
             return $this->errorResponse('No snapshot found. Run `php artisan logic-map:build` first.');
         }
 
@@ -94,7 +95,7 @@ class QueryLogicMapService
     {
         $graph = $this->getCurrentGraph();
 
-        if (! $graph) {
+        if (!$graph) {
             return $this->errorResponse('No snapshot found. Run `php artisan logic-map:build` first.');
         }
 
@@ -112,14 +113,14 @@ class QueryLogicMapService
     {
         $report = $this->getCurrentAnalysisReport();
 
-        if (! $report) {
+        if (!$report) {
             return $this->errorResponse('No analysis report found. Run `php artisan logic-map:build` first.');
         }
 
         $violations = $report->violations;
 
         // Filter by severity if requested
-        if (! empty($filters['severity'])) {
+        if (!empty($filters['severity'])) {
             $violations = array_values(array_filter(
                 $violations,
                 fn($v) => $v->severity === $filters['severity']
@@ -127,7 +128,7 @@ class QueryLogicMapService
         }
 
         // Filter by type if requested
-        if (! empty($filters['type'])) {
+        if (!empty($filters['type'])) {
             $violations = array_values(array_filter(
                 $violations,
                 fn($v) => $v->type === $filters['type']
@@ -150,7 +151,7 @@ class QueryLogicMapService
         $report = $this->getCurrentAnalysisReport();
         $graph = $this->getCurrentGraph();
 
-        if (! $report || ! $graph) {
+        if (!$report || !$graph) {
             return $this->errorResponse('No analysis report found. Run `php artisan logic-map:build` first.');
         }
 
@@ -169,7 +170,7 @@ class QueryLogicMapService
                 'total_nodes' => count($nodes),
                 'total_edges' => count($edges),
                 'avg_fan_out' => count($fanOuts) > 0 ? round(array_sum($fanOuts) / count($fanOuts), 1) : 0,
-                'max_depth' => ! empty($depths) ? max($depths) : 0,
+                'max_depth' => !empty($depths) ? max($depths) : 0,
             ],
         ]);
     }
@@ -184,7 +185,7 @@ class QueryLogicMapService
         $graph = $this->getCurrentGraph();
         $report = $this->getCurrentAnalysisReport();
 
-        if (! $graph) {
+        if (!$graph) {
             return $this->errorResponse('No snapshot found. Run `php artisan logic-map:build` first.');
         }
 
@@ -231,7 +232,7 @@ class QueryLogicMapService
         $graph = $this->getCurrentGraph();
         $report = $this->getCurrentAnalysisReport();
 
-        if (! $graph) {
+        if (!$graph) {
             return $this->errorResponse('No snapshot found. Run `php artisan logic-map:build` first.');
         }
 
@@ -296,7 +297,7 @@ class QueryLogicMapService
         $graph = $this->repository->getSnapshot($fingerprint);
 
         // Fallback to latest if fingerprint changed
-        if (! $graph) {
+        if (!$graph) {
             $graph = $this->repository->getLatestSnapshot();
         }
 
@@ -315,7 +316,7 @@ class QueryLogicMapService
         $report = $this->repository->getAnalysisReport($fingerprint, $configHash);
 
         // Fallback to any report for this fingerprint
-        if (! $report) {
+        if (!$report) {
             $report = $this->repository->getAnalysisReport($fingerprint);
         }
 

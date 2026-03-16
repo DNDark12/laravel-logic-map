@@ -2,7 +2,6 @@
 
 namespace dndark\LogicMap\Analysis\Resolvers;
 
-use PhpParser\Node;
 use PhpParser\Node\Name;
 
 class ClassNameResolver

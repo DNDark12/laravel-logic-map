@@ -3,7 +3,6 @@
 namespace dndark\LogicMap\Analysis\Analyzers;
 
 use dndark\LogicMap\Contracts\ViolationAnalyzer;
-use dndark\LogicMap\Domain\Edge;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Violation;
 
@@ -34,7 +33,7 @@ class CircularDependencyAnalyzer implements ViolationAnalyzer
 
         // Run Tarjan on all nodes
         foreach ($graph->getNodes() as $node) {
-            if (! isset($this->indices[$node->id])) {
+            if (!isset($this->indices[$node->id])) {
                 $this->strongConnect($node->id, $adjacency);
             }
         }
@@ -82,13 +81,13 @@ class CircularDependencyAnalyzer implements ViolationAnalyzer
 
         // Visit neighbors
         foreach (array_keys($adjacency[$nodeId] ?? []) as $target) {
-            if (! isset($this->indices[$target])) {
+            if (!isset($this->indices[$target])) {
                 $this->strongConnect($target, $adjacency);
                 $this->lowlinks[$nodeId] = min(
                     $this->lowlinks[$nodeId],
                     $this->lowlinks[$target]
                 );
-            } elseif (! empty($this->onStack[$target])) {
+            } elseif (!empty($this->onStack[$target])) {
                 $this->lowlinks[$nodeId] = min(
                     $this->lowlinks[$nodeId],
                     $this->indices[$target]
@@ -126,6 +125,6 @@ class CircularDependencyAnalyzer implements ViolationAnalyzer
 
     public function isEnabled(): bool
     {
-        return (bool) config('logic-map.analysis.analyzers.circular_dependency', true);
+        return (bool)config('logic-map.analysis.analyzers.circular_dependency', true);
     }
 }

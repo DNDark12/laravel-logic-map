@@ -3,7 +3,6 @@
 namespace dndark\LogicMap\Tests;
 
 use Illuminate\Support\Facades\Artisan;
-use dndark\LogicMap\Contracts\GraphRepository;
 
 class BuildCommandTest extends TestCase
 {

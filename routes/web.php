@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use dndark\LogicMap\Http\Controllers\LogicMapController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web'])->prefix('logic-map')->group(function () {
     Route::get('/', [LogicMapController::class, 'index'])->name('logic-map.index');

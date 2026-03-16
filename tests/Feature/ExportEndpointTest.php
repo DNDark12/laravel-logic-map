@@ -2,8 +2,8 @@
 
 namespace dndark\LogicMap\Tests\Feature;
 
-use Illuminate\Support\Facades\Artisan;
 use dndark\LogicMap\Tests\TestCase;
+use Illuminate\Support\Facades\Artisan;
 
 class ExportEndpointTest extends TestCase
 {

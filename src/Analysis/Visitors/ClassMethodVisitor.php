@@ -2,15 +2,15 @@
 
 namespace dndark\LogicMap\Analysis\Visitors;
 
-use PhpParser\Node;
-use PhpParser\NodeVisitorAbstract;
+use dndark\LogicMap\Analysis\Support\IntentExtractor;
+use dndark\LogicMap\Domain\Edge;
+use dndark\LogicMap\Domain\Enums\Confidence;
+use dndark\LogicMap\Domain\Enums\EdgeType;
+use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node as DomainNode;
-use dndark\LogicMap\Domain\Edge;
-use dndark\LogicMap\Domain\Enums\NodeKind;
-use dndark\LogicMap\Domain\Enums\EdgeType;
-use dndark\LogicMap\Domain\Enums\Confidence;
-use dndark\LogicMap\Analysis\Support\IntentExtractor;
+use PhpParser\Node;
+use PhpParser\NodeVisitorAbstract;
 
 class ClassMethodVisitor extends NodeVisitorAbstract
 {
@@ -23,14 +23,16 @@ class ClassMethodVisitor extends NodeVisitorAbstract
     /** @var array<string, string> Maps parameter name to resolved class type */
     protected array $constructorParams = [];
 
-    public function __construct(protected Graph $graph) {}
+    public function __construct(protected Graph $graph)
+    {
+    }
 
     public function enterNode(Node $node)
     {
         if ($node instanceof Node\Stmt\Class_) {
             $this->currentClass = $node->namespacedName
                 ? $node->namespacedName->toString()
-                : (string) $node->name;
+                : (string)$node->name;
             $this->propertyTypes = [];
             $this->constructorParams = [];
             $this->processClass($node);
@@ -163,14 +165,14 @@ class ClassMethodVisitor extends NodeVisitorAbstract
 
     protected function processMethodCall(Node\Expr\MethodCall $node): void
     {
-        if (! $node->name instanceof Node\Identifier) {
+        if (!$node->name instanceof Node\Identifier) {
             return; // Dynamic method name, skip
         }
 
         $targetMethod = $node->name->toString();
         $targetClass = $this->resolveCallTarget($node->var);
 
-        if (! $targetClass) {
+        if (!$targetClass) {
             return;
         }
 
@@ -186,7 +188,7 @@ class ClassMethodVisitor extends NodeVisitorAbstract
 
     protected function processStaticCall(Node\Expr\StaticCall $node): void
     {
-        if (! $node->class instanceof Node\Name || ! $node->name instanceof Node\Identifier) {
+        if (!$node->class instanceof Node\Name || !$node->name instanceof Node\Identifier) {
             return;
         }
 
@@ -210,7 +212,7 @@ class ClassMethodVisitor extends NodeVisitorAbstract
 
     protected function processNewExpression(Node\Expr\New_ $node): void
     {
-        if (! $node->class instanceof Node\Name) {
+        if (!$node->class instanceof Node\Name) {
             return;
         }
 

@@ -60,19 +60,19 @@ return [
          */
         'thresholds' => [
             'fat_controller_fan_out' => 10,
-            'high_instability'       => 0.9,
-            'high_coupling'          => 20,
+            'high_instability' => 0.9,
+            'high_coupling' => 20,
         ],
 
         /*
          * Enable/disable individual analyzers
          */
         'analyzers' => [
-            'fat_controller'      => true,
+            'fat_controller' => true,
             'circular_dependency' => true,
-            'orphan'              => true,
-            'high_instability'    => false,
-            'high_coupling'       => false,
+            'orphan' => true,
+            'high_instability' => false,
+            'high_coupling' => false,
         ],
 
         /*
@@ -90,7 +90,7 @@ return [
          * depth: ?int — null if unreachable from any entrypoint
          */
         'depth' => [
-            'entrypoint_kinds'     => ['route'],
+            'entrypoint_kinds' => ['route'],
             'traversal_edge_types' => ['handles', 'calls', 'dispatches', 'queries', 'resolves'],
         ],
 
@@ -99,9 +99,9 @@ return [
          */
         'weights' => [
             'critical' => 25,
-            'high'     => 10,
-            'medium'   => 5,
-            'low'      => 1,
+            'high' => 10,
+            'medium' => 5,
+            'low' => 1,
         ],
     ],
 
@@ -109,7 +109,7 @@ return [
      * Export Settings
      */
     'export' => [
-        'csv_delimiter'   => ',',
+        'csv_delimiter' => ',',
         'include_metrics' => true,
     ],
 ];

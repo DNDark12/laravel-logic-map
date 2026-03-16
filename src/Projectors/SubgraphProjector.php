@@ -2,11 +2,10 @@
 
 namespace dndark\LogicMap\Projectors;
 
-use dndark\LogicMap\Contracts\GraphProjector;
-use dndark\LogicMap\Domain\Graph;
-use dndark\LogicMap\Domain\Node;
-use dndark\LogicMap\Domain\Edge;
-use dndark\LogicMap\Domain\Enums\Confidence;
+use DNDark\LogicMap\Contracts\GraphProjector;
+use DNDark\LogicMap\Domain\Edge;
+use DNDark\LogicMap\Domain\Graph;
+use DNDark\LogicMap\Domain\Node;
 
 class SubgraphProjector implements GraphProjector
 {
@@ -20,7 +19,7 @@ class SubgraphProjector implements GraphProjector
         $nodes = $graph->getNodes();
         $edges = $graph->getEdges();
 
-        if (! isset($nodes[$id])) {
+        if (!isset($nodes[$id])) {
             return ['nodes' => [], 'edges' => [], 'meta' => ['focus_id' => $id, 'found' => false]];
         }
 
@@ -63,7 +62,7 @@ class SubgraphProjector implements GraphProjector
                     }
 
                     // Add neighbor node if exists and passes filters
-                    if (isset($nodes[$neighborId]) && ! isset($visited[$neighborId])) {
+                    if (isset($nodes[$neighborId]) && !isset($visited[$neighborId])) {
                         $neighborNode = $nodes[$neighborId];
 
                         // Filter by excluded kinds
@@ -86,7 +85,7 @@ class SubgraphProjector implements GraphProjector
         // Also include intra-neighborhood edges
         foreach ($edges as $edge) {
             $key = $edge->source . '->' . $edge->target;
-            if (! isset($neighborhoodEdges[$key]) &&
+            if (!isset($neighborhoodEdges[$key]) &&
                 isset($neighborhoodNodes[$edge->source]) &&
                 isset($neighborhoodNodes[$edge->target])) {
 

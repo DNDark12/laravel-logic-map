@@ -46,6 +46,6 @@ class HighCouplingAnalyzer implements ViolationAnalyzer
 
     public function isEnabled(): bool
     {
-        return (bool) config('logic-map.analysis.analyzers.high_coupling', false);
+        return (bool)config('logic-map.analysis.analyzers.high_coupling', false);
     }
 }

@@ -31,7 +31,7 @@ class ArchitectureAnalyzer
      */
     public function analyze(Graph $graph): AnalysisReport
     {
-        if (! config('logic-map.analysis.enabled', true)) {
+        if (!config('logic-map.analysis.enabled', true)) {
             return $this->emptyReport();
         }
 

@@ -3,7 +3,6 @@
 namespace dndark\LogicMap\Analysis\Analyzers;
 
 use dndark\LogicMap\Contracts\ViolationAnalyzer;
-use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Violation;
 
@@ -23,7 +22,7 @@ class OrphanAnalyzer implements ViolationAnalyzer
 
         foreach ($graph->getNodes() as $node) {
             // Only check eligible kinds
-            if (! in_array($node->kind->value, $eligibleKinds, true)) {
+            if (!in_array($node->kind->value, $eligibleKinds, true)) {
                 continue;
             }
 
@@ -77,6 +76,6 @@ class OrphanAnalyzer implements ViolationAnalyzer
 
     public function isEnabled(): bool
     {
-        return (bool) config('logic-map.analysis.analyzers.orphan', true);
+        return (bool)config('logic-map.analysis.analyzers.orphan', true);
     }
 }

@@ -10,7 +10,8 @@ class Violation
         public string $nodeId,
         public string $message,
         public array $details = [],
-    ) {}
+    ) {
+    }
 
     public function toArray(): array
     {
