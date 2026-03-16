@@ -91,6 +91,15 @@ class BuildLogicMapCommand extends Command
 
         $this->newLine();
         $this->info('Logic map snapshot generated successfully.');
+        $this->newLine();
+
+        $baseUrl = url('logic-map');
+        $this->line('<fg=cyan>  ▸ Visual Explorer:</> ' . $baseUrl);
+        $this->line('<fg=cyan>  ▸ Health API:</>      ' . $baseUrl . '/health');
+        $this->line('<fg=cyan>  ▸ Violations API:</>  ' . $baseUrl . '/violations');
+        $this->line('<fg=cyan>  ▸ Export JSON:</>     ' . $baseUrl . '/export/json');
+        $this->newLine();
+        $this->line('<comment>Tip:</comment> Run <fg=green>php artisan logic-map:analyze --show-violations</> to see details in terminal.');
 
         return self::SUCCESS;
     }
