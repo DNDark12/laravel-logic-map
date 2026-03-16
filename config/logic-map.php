@@ -7,8 +7,6 @@ return [
     'scan_paths' => [
         base_path('app'),
         base_path('routes'),
-        base_path('packages/dndark/laravel-logic-map/src'),
-        base_path('packages/dndark/laravel-logic-map/routes'),
     ],
 
     /*
@@ -21,17 +19,17 @@ return [
     /*
      * The cache key used to store the snapshot
      */
-    'cache_key' => 'dndark.logic_map.snapshot',
+    'cache_key' => 'logic_map.snapshot',
 
     /*
      * The cache key used to store the fingerprint
      */
-    'fingerprint_key' => 'dndark.logic_map.fingerprint',
+    'fingerprint_key' => 'logic_map.fingerprint',
 
     /*
      * Cache key prefix for analysis reports (stored separately from graph)
      */
-    'analysis_cache_key' => 'dndark.logic_map.analysis',
+    'analysis_cache_key' => 'logic_map.analysis',
 
     /*
      * How long should the snapshot be cached? (in seconds)

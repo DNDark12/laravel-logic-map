@@ -1022,26 +1022,45 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Format short label from full ID ──
     function formatShortLabel(id) {
         if (!id) return '';
+
+        let result = '';
+
         // Handle method:Namespace\Class@method format
         if (id.includes('@')) {
-            const parts = id.split('@');
-            const methodName = parts[parts.length - 1];
-            // Get class short name
-            const classPart = parts[0].replace(/^(method|class):/, '');
+            const atIndex = id.lastIndexOf('@');
+            const methodName = id.substring(atIndex + 1);
+            const classPart = id.substring(0, atIndex).replace(/^(method|class):/, '');
             const className = classPart.split('\\').pop();
-            return `${className}::${methodName}`;
+            result = methodName; // Just show method name, class visible in tooltip
         }
         // Handle class:Namespace\Class format
-        if (id.startsWith('class:')) {
-            return id.replace('class:', '').split('\\').pop();
+        else if (id.startsWith('class:')) {
+            result = id.replace('class:', '').split('\\').pop();
         }
         // Handle route:VERB /path format
-        if (id.startsWith('route:')) {
-            return id.replace('route:', '');
+        else if (id.startsWith('route:')) {
+            result = id.replace('route:', '');
         }
-        // Default: get last part after backslash or colon
-        const clean = id.replace(/^(method|class|route):/, '');
-        return clean.split('\\').pop() || clean;
+        // Handle method: without @ (shouldn't happen but just in case)
+        else if (id.startsWith('method:')) {
+            const clean = id.replace('method:', '');
+            result = clean.split('\\').pop() || clean;
+        }
+        // Default: get last part after backslash
+        else {
+            const parts = id.split('\\');
+            result = parts[parts.length - 1] || id;
+        }
+
+        // Remove any remaining prefixes
+        result = result.replace(/^(method|class|route):/, '');
+
+        // Truncate if still too long (max 25 chars)
+        if (result.length > 25) {
+            result = result.substring(0, 22) + '...';
+        }
+
+        return result;
     }
 
     // ── Load Data ──
