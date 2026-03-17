@@ -1,161 +1,120 @@
+<p align="center">
+  <img src="art/logo.png" width="200" alt="Laravel Logic Map Logo">
+</p>
+
 # Laravel Logic Map
 
-> Understand, audit, and visualize your Laravel application's logic and workflows.
+<p align="center">
+  <strong>Understand, analyze, and visualize your application's architecture and logic flows.</strong>
+</p>
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/dndark/laravel-logic-map.svg)](https://packagist.org/packages/dndark/laravel-logic-map)
-[![Tests](https://img.shields.io/github/actions/workflow/status/dndark/laravel-logic-map/tests.yml?label=tests)](https://github.com/dndark/laravel-logic-map/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+<p align="center">
+  <a href="https://packagist.org/packages/dndark/laravel-logic-map"><img src="https://img.shields.io/packagist/v/dndark/laravel-logic-map.svg" alt="Latest Version on Packagist"></a>
+  <a href="https://github.com/dndark12/laravel-logic-map/actions"><img src="https://img.shields.io/github/actions/workflow/status/dndark/laravel-logic-map/tests.yml?label=tests" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"></a>
+  <a href="https://php.net"><img src="https://img.shields.io/badge/PHP-%5E8.2-777bb4.svg" alt="PHP Version"></a>
+</p>
 
-Laravel Logic Map uses deterministic AST analysis (`nikic/php-parser`) + Laravel runtime metadata to build an
-interactive, layered map of how logic flows through your application — routes, controllers, services, jobs, events, and
-models.
+---
 
-## Features
+**Laravel Logic Map** leverages deterministic AST analysis via `nikic/php-parser` combined with Laravel runtime metadata to construct an interactive, multi-layered map of your application's logic. Unlike simple dependency graphs, Logic Map visualizes the **functional flow** from Entry Point to Data Persistence.
 
-- **Workflow graph** — Route → Controller → Service → Job → Model (not just dependencies)
-- **7 structural metrics** — in/out degree, fan in/out, instability, coupling, depth
-- **5 built-in analyzers** — fat controllers, circular dependencies, orphans, high instability, high coupling
-- **Visual Health Panel** — Detailed score breakdown, grade distribution, and explainable violation chains
-- **Risk Assessment** — Node-level risk badges (Critical, High, Medium, Low) in detail panels
-- **Dynamic SubGraph** — Adjustable depth traversal (Hops) with BE-driven discovery
-- **Export** — JSON & CSV download for CI integration
-- **Interactive UI** — Overhauled Cytoscape.js viewer with dual panels, floating controls, and theme toggle
-- **Keyboard Shortcuts** — 1-4 (Layouts), S (Subgraph), F (Fit), T (Theme), M (Modules), Ctrl+K (Search)
-- **Business Intent** — Semantic mapping of code to human purpose (Action, Domain, Trigger)
-- **Zero-runtime overhead** — Cached snapshots and optimized AST analysis
+## 🚀 Key Features
 
-## Keyboard Shortcuts
+*   **🔍 Holistic Workflow Graph** — Traverse the full execution path: `Route` → `Controller` → `Service` → `Job` → `Model`.
+*   **📊 Architecture Metrics** — 7 built-in metrics (In/Out Degree, Fan In/Out, Instability, Coupling, Depth) to detect logic bloat.
+*   **🏥 Visual Health Panel** — Real-time health score calculation with grade distribution (A-F) and risk assessment.
+*   **🕵️ 5 Specialized Analyzers** — Detect Fat Controllers, Circular Dependencies, Orphan Nodes, High Instability, and Over-coupling.
+*   **🌊 Dynamic SubGraph** — Drill down into specific node neighborhoods with adjustable **Depth Traversal (Hops)**.
+*   **⌨️ Power-User Shortcuts** — Switch layouts (1-4), toggle themes (T), search (Ctrl+K), and explore modules (M) in milliseconds.
+*   **💾 CI/CD Friendly** — Export full graph details to **JSON** or node metrics to **CSV** for automated audits.
+*   **🎨 Fully Customizable UI** — Publish and override Blade views, CSS, and JS to match your internal design standards.
 
-| Key        | Action                                     |
-|------------|--------------------------------------------|
-| `1` - `4`  | Switch Layout (Flow, Force, LR, Tree)      |
-| `S`        | **SubGraph Mode** (Isolate selected nodes) |
-| `F`        | Fit Graph to view                          |
-| `T`        | Toggle Dark/Light Theme                    |
-| `M`        | Toggle Module Explorer                     |
-| `Ctrl + K` | Focus Search                               |
-| `Esc`      | Clear selection / Close panels             |
+---
 
-## Requirements
-
-- PHP 8.2+
-- Laravel 10, 11, or 12
-
-## Installation
+## 🛠 Installation
 
 ```bash
 composer require dndark/laravel-logic-map --dev
 ```
 
-The service provider is auto-discovered. Publish the config and assets:
+### Publishing Resources
 
 ```bash
 # Publish base configuration
 php artisan vendor:publish --tag=logic-map-config
 
-# Publish ALL resources (Blade, CSS, JS) to resources/views/logic-map
-# Recommended for full UI/Style customization
+# RECOMMENDED: Publish ALL resources (Blade, CSS, JS) for full customization
 php artisan vendor:publish --tag=logic-map-full
 ```
 
-## Quick Start
+---
 
-```bash
-# Build the graph snapshot
-php artisan logic-map:build
+## ⚡ Quick Start
 
-# Open the UI
-# Visit http://your-app.test/logic-map
-```
+1.  **Build the Graph:** Scan your project to create a logic snapshot.
+    ```bash
+    php artisan logic-map:build
+    ```
 
-## CLI Commands
+2.  **Explore:** Visit your local dashboard to visualize the findings.
+    Visit: `http://your-app.test/logic-map`
 
-| Command                               | Description                           |
-|---------------------------------------|---------------------------------------|
-| `logic-map:build`                     | Scan project and build graph snapshot |
-| `logic-map:build --force`             | Force rebuild (ignore cache)          |
-| `logic-map:analyze`                   | Re-run analysis without rebuilding    |
-| `logic-map:analyze --show-violations` | Show violation details                |
-| `logic-map:clear-cache`               | Clear all cached snapshots            |
+---
 
-## API Endpoints
+## ⌨️ Keyboard Shortcuts
 
-All endpoints return `{ ok, data, message, errors }` envelope.
+| Shortcut | Action |
+| :--- | :--- |
+| `1` - `4` | **Layouts**: Switch between Flow, Force, Left-to-Right, and Tree. |
+| `S` | **SubGraph**: Isolate neighbors of the selected node. |
+| `F` | **Fit**: Center and fit the graph to viewport. |
+| `T` | **Theme**: Toggle between dark and light modes. |
+| `M` | **Modules**: Open/Close the Module Explorer. |
+| `Ctrl + K` | **Search**: Instantly focus the node search. |
+| `Esc` | **Clear**: Close panels and reset selection. |
 
-| Endpoint                       | Description                    |
-|--------------------------------|--------------------------------|
-| `GET /logic-map/overview`      | Full graph (nodes + edges)     |
-| `GET /logic-map/subgraph/{id}` | Node neighborhood              |
-| `GET /logic-map/search?q=`     | Search nodes by name           |
-| `GET /logic-map/meta`          | Graph statistics               |
-| `GET /logic-map/violations`    | Architecture violations        |
-| `GET /logic-map/health`        | Health score + grade           |
-| `GET /logic-map/export/json`   | Full export (graph + analysis) |
-| `GET /logic-map/export/csv`    | Node metrics CSV download      |
+---
 
-### Filters
+## ⚙️ Configuration
 
-- `/violations?severity=critical` — filter by severity
-- `/violations?type=fat_controller` — filter by type
-- `/overview?kinds[]=controller&kinds[]=service` — filter by node kind
-
-## Configuration
+Control scanning depth and analysis thresholds via `config/logic-map.php`:
 
 ```php
-// config/logic-map.php
-
-'scan_paths' => [app_path()],
-
 'analysis' => [
     'enabled' => true,
     'thresholds' => [
         'fat_controller_fan_out' => 10,
         'high_instability'       => 0.9,
-        'high_coupling'          => 20,
     ],
     'analyzers' => [
         'fat_controller'      => true,
         'circular_dependency' => true,
         'orphan'              => true,
-        'high_instability'    => false, // enable for medium-severity checks
-        'high_coupling'       => false,
     ],
 ],
 ```
 
-## Architecture
+---
 
-```
-Build Pipeline (artisan logic-map:build)
-├── FileDiscovery → find PHP files
-├── AstParser → extract nodes & edges → Graph
-├── MetricsCalculator → 7 metrics per node
-├── ArchitectureAnalyzer → violations → AnalysisReport
-└── CacheGraphRepository → store snapshot + report
+## 📂 Architecture
 
-Query Pipeline (HTTP requests)
-├── QueryLogicMapService → fetch from cache
-├── Projectors → overview, subgraph, search, meta
-└── LogicMapController → JSON envelope
-```
+Laravel Logic Map consists of two high-performance pipelines:
 
-## Customization
+*   **Build Pipeline**: Scans files using a custom AST parser, calculates structural metrics, and runs the health analyzer. Results are cached as a binary snapshot.
+*   **Query Pipeline**: A projection-based API layer that serves graph data to the Cytoscape.js frontend with zero-runtime impact on your main application.
 
-The UI assets (CSS/JS) are designed to be customizable. After running `php artisan vendor:publish --tag=logic-map-full`, you can modify:
-- `resources/views/logic-map/graph.blade.php`: The main layout
-- `resources/views/logic-map/logic-map.css`: Custom themes and component styles
-- `resources/views/logic-map/logic-map.js`: Custom graph behavior and event hooks
+---
 
-The package will automatically detect these local overrides and prioritize them over the core assets.
+## 🤝 Contributing
 
-## Testing
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-```bash
-composer test              # all tests
-composer test:unit         # unit only
-composer test:feature      # feature / integration only
-```
+## 📄 License
 
-## License
+The MIT License (MIT). Please see [License File](LICENSE) for more information.
 
-MIT — see [LICENSE](LICENSE).
+---
+<p align="center">
+  Built with ❤️ by <strong>DNDark</strong>
+</p>
