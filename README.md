@@ -2,8 +2,6 @@
   <img src="art/logo.png" width="200" alt="Laravel Logic Map Logo">
 </p>
 
-# Laravel Logic Map
-
 <p align="center">
   <strong>Understand, analyze, and visualize your application's architecture and logic flows.</strong>
 </p>
@@ -25,7 +23,9 @@
 *   **📊 Architecture Metrics** — 7 built-in metrics (In/Out Degree, Fan In/Out, Instability, Coupling, Depth) to detect logic bloat.
 *   **🏥 Visual Health Panel** — Real-time health score calculation with grade distribution (A-F) and risk assessment.
 *   **🕵️ 5 Specialized Analyzers** — Detect Fat Controllers, Circular Dependencies, Orphan Nodes, High Instability, and Over-coupling.
-*   **🌊 Dynamic SubGraph** — Drill down into specific node neighborhoods with adjustable **Depth Traversal (Hops)**.
+*   **🧼 Orphan Grouping** — Automatically isolates nodes without connections to prevent graph clutter.
+*   **� Visual Health Panel** — Real-time health score calculation (A-F), risk assessment, and **Explainable Violation Chains**.
+*   **�🌊 Dynamic SubGraph** — Drill down into specific node neighborhoods with adjustable **Depth Traversal (1, 2, 3, All)**.
 *   **⌨️ Power-User Shortcuts** — Switch layouts (1-4), toggle themes (T), search (Ctrl+K), and explore modules (M) in milliseconds.
 *   **💾 CI/CD Friendly** — Export full graph details to **JSON** or node metrics to **CSV** for automated audits.
 *   **🎨 Fully Customizable UI** — Publish and override Blade views, CSS, and JS to match your internal design standards.
@@ -106,15 +106,6 @@ Laravel Logic Map consists of two high-performance pipelines:
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
 ## 📄 License
 
 The MIT License (MIT). Please see [License File](LICENSE) for more information.
-
----
-<p align="center">
-  Built with ❤️ by <strong>DNDark</strong>
-</p>
