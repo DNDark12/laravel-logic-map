@@ -92,6 +92,8 @@
             {
                 selector: 'edge.highlighted', style: {
                     'width': 2.5,
+                    'line-color': '#4a7ff5',
+                    'target-arrow-color': '#4a7ff5',
                     'z-index': 999,
                     'line-style': 'dashed',
                     'line-dash-pattern': [8, 4],
@@ -495,17 +497,26 @@
         cy.edges().removeClass('highlighted dimmed');
 
         node.addClass('highlighted');
-        const neighborhood = node.neighborhood();
-        neighborhood.nodes().addClass('neighbor');
-        neighborhood.edges().addClass('highlighted');
+        const successors = node.successors();
+        const predecessors = node.predecessors();
+
+        successors.nodes().addClass('neighbor');
+        successors.edges().addClass('highlighted');
+        predecessors.nodes().addClass('neighbor');
+        predecessors.edges().addClass('highlighted');
 
         // Dim non-neighbors
-        cy.nodes().not(node).not(neighborhood.nodes()).addClass('dimmed');
-        cy.edges().not(neighborhood.edges()).addClass('dimmed');
+        cy.elements().not(node).not(successors).not(predecessors).addClass('dimmed');
 
         startFlow();
 
         openPanel(node.data());
+
+        // Animate viewport to fit the highlighted flow
+        cy.animate({
+            fit: { eles: node.add(successors).add(predecessors), padding: 80 },
+            duration: 500
+        });
 
         // Fetch subgraph for deeper connections
         fetch(window.logicMapConfig.subgraphUrl + '/' + encodeURIComponent(node.id()))
