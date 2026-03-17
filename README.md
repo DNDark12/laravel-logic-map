@@ -15,13 +15,14 @@ models.
 - **Workflow graph** — Route → Controller → Service → Job → Model (not just dependencies)
 - **7 structural metrics** — in/out degree, fan in/out, instability, coupling, depth
 - **5 built-in analyzers** — fat controllers, circular dependencies, orphans, high instability, high coupling
-- **Health scoring** — A-F grade with explainable risk per node
+- **Visual Health Panel** — Detailed score breakdown, grade distribution, and explainable violation chains
+- **Risk Assessment** — Node-level risk badges (Critical, High, Medium, Low) in detail panels
+- **Dynamic SubGraph** — Adjustable depth traversal (Hops) with BE-driven discovery
 - **Export** — JSON & CSV download for CI integration
-- **Interactive UI** — Overhauled Cytoscape.js viewer with dual panels and theme toggle
+- **Interactive UI** — Overhauled Cytoscape.js viewer with dual panels, floating controls, and theme toggle
 - **Keyboard Shortcuts** — 1-4 (Layouts), S (Subgraph), F (Fit), T (Theme), M (Modules), Ctrl+K (Search)
 - **Business Intent** — Semantic mapping of code to human purpose (Action, Domain, Trigger)
-- **Modular Assets** — Extracted CSS/JS for easier UI customizability
-- **Build-time analysis** — Cached snapshots, zero runtime overhead
+- **Zero-runtime overhead** — Cached snapshots and optimized AST analysis
 
 ## Keyboard Shortcuts
 
@@ -49,8 +50,12 @@ composer require dndark/laravel-logic-map --dev
 The service provider is auto-discovered. Publish the config and assets:
 
 ```bash
+# Publish base configuration
 php artisan vendor:publish --tag=logic-map-config
-php artisan vendor:publish --tag=logic-map-assets
+
+# Publish ALL resources (Blade, CSS, JS) to resources/views/logic-map
+# Recommended for full UI/Style customization
+php artisan vendor:publish --tag=logic-map-full
 ```
 
 ## Quick Start
@@ -133,6 +138,15 @@ Query Pipeline (HTTP requests)
 ├── Projectors → overview, subgraph, search, meta
 └── LogicMapController → JSON envelope
 ```
+
+## Customization
+
+The UI assets (CSS/JS) are designed to be customizable. After running `php artisan vendor:publish --tag=logic-map-full`, you can modify:
+- `resources/views/logic-map/graph.blade.php`: The main layout
+- `resources/views/logic-map/logic-map.css`: Custom themes and component styles
+- `resources/views/logic-map/logic-map.js`: Custom graph behavior and event hooks
+
+The package will automatically detect these local overrides and prioritize them over the core assets.
 
 ## Testing
 

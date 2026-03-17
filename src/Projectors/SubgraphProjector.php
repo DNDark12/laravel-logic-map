@@ -23,9 +23,9 @@ class SubgraphProjector implements GraphProjector
             return ['nodes' => [], 'edges' => [], 'meta' => ['focus_id' => $id, 'found' => false]];
         }
 
-        $limit = $filters['limit'] ?? config('logic-map.subgraph_node_limit', 50);
-        $depth = $filters['depth'] ?? 1;
-        $minConfidence = $this->parseConfidence($filters['min_confidence'] ?? 'low');
+        $limit = (int) ($filters['limit'] ?? config('logic-map.subgraph_node_limit', 50));
+        $depth = (int) ($filters['depth'] ?? 1);
+        $minConfidenceWeight = $this->getConfidenceWeight($filters['min_confidence'] ?? 'low');
         $excludeKinds = $filters['exclude_kinds'] ?? config('logic-map.filters.excluded_kinds', []);
 
         $neighborhoodNodes = [$id => $nodes[$id]];
@@ -42,8 +42,8 @@ class SubgraphProjector implements GraphProjector
                     break;
                 }
 
-                // Filter by confidence
-                if ($edge->confidence->value < $minConfidence) {
+                // Filter by confidence (use weights for proper comparison)
+                if ($this->getConfidenceWeight($edge->confidence->value) < $minConfidenceWeight) {
                     continue;
                 }
 
@@ -89,7 +89,7 @@ class SubgraphProjector implements GraphProjector
                 isset($neighborhoodNodes[$edge->source]) &&
                 isset($neighborhoodNodes[$edge->target])) {
 
-                if ($edge->confidence->value >= $minConfidence) {
+                if ($this->getConfidenceWeight($edge->confidence->value) >= $minConfidenceWeight) {
                     $neighborhoodEdges[$key] = $edge;
                 }
             }
@@ -109,9 +109,14 @@ class SubgraphProjector implements GraphProjector
         ];
     }
 
-    protected function parseConfidence(string $value): string
+    protected function getConfidenceWeight(string $value): int
     {
-        $levels = ['low' => 'low', 'medium' => 'medium', 'high' => 'high'];
-        return $levels[$value] ?? 'low';
+        $weights = [
+            'low' => 0,
+            'medium' => 1,
+            'high' => 2,
+        ];
+
+        return $weights[$value] ?? 0;
     }
 }

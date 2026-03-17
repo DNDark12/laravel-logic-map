@@ -68,12 +68,13 @@ class LogicMapServiceProvider extends ServiceProvider
             ], 'logic-map-config');
 
             $this->publishes([
-                __DIR__ . '/../resources/views' => resource_path('views/vendor/logic-map'),
+                __DIR__ . '/../resources/views' => resource_path('views/logic-map'),
             ], 'logic-map-views');
 
             $this->publishes([
-                __DIR__ . '/../resources/dist' => public_path('vendor/logic-map'),
-            ], 'logic-map-assets');
+                __DIR__ . '/../resources/views' => resource_path('views/logic-map'),
+                __DIR__ . '/../resources/dist' => resource_path('views/logic-map'),
+            ], 'logic-map-full');
 
             $this->commands([
                 Commands\BuildLogicMapCommand::class,
@@ -85,11 +86,16 @@ class LogicMapServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
         $this->loadViewsFrom(__DIR__ . '/../resources/views', 'logic-map');
 
-        // Share resource paths with views
-        $packagePath = __DIR__ . '/..';
-        View::composer('logic-map::*', function ($view) use ($packagePath) {
-            $view->with('logicMapCss', file_get_contents($packagePath . '/resources/dist/logic-map.css'));
-            $view->with('logicMapJs', file_get_contents($packagePath . '/resources/dist/logic-map.js'));
+        // Share resource paths with views (Allow local override in resources/views/logic-map)
+        View::composer('logic-map::*', function ($view) {
+            $customCss = resource_path('views/logic-map/logic-map.css');
+            $customJs = resource_path('views/logic-map/logic-map.js');
+
+            $cssPath = file_exists($customCss) ? $customCss : __DIR__ . '/../resources/dist/logic-map.css';
+            $jsPath = file_exists($customJs) ? $customJs : __DIR__ . '/../resources/dist/logic-map.js';
+
+            $view->with('logicMapCss', file_get_contents($cssPath));
+            $view->with('logicMapJs', file_get_contents($jsPath));
         });
     }
 }

@@ -96,9 +96,9 @@ return [
          * Scoring weights for health score calculation
          */
         'weights' => [
-            'critical' => 25,
-            'high' => 10,
-            'medium' => 5,
+            'critical' => 10,
+            'high' => 5,
+            'medium' => 2,
             'low' => 1,
         ],
     ],

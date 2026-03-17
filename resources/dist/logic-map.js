@@ -7,887 +7,916 @@
             cytoscape.use(cytoscapeDagre);
         }
 
-    const KIND_COLORS = {
-        route: {bg: '#dcfce7', bd: '#22c55e'},
-        controller: {bg: '#dbeafe', bd: '#3b82f6'},
-        service: {bg: '#fef3c7', bd: '#f59e0b'},
-        repository: {bg: '#f3e8ff', bd: '#a855f7'},
-        model: {bg: '#fce7f3', bd: '#ec4899'},
-        event: {bg: '#cffafe', bd: '#06b6d4'},
-        job: {bg: '#cffafe', bd: '#06b6d4'},
-        listener: {bg: '#cffafe', bd: '#06b6d4'},
-        command: {bg: '#e0e7ff', bd: '#6366f1'},
-        component: {bg: '#fef3c7', bd: '#eab308'},
-        unknown: {bg: '#f3f4f6', bd: '#6b7280'}
-    };
+        /* ────────────────────────────────────
+           Constants
+        ──────────────────────────────────── */
+        const KIND_COLORS = {
+            route: { bg: '#dcfce7', bd: '#22c55e' },
+            controller: { bg: '#dbeafe', bd: '#3b82f6' },
+            service: { bg: '#fef3c7', bd: '#f59e0b' },
+            repository: { bg: '#f3e8ff', bd: '#a855f7' },
+            model: { bg: '#fce7f3', bd: '#ec4899' },
+            event: { bg: '#cffafe', bd: '#06b6d4' },
+            job: { bg: '#cffafe', bd: '#06b6d4' },
+            listener: { bg: '#cffafe', bd: '#06b6d4' },
+            command: { bg: '#e0e7ff', bd: '#6366f1' },
+            component: { bg: '#fef3c7', bd: '#eab308' },
+            unknown: { bg: '#f3f4f6', bd: '#6b7280' }
+        };
 
-    let currentLayout = 'dagre';
-    let allNodesData = [];
-    let allEdgesData = [];
-    let sgOriginalElements = null; // Store original elements for SubGraph exit
-    let sgLastSeed = null; // Last subgraph seed node
-    let crossModuleEdges = {}; // Cross-module edge counts
+        const KIND_LABELS = {
+            route: 'Routes', controller: 'Controllers', service: 'Services',
+            repository: 'Repositories', model: 'Models', event: 'Events',
+            job: 'Jobs', listener: 'Listeners', command: 'Commands',
+            component: 'Components', unknown: 'Other'
+        };
 
-    // ── Cytoscape Init ──
-    const cy = cytoscape({
-        container: document.getElementById('cy'),
-        pixelRatio: Math.min(window.devicePixelRatio, 2),
-        hideEdgesOnViewport: true,
-        textureOnViewport: false,
-        motionBlur: false,
-        style: [
-            {
-                selector: 'node', style: {
-                    'background-color': '#f3f4f6', 'label': 'data(label)', 'color': '#1c2036',
-                    'font-size': '9px', 'font-family': '"SF Mono","Fira Code",monospace',
-                    'text-valign': 'center', 'text-halign': 'center',
-                    'border-width': 1, 'border-color': '#9ca3af',
-                    'padding': '8px', 'shape': 'round-rectangle',
-                    'width': '120px', 'height': '40px',
-                    'text-max-width': '110px', 'text-wrap': 'ellipsis',
-                    'text-overflow-wrap': 'anywhere',
-                    'min-zoomed-font-size': 6
-                }
-            },
-            {selector: 'node[kind="route"]', style: {'background-color': '#dcfce7', 'border-color': '#22c55e'}},
-            {selector: 'node[kind="controller"]', style: {'background-color': '#dbeafe', 'border-color': '#3b82f6'}},
-            {selector: 'node[kind="service"]', style: {'background-color': '#fef3c7', 'border-color': '#f59e0b'}},
-            {selector: 'node[kind="repository"]', style: {'background-color': '#f3e8ff', 'border-color': '#a855f7'}},
-            {selector: 'node[kind="model"]', style: {'background-color': '#fce7f3', 'border-color': '#ec4899'}},
-            {selector: 'node[kind="event"]', style: {'background-color': '#cffafe', 'border-color': '#06b6d4'}},
-            {selector: 'node[kind="job"]', style: {'background-color': '#cffafe', 'border-color': '#06b6d4'}},
-            {selector: 'node[kind="listener"]', style: {'background-color': '#cffafe', 'border-color': '#06b6d4'}},
-            {selector: 'node[kind="command"]', style: {'background-color': '#e0e7ff', 'border-color': '#6366f1'}},
-            {selector: 'node.highlighted', style: {'border-width': 3, 'border-color': '#dd3585', 'z-index': 999}},
-            {selector: 'node.neighbor', style: {'border-width': 2, 'border-color': '#4a7ff5'}},
-            {selector: 'node.dimmed', style: {'opacity': 0.15}},
-            {
-                selector: 'node.module-focus',
-                style: {'border-width': 3, 'border-color': '#4a7ff5', 'z-index': 998}
-            },
-            {
-                selector: 'edge', style: {
-                    'width': 1.5, 'line-color': 'rgba(156,163,175,0.4)',
-                    'target-arrow-color': 'rgba(156,163,175,0.4)',
-                    'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
-                    'curve-style': 'bezier'
-                }
-            },
-            {
-                selector: 'edge[type="route_to_controller"]',
-                style: {'line-color': '#22c55e', 'target-arrow-color': '#22c55e'}
-            },
-            {
-                selector: 'edge[type="call"]',
-                style: {'line-color': 'rgba(59,130,246,0.6)', 'target-arrow-color': 'rgba(59,130,246,0.6)'}
-            },
-            {
-                selector: 'edge[type="use"]',
-                style: {
-                    'line-color': 'rgba(245,158,11,0.5)',
-                    'target-arrow-color': 'rgba(245,158,11,0.5)',
-                    'line-style': 'dashed'
-                }
-            },
-            {
-                selector: 'edge.highlighted', style: {
-                    'width': 2.5,
-                    'line-color': '#4a7ff5',
-                    'target-arrow-color': '#4a7ff5',
-                    'z-index': 999,
-                    'line-style': 'dashed',
-                    'line-dash-pattern': [8, 4],
-                    'line-dash-offset': 0
-                }
-            },
-            {selector: 'edge.dimmed', style: {'opacity': 0.08}},
-        ],
-        layout: {name: 'preset'},
-        minZoom: 0.1, maxZoom: 4
-    });
+        // Kind display order for orphan groups
+        const KIND_ORDER = ['route', 'controller', 'service', 'repository', 'model', 'event', 'job', 'listener', 'command', 'component', 'unknown'];
 
-    // Track edge IDs to avoid duplicates
-    const addedEdgeIds = new Set();
+        let currentLayout = 'dagre';
+        let allNodesData = [];
+        let allEdgesData = [];
+        let sgOriginalElements = null;
+        let sgLastSeed = null;
+        let crossModuleEdges = {};
+        // hiddenModules removed — visibility toggle feature removed
 
-    // Helper to generate unique edge ID
-    function getUniqueEdgeId(e) {
-        const baseId = `${e.source}->${e.target}:${e.type}`;
-        if (!addedEdgeIds.has(baseId)) {
-            addedEdgeIds.add(baseId);
-            return baseId;
-        }
-        // Add index for duplicates
-        let idx = 2;
-        while (addedEdgeIds.has(`${baseId}#${idx}`)) {
-            idx++;
-        }
-        const uniqueId = `${baseId}#${idx}`;
-        addedEdgeIds.add(uniqueId);
-        return uniqueId;
-    }
-
-
-    // ── Layout Configs ──
-    function getLayoutOpts(name) {
-        switch (name) {
-            case 'dagre':
-                return {name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20};
-            case 'cose':
-                return {name: 'cose', idealEdgeLength: 100, nodeRepulsion: 8000, animate: false};
-            case 'lr':
-                return {name: 'dagre', rankDir: 'LR', nodeSep: 50, rankSep: 100, edgeSep: 20};
-            case 'compact':
-                return {
-                    name: 'cose',
-                    idealEdgeLength: 80,
-                    nodeRepulsion: 8000,
-                    gravity: 2.5,
-                    nodeDimensionsIncludeLabels: true,
-                    padding: 40,
-                    animate: true,
-                    animationDuration: 500
-                };
-            default:
-                return {name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100};
-        }
-    }
-
-    function runLayout(name) {
-        currentLayout = name;
-        document.querySelectorAll('.lbtn').forEach(b => b.classList.toggle('active', b.dataset.layout === name));
-        cy.startBatch();
-        cy.layout(getLayoutOpts(name)).run();
-        cy.endBatch();
-    }
-
-    document.querySelectorAll('.lbtn').forEach(btn => {
-        btn.addEventListener('click', () => runLayout(btn.dataset.layout));
-    });
-
-    // ── Theme ──
-    window.toggleTheme = function () {
-        const html = document.documentElement;
-        html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
-    };
-
-    // ── Module Panel ──
-    window.toggleModPanel = function () {
-        const panel = document.getElementById('mod-panel');
-        panel.classList.toggle('open');
-        const cy$ = document.getElementById('cy');
-        cy$.style.left = panel.classList.contains('open') ? '300px' : '0';
-        document.getElementById('legend').style.left = panel.classList.contains('open') ? '316px' : '16px';
-    };
-
-    const modToggleEl = document.getElementById('mod-toggle');
-    if (modToggleEl) {
-        modToggleEl.addEventListener('click', toggleModPanel);
-    }
-
-    // ── LOD (Level of Detail) on Zoom ──
-    let lodTimer = null;
-    cy.on('zoom', function () {
-        clearTimeout(lodTimer);
-        lodTimer = setTimeout(applyLOD, 50);
-    });
-
-    function applyLOD() {
-        const z = cy.zoom();
-        cy.startBatch();
-        if (z < 0.25) {
-            cy.nodes().style('font-size', 0.01);
-            cy.edges().style('font-size', 0.01);
-        } else if (z < 0.5) {
-            cy.nodes().style('font-size', 8);
-            cy.edges().style('font-size', 0.01);
-        } else {
-            cy.nodes().style('font-size', 9);
-            cy.edges().style('font-size', 9);
-        }
-        cy.endBatch();
-    }
-
-    // ── Helper: Get Route Info ──
-    function getRouteInfo(nodeData) {
-        const meta = nodeData.metadata || {};
-        if (meta.route_uri || meta.routeUri) {
-            return {
-                uri: meta.route_uri || meta.routeUri,
-                verb: meta.route_verb || meta.routeVerb || 'GET'
-            };
-        }
-        // Check if this node IS a route
-        if (nodeData.kind === 'route') {
-            const label = nodeData.label || nodeData.name || '';
-            const match = label.match(/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(.+)/i);
-            if (match) return {verb: match[1].toUpperCase(), uri: match[2]};
-            return {verb: 'GET', uri: label};
-        }
-        return null;
-    }
-
-    // ── Helper: Get Trigger (who calls this) ──
-    function getTrigger(nodeId) {
-        const incoming = cy.edges(`[target="${nodeId}"]`);
-        if (incoming.length === 0) return null;
-        const sources = incoming.map(e => {
-            const src = e.source();
-            return {
-                id: src.id(),
-                label: src.data('label') || src.id().split('\\').pop(),
-                kind: src.data('kind'),
-                type: e.data('type')
-            };
+        /* ────────────────────────────────────
+           Cytoscape
+        ──────────────────────────────────── */
+        const cy = cytoscape({
+            container: document.getElementById('cy'),
+            pixelRatio: Math.min(window.devicePixelRatio, 2),
+            hideEdgesOnViewport: true,
+            textureOnViewport: false,
+            motionBlur: false,
+            style: [
+                {
+                    selector: 'node', style: {
+                        'background-color': '#f3f4f6', 'label': 'data(label)', 'color': '#1c2036',
+                        'font-size': '11px', 'font-family': 'system-ui,-apple-system,sans-serif',
+                        'font-weight': '600', 'text-valign': 'center', 'text-halign': 'center',
+                        'border-width': 1, 'border-color': '#9ca3af', 'padding': '10px',
+                        'shape': 'round-rectangle', 'width': '160px', 'height': '55px',
+                        'text-max-width': '150px', 'text-wrap': 'wrap', 'line-height': 1.2,
+                        'text-overflow-wrap': 'anywhere', 'min-zoomed-font-size': 6
+                    }
+                },
+                { selector: 'node[kind="route"]', style: { 'background-color': '#dcfce7', 'border-color': '#22c55e' } },
+                { selector: 'node[kind="controller"]', style: { 'background-color': '#dbeafe', 'border-color': '#3b82f6' } },
+                { selector: 'node[kind="service"]', style: { 'background-color': '#fef3c7', 'border-color': '#f59e0b' } },
+                { selector: 'node[kind="repository"]', style: { 'background-color': '#f3e8ff', 'border-color': '#a855f7' } },
+                { selector: 'node[kind="model"]', style: { 'background-color': '#fce7f3', 'border-color': '#ec4899' } },
+                { selector: 'node[kind="event"]', style: { 'background-color': '#cffafe', 'border-color': '#06b6d4' } },
+                { selector: 'node[kind="job"]', style: { 'background-color': '#cffafe', 'border-color': '#06b6d4' } },
+                { selector: 'node[kind="listener"]', style: { 'background-color': '#cffafe', 'border-color': '#06b6d4' } },
+                { selector: 'node[kind="command"]', style: { 'background-color': '#e0e7ff', 'border-color': '#6366f1' } },
+                { selector: 'node[risk="critical"]', style: { 'border-color': '#ef4444', 'border-width': 2 } },
+                { selector: 'node[risk="high"]', style: { 'border-color': '#f97316', 'border-width': 2 } },
+                { selector: 'node[risk="medium"]', style: { 'border-color': '#eab308', 'border-width': 1.5 } },
+                { selector: 'node.highlighted', style: { 'border-width': 3, 'border-color': '#dd3585', 'z-index': 999 } },
+                { selector: 'node.neighbor', style: { 'border-width': 2, 'border-color': '#4a7ff5' } },
+                { selector: 'node.dimmed', style: { 'opacity': 0.15, 'events': 'no' } },
+                { selector: 'node.module-focus', style: { 'border-width': 3, 'border-color': '#4a7ff5', 'z-index': 998 } },
+                {
+                    selector: 'edge', style: {
+                        'width': 1.5,
+                        'line-color': 'rgba(156,163,175,0.4)',
+                        'target-arrow-color': 'rgba(156,163,175,0.4)',
+                        'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
+                        'curve-style': 'bezier'
+                    }
+                },
+                { selector: 'edge[type="route_to_controller"]', style: { 'line-color': '#22c55e', 'target-arrow-color': '#22c55e' } },
+                { selector: 'edge[type="call"]', style: { 'line-color': 'rgba(59,130,246,0.6)', 'target-arrow-color': 'rgba(59,130,246,0.6)' } },
+                { selector: 'edge[type="use"]', style: { 'line-color': 'rgba(245,158,11,0.5)', 'target-arrow-color': 'rgba(245,158,11,0.5)', 'line-style': 'dashed' } },
+                {
+                    selector: 'edge.highlighted', style: {
+                        'width': 2.5, 'line-color': '#4a7ff5', 'target-arrow-color': '#4a7ff5',
+                        'z-index': 999, 'line-style': 'dashed', 'line-dash-pattern': [8, 4], 'line-dash-offset': 0
+                    }
+                },
+                { selector: 'edge.dimmed', style: { 'opacity': 0.08, 'events': 'no' } },
+            ],
+            layout: { name: 'preset' },
+            minZoom: 0.1, maxZoom: 4
         });
-        return sources;
-    }
 
-    // ── Helper: Get Result (what this triggers) ──
-    function getResult(nodeId) {
-        const outgoing = cy.edges(`[source="${nodeId}"]`);
-        if (outgoing.length === 0) return null;
-        const targets = outgoing.map(e => {
-            const tgt = e.target();
-            return {
-                id: tgt.id(),
-                label: tgt.data('label') || tgt.id().split('\\').pop(),
-                kind: tgt.data('kind'),
-                type: e.data('type')
-            };
-        });
-        return targets;
-    }
+        const addedEdgeIds = new Set();
+        function getUniqueEdgeId(e) {
+            const base = `${e.source}->${e.target}:${e.type}`;
+            if (!addedEdgeIds.has(base)) { addedEdgeIds.add(base); return base; }
+            let i = 2;
+            while (addedEdgeIds.has(`${base}#${i}`)) i++;
+            const uid = `${base}#${i}`;
+            addedEdgeIds.add(uid);
+            return uid;
+        }
 
-    // ── Helper: Build Timeline (DFS) ──
-    function buildTimeline(nodeId, maxDepth = 5) {
-        const timeline = [];
-        const visited = new Set();
+        /* ────────────────────────────────────
+           FIX: Hops selector — scoped, mousedown, direct call
+        ──────────────────────────────────── */
+        function initHopsSelector() {
+            const grp = document.getElementById('hl-hops-grp');
+            if (!grp) return;
+            grp.querySelectorAll('.seg-btn').forEach(btn => {
+                const fresh = btn.cloneNode(true);
+                btn.parentNode.replaceChild(fresh, btn);
+                fresh.addEventListener('mousedown', function (e) {
+                    e.preventDefault(); e.stopPropagation();
+                    if (this.classList.contains('active')) return;
+                    grp.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const inp = document.getElementById('hl-hops');
+                    if (inp) inp.value = this.dataset.hops;
+                    if (window._hlTimeout) clearTimeout(window._hlTimeout);
+                    window._hlTimeout = setTimeout(() => {
+                        const hl = cy.nodes('.highlighted').first();
+                        if (hl.length) applyHighlight(hl);
+                    }, 80);
+                });
+            });
+        }
+        initHopsSelector();
 
-        function dfs(id, depth) {
-            if (depth > maxDepth || visited.has(id)) return;
-            visited.add(id);
+        /* Shared highlight logic */
+        function applyHighlight(node) {
+            stopFlow();
+            cy.nodes().removeClass('highlighted neighbor dimmed module-focus');
+            cy.edges().removeClass('highlighted dimmed');
+            node.addClass('highlighted');
 
-            const outgoing = cy.edges(`[source="${id}"]`);
-            outgoing.forEach(e => {
-                const tgt = e.target();
-                const tgtId = tgt.id();
-                if (!visited.has(tgtId)) {
-                    timeline.push({
-                        id: tgtId,
-                        label: tgt.data('label') || tgtId.split('\\').pop(),
-                        kind: tgt.data('kind'),
-                        type: e.data('type'),
-                        depth: depth
-                    });
-                    dfs(tgtId, depth + 1);
+            const hops = parseInt((document.getElementById('hl-hops') || {}).value || '99', 10);
+            let succ = cy.collection(), pred = cy.collection();
+
+            if (hops >= 99) {
+                succ = node.successors();
+                pred = node.predecessors();
+            } else {
+                let curS = node, curP = node;
+                for (let i = 0; i < hops; i++) {
+                    curS = curS.outgoers().union(curS);
+                    curP = curP.incomers().union(curP);
+                }
+                succ = curS.not(node);
+                pred = curP.not(node);
+            }
+
+            succ.nodes().addClass('neighbor');
+            succ.edges().addClass('highlighted');
+            pred.nodes().addClass('neighbor');
+            pred.edges().addClass('highlighted');
+            cy.elements().not(node).not(succ).not(pred).addClass('dimmed');
+            startFlow();
+            cy.animate({ fit: { eles: node.union(succ).union(pred), padding: 80 }, duration: 600, easing: 'ease-out-quad' });
+        }
+
+        /* ────────────────────────────────────
+           Layout
+        ──────────────────────────────────── */
+        function getLayoutOpts(name) {
+            switch (name) {
+                case 'dagre': return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20 };
+                case 'cose': return { name: 'cose', idealEdgeLength: 100, nodeRepulsion: 45000, gravity: 0.1, numIter: 1000, initialTemp: 200, coolingFactor: 0.99, nodeDimensionsIncludeLabels: true, componentSpacing: 120, animate: true, animationDuration: 500 };
+                case 'lr': return { name: 'dagre', rankDir: 'LR', nodeSep: 50, rankSep: 100, edgeSep: 20 };
+                case 'compact': return { name: 'dagre', rankDir: 'LR', nodeSep: 40, rankSep: 60, edgeSep: 10, padding: 30, animate: true, animationDuration: 500 };
+                default: return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100 };
+            }
+        }
+
+        function runLayout(name) {
+            currentLayout = name;
+            document.querySelectorAll('#layout-grp .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.layout === name));
+
+            // Temporarily hide orphan nodes so dagre only arranges the connected graph.
+            // They will be repositioned manually after layout finishes.
+            cy.nodes().forEach(n => {
+                if (n.data('_orphan') && !n.data('_groupNode')) {
+                    n.style('display', 'none');
                 }
             });
-        }
 
-        dfs(nodeId, 1);
-        return timeline;
-    }
-
-    // ── Helper: Check if Hub Utility ──
-    function isHubUtility(nodeData) {
-        const m = nodeData.metrics || {};
-        const fanIn = m.fan_in || 0;
-        const fanOut = m.fan_out || 0;
-        return fanIn > 5 && fanOut === 0 && nodeData.kind !== 'route';
-    }
-
-    // ── Detail Panel ──
-    function openPanel(nodeData) {
-        const panel = document.getElementById('panel');
-        const badge = document.getElementById('p-badge');
-        const name = document.getElementById('p-name');
-        const pid = document.getElementById('p-id');
-        const body = document.getElementById('pbody');
-        const hubWarn = document.getElementById('hub-warning');
-
-        const kind = nodeData.kind || 'unknown';
-        const kc = KIND_COLORS[kind] || KIND_COLORS.unknown;
-        badge.style.color = kc.bd;
-        badge.style.borderColor = kc.bd;
-        badge.textContent = kind.toUpperCase();
-        name.textContent = nodeData.metadata?.shortLabel || nodeData.name || nodeData.label || nodeData.id;
-        pid.textContent = nodeData.id;
-
-        // Hub Warning
-        if (isHubUtility(nodeData)) {
-            hubWarn.classList.add('show');
-        } else {
-            hubWarn.classList.remove('show');
-        }
-
-        let html = '';
-        const meta = nodeData.metadata || {};
-
-        // ── Flow Box ──
-        const triggers = getTrigger(nodeData.id);
-        const results = getResult(nodeData.id);
-        const routeInfo = getRouteInfo(nodeData);
-
-        html += `<div class="ps"><div class="sl">Flow</div><div class="flow-box">`;
-
-        // Trigger row
-        html += `<div class="flow-row"><span class="flow-ico">⚡</span><div><div class="flow-lbl">Trigger</div><div class="flow-val">`;
-        if (triggers && triggers.length > 0) {
-            const triggerTxt = triggers.slice(0, 3).map(t => `<strong>${t.label}</strong>`).join(', ');
-            html += triggerTxt + (triggers.length > 3 ? ` +${triggers.length - 3} more` : '');
-        } else {
-            html += meta.trigger || '<span style="color:#8d97b4">Entry point</span>';
-        }
-        html += `</div></div></div>`;
-
-        // Arrow
-        html += `<div class="flow-arr">↓</div>`;
-
-        // Action row
-        html += `<div class="flow-row"><span class="flow-ico">⚙</span><div><div class="flow-lbl">Action</div><div class="flow-val">`;
-        html += `<strong>${meta.action || nodeData.name || nodeData.label || '-'}</strong>`;
-        if (meta.domain) html += ` ${meta.domain}`;
-        if (routeInfo) {
-            html += `<div class="uri-pill"><span class="uri-verb">${routeInfo.verb}</span> ${routeInfo.uri}</div>`;
-        }
-        html += `</div></div></div>`;
-
-        // Arrow
-        html += `<div class="flow-arr">↓</div>`;
-
-        // Result row
-        html += `<div class="flow-row"><span class="flow-ico">✓</span><div><div class="flow-lbl">Result</div><div class="flow-val">`;
-        if (results && results.length > 0) {
-            const resultTxt = results.slice(0, 3).map(r => `<strong>${r.label}</strong>`).join(', ');
-            html += 'Triggers: ' + resultTxt + (results.length > 3 ? ` +${results.length - 3} more` : '');
-        } else {
-            html += meta.result || '<span style="color:#8d97b4">Terminal node</span>';
-        }
-        html += `</div></div></div>`;
-
-        html += `</div></div>`;
-
-        // ── Timeline: What triggers next ──
-        const timeline = buildTimeline(nodeData.id);
-        if (timeline.length > 0) {
-            html += `<div class="ps"><div class="sl">What it triggers next →</div><div class="tl">`;
-            timeline.slice(0, 8).forEach((item, idx) => {
-                const dotClass = item.type === 'dispatch' ? 'dispatch' : (item.kind === 'event' ? 'event' : 'call');
-                html += `<div class="tli" onclick="focusNode('${item.id}')">
-                    <span class="tli-dot ${dotClass}">${idx + 1}</span>
-                    <div class="tli-body">
-                        <div class="tli-m">${item.label}</div>
-                        <div class="tli-sub">${item.kind || 'unknown'} • ${item.type || 'call'}</div>
-                    </div>
-                </div>`;
+            const layout = cy.layout(getLayoutOpts(name));
+            layout.on('layoutstop', function () {
+                // Restore orphan visibility, then place them in kind-rows/cols
+                cy.nodes().forEach(n => {
+                    if (n.data('_orphan') && !n.data('_groupNode')) {
+                        n.style('display', 'element');
+                    }
+                });
+                positionOrphanGroups();
             });
-            if (timeline.length > 8) {
-                html += `<div class="tli"><span class="tli-dot" style="background:#8d97b4">+</span><div class="tli-body"><div class="tli-m" style="color:#8d97b4">${timeline.length - 8} more...</div></div></div>`;
+            layout.run();
+        }
+
+        document.querySelectorAll('#layout-grp .seg-btn').forEach(btn => btn.addEventListener('click', () => runLayout(btn.dataset.layout)));
+
+        /* ────────────────────────────────────
+           Theme
+        ──────────────────────────────────── */
+        window.toggleThemePicker = function () {
+            const picker = document.getElementById('theme-picker');
+            picker.classList.toggle('open');
+        };
+
+        window.setTheme = function (theme, el) {
+            document.documentElement.dataset.theme = theme;
+            // Update active state in picker
+            document.querySelectorAll('#theme-picker .theme-option').forEach(o => o.classList.remove('active'));
+            if (el) el.classList.add('active');
+            // Save preference
+            try { localStorage.setItem('lm-theme', theme); } catch (e) { }
+            // Close picker
+            document.getElementById('theme-picker').classList.remove('open');
+            // Update cytoscape bg
+            cy.style().selector('#cy').update();
+            cy.container().style.background = getComputedStyle(document.documentElement).getPropertyValue('--bg-canvas').trim();
+        };
+
+        // Restore saved theme
+        try {
+            const saved = localStorage.getItem('lm-theme');
+            if (saved) {
+                document.documentElement.dataset.theme = saved;
+                document.querySelectorAll('#theme-picker .theme-option').forEach(o => {
+                    o.classList.toggle('active', o.dataset.themeVal === saved);
+                });
             }
-            html += `</div></div>`;
-        }
+        } catch (e) { }
 
-        // Metrics section
-        const m = nodeData.metrics || {};
-        html += `<div class="ps"><div class="sl">Metrics</div><div class="mrow">`;
-        html += mc('Fan In', m.fan_in ?? '-');
-        html += mc('Fan Out', m.fan_out ?? '-');
-        html += mc('Instability', m.instability != null ? m.instability.toFixed(2) : '-');
-        html += mc('Coupling', m.coupling ?? '-');
-        html += mc('Depth', m.depth ?? '∅');
-        html += mc('In°', m.in_degree ?? '-');
-        html += mc('Out°', m.out_degree ?? '-');
-        html += `</div></div>`;
-
-        // Connections (simplified - already shown in timeline)
-        const incoming = cy.edges(`[target="${nodeData.id}"]`);
-        const outgoing = cy.edges(`[source="${nodeData.id}"]`);
-
-        if (incoming.length > 0) {
-            html += `<div class="ps"><div class="sl">Incoming (${incoming.length})</div><div class="conn-list">`;
-            incoming.forEach(e => {
-                const src = e.source();
-                html += `<div class="conn-item" onclick="focusNode('${src.id()}')">`
-                    + `<span class="conn-arr">←</span><span class="conn-name">${src.data('label') || src.id()}</span>`
-                    + `<span style="font-size:8px;color:#8d97b4">${e.data('type')}</span></div>`;
-            });
-            html += `</div></div>`;
-        }
-
-        if (outgoing.length > 0) {
-            html += `<div class="ps"><div class="sl">Outgoing (${outgoing.length})</div><div class="conn-list">`;
-            outgoing.forEach(e => {
-                const tgt = e.target();
-                html += `<div class="conn-item" onclick="focusNode('${tgt.id()}')">`
-                    + `<span class="conn-arr">→</span><span class="conn-name">${tgt.data('label') || tgt.id()}</span>`
-                    + `<span style="font-size:8px;color:#8d97b4">${e.data('type')}</span></div>`;
-            });
-            html += `</div></div>`;
-        }
-
-        body.innerHTML = html;
-        panel.classList.add('open');
-    }
-
-    function mc(label, value) {
-        return `<div class="mc"><div class="mv">${value}</div><div class="ml">${label}</div></div>`;
-    }
-
-    window.closePanel = function () {
-        document.getElementById('panel').classList.remove('open');
-        document.getElementById('hub-warning').classList.remove('show');
-        stopFlow();
-        cy.nodes().removeClass('highlighted neighbor dimmed module-focus');
-        cy.edges().removeClass('highlighted dimmed');
-    };
-
-    window.focusNode = function (id) {
-        const node = cy.getElementById(id);
-        if (node.length) {
-            cy.animate({center: {eles: node}, zoom: 1.5}, {duration: 400});
-            node.emit('tap');
-        }
-    };
-
-    // ── Fit View & Clear ──
-    window.fitView = function () {
-        cy.animate({fit: {padding: 60}}, {duration: 500});
-    };
-
-    window.clearHighlight = function () {
-        closePanel();
-        cy.nodes().removeClass('highlighted neighbor dimmed module-focus');
-        cy.edges().removeClass('highlighted dimmed');
-    };
-
-    // ── Edge Flow Animation ──
-    let raf = null, doff = 0;
-
-    function startFlow() {
-        if (raf) return;
-
-        function tick() {
-            const hlEdges = cy.edges('.highlighted');
-            if (!hlEdges.length) {
-                raf = null;
-                doff = 0;
-                return;
+        // Close picker when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#theme-picker') && !e.target.closest('#theme-btn')) {
+                document.getElementById('theme-picker').classList.remove('open');
             }
-            doff -= 1.5;
-            hlEdges.style('line-dash-offset', doff);
+        });
+
+        /* ────────────────────────────────────
+           Module Panel
+        ──────────────────────────────────── */
+        window.toggleModPanel = function () {
+            const panel = document.getElementById('mod-panel');
+            panel.classList.toggle('open');
+            const isOpen = panel.classList.contains('open');
+            document.getElementById('cy').style.left = isOpen ? '280px' : '0';
+            const leg = document.getElementById('legend');
+            if (leg && !leg._dragged) {
+                leg.style.left = isOpen ? '296px' : '16px';
+                document.getElementById('legend-restore').style.left = isOpen ? '296px' : '16px';
+            }
+        };
+
+        document.getElementById('mod-toggle')?.addEventListener('click', toggleModPanel);
+
+        document.getElementById('mod-filter')?.addEventListener('input', function () {
+            const q = this.value.trim().toLowerCase();
+            document.querySelectorAll('.mod-card').forEach(card => {
+                card.style.display = (!q || (card.dataset.ns || '').toLowerCase().includes(q)) ? '' : 'none';
+            });
+        });
+
+        /* ────────────────────────────────────
+           LOD
+        ──────────────────────────────────── */
+        let lodTimer;
+        cy.on('zoom', () => { clearTimeout(lodTimer); lodTimer = setTimeout(applyLOD, 50); });
+        function applyLOD() {
+            const z = cy.zoom();
+            cy.startBatch();
+            cy.nodes().style('font-size', z < 0.25 ? 0.01 : z < 0.5 ? 8 : 9);
+            cy.edges().style('font-size', z < 0.5 ? 0.01 : 9);
+            cy.endBatch();
+        }
+
+        /* ────────────────────────────────────
+           Helpers
+        ──────────────────────────────────── */
+        function getNamespace(id) {
+            if (!id) return '(root)';
+            let c = id.replace(/^(class|method|route):/, '');
+            if (c.includes('@')) c = c.substring(0, c.lastIndexOf('@'));
+            const p = c.split('\\');
+            return p.length > 1 ? p.slice(0, -1).join('\\') : '(root)';
+        }
+
+        function isHubUtility(d) {
+            const m = d.metrics || {};
+            return (m.fan_in || 0) > 5 && (m.fan_out || 0) === 0 && d.kind !== 'route';
+        }
+
+        function getRouteInfo(d) {
+            const m = d.metadata || {};
+            if (m.route_uri || m.routeUri) return { uri: m.route_uri || m.routeUri, verb: m.route_verb || m.routeVerb || 'GET' };
+            if (d.kind === 'route') {
+                const match = (d.label || d.name || '').match(/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(.+)/i);
+                if (match) return { verb: match[1].toUpperCase(), uri: match[2] };
+                return { verb: 'GET', uri: d.label || '' };
+            }
+            return null;
+        }
+
+        function getTrigger(id) {
+            const inc = cy.edges(`[target="${id}"]`);
+            if (!inc.length) return null;
+            return inc.map(e => { const s = e.source(); return { id: s.id(), label: s.data('label') || s.id().split('\\').pop(), kind: s.data('kind'), type: e.data('type') }; });
+        }
+
+        function getResult(id) {
+            const out = cy.edges(`[source="${id}"]`);
+            if (!out.length) return null;
+            return out.map(e => { const t = e.target(); return { id: t.id(), label: t.data('label') || t.id().split('\\').pop(), kind: t.data('kind'), type: e.data('type') }; });
+        }
+
+        function buildTimeline(nodeId, maxDepth = 5) {
+            const tl = [], vis = new Set();
+            function dfs(id, d) {
+                if (d > maxDepth || vis.has(id)) return;
+                vis.add(id);
+                cy.edges(`[source="${id}"]`).forEach(e => {
+                    const t = e.target(), tid = t.id();
+                    if (!vis.has(tid)) { tl.push({ id: tid, label: t.data('label') || tid.split('\\').pop(), kind: t.data('kind'), type: e.data('type'), depth: d }); dfs(tid, d + 1); }
+                });
+            }
+            dfs(nodeId, 1);
+            return tl;
+        }
+
+        function formatShortLabel(id) {
+            if (!id) return '';
+            let r = '';
+            if (id.includes('@')) {
+                const ai = id.lastIndexOf('@');
+                r = `${id.substring(0, ai).replace(/^(method|class):/, '').split('\\').pop()}\n${id.substring(ai + 1)}`;
+            } else if (id.startsWith('class:')) { r = id.replace('class:', '').split('\\').pop(); }
+            else if (id.startsWith('route:')) { r = id.replace('route:', ''); }
+            else if (id.startsWith('method:')) { r = id.replace('method:', '').split('\\').pop(); }
+            else { r = id.split('\\').pop() || id; }
+            r = r.replace(/^(method|class|route):/, '');
+            if (r.length > 25) r = r.substring(0, 22) + '…';
+            return r;
+        }
+
+        /* ────────────────────────────────────
+           Detail Panel
+        ──────────────────────────────────── */
+        function openPanel(d) {
+            if (!d || d._groupNode) return;
+            const kind = d.kind || 'unknown';
+            const kc = KIND_COLORS[kind] || KIND_COLORS.unknown;
+
+            document.getElementById('p-badge').style.cssText = `color:${kc.bd};border-color:${kc.bd}`;
+            document.getElementById('p-badge').textContent = kind.toUpperCase();
+            // Risk badge
+            const riskColors = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#22c55e', healthy: '' };
+            const riskBadge = document.getElementById('p-risk-badge');
+            if (riskBadge) {
+                const risk = d.risk;
+                if (risk && risk !== 'healthy' && riskColors[risk]) {
+                    riskBadge.textContent = risk.toUpperCase();
+                    riskBadge.style.cssText = `color:${riskColors[risk]};border-color:${riskColors[risk]};background:${riskColors[risk]}18;display:inline-flex`;
+                } else {
+                    riskBadge.style.display = 'none';
+                }
+            }
+            document.getElementById('p-name').textContent = d.metadata?.shortLabel || d.name || d.label || d.id;
+            document.getElementById('p-id').textContent = d.id;
+            document.getElementById('hub-warning').classList.toggle('show', isHubUtility(d));
+
+            const meta = d.metadata || {};
+            const triggers = getTrigger(d.id);
+            const results = getResult(d.id);
+            const routeInfo = getRouteInfo(d);
+            let h = '';
+
+            h += `<div class="ps"><div class="sl">Flow</div><div class="flow-box">`;
+            h += `<div class="flow-row"><span class="flow-ico">⚡</span><div><div class="flow-lbl">Trigger</div><div class="flow-val">`;
+            h += triggers?.length ? triggers.slice(0, 3).map(t => `<strong>${t.label}</strong>`).join(', ') + (triggers.length > 3 ? ` +${triggers.length - 3} more` : '') : (meta.trigger || '<span style="color:#8d97b4">Entry point</span>');
+            h += `</div></div></div><div class="flow-arr">↓</div>`;
+            h += `<div class="flow-row"><span class="flow-ico">⚙</span><div><div class="flow-lbl">Action</div><div class="flow-val"><strong>${meta.action || d.name || d.label || '–'}</strong>`;
+            if (meta.domain) h += ` ${meta.domain}`;
+            if (routeInfo) h += `<div class="uri-pill"><strong>${routeInfo.verb}</strong> ${routeInfo.uri}</div>`;
+            h += `</div></div></div><div class="flow-arr">↓</div>`;
+            h += `<div class="flow-row"><span class="flow-ico">✓</span><div><div class="flow-lbl">Result</div><div class="flow-val">`;
+            h += results?.length ? 'Triggers: ' + results.slice(0, 3).map(r => `<strong>${r.label}</strong>`).join(', ') + (results.length > 3 ? ` +${results.length - 3} more` : '') : (meta.result || '<span style="color:#8d97b4">Terminal node</span>');
+            h += `</div></div></div></div></div>`;
+
+            const tl = buildTimeline(d.id);
+            if (tl.length) {
+                h += `<div class="ps"><div class="sl">Triggers next →</div><div class="tl">`;
+                tl.slice(0, 8).forEach((item, i) => {
+                    h += `<div class="tli" onclick="focusNode('${item.id}')"><span class="tli-dot">${i + 1}</span><div class="tli-body"><div class="tli-m">${item.label}</div><div class="tli-sub">${item.kind || '?'} · ${item.type || 'call'}</div></div></div>`;
+                });
+                if (tl.length > 8) h += `<div class="tli"><span class="tli-dot" style="background:var(--bg-elevated)">+</span><div class="tli-body"><div class="tli-m" style="color:var(--tx3)">${tl.length - 8} more…</div></div></div>`;
+                h += `</div></div>`;
+            }
+
+            const m = d.metrics || {};
+            h += `<div class="ps"><div class="sl">Metrics</div><div class="mrow">`;
+            [['Fan In', m.fan_in ?? '–'], ['Fan Out', m.fan_out ?? '–'], ['Instability', m.instability != null ? m.instability.toFixed(2) : '–'], ['Coupling', m.coupling ?? '–'], ['Depth', m.depth ?? '∅'], ['In°', m.in_degree ?? '–'], ['Out°', m.out_degree ?? '–']].forEach(([l, v]) => { h += `<div class="mc"><div class="mv">${v}</div><div class="ml">${l}</div></div>`; });
+            h += `</div></div>`;
+
+            const inc = cy.edges(`[target="${d.id}"]`), out = cy.edges(`[source="${d.id}"]`);
+            if (inc.length) {
+                h += `<div class="ps"><div class="sl">Incoming (${inc.length})</div><div class="conn-list">`;
+                inc.forEach(e => { const s = e.source(); h += `<div class="conn-item" onclick="focusNode('${s.id()}')"><span class="conn-arr">←</span><span class="conn-name">${s.data('label') || s.id()}</span><span style="font-size:8px;color:var(--tx3);flex-shrink:0">${e.data('type')}</span></div>`; });
+                h += `</div></div>`;
+            }
+            if (out.length) {
+                h += `<div class="ps"><div class="sl">Outgoing (${out.length})</div><div class="conn-list">`;
+                out.forEach(e => { const t = e.target(); h += `<div class="conn-item" onclick="focusNode('${t.id()}')"><span class="conn-arr">→</span><span class="conn-name">${t.data('label') || t.id()}</span><span style="font-size:8px;color:var(--tx3);flex-shrink:0">${e.data('type')}</span></div>`; });
+                h += `</div></div>`;
+            }
+
+            // SubGraph action button at bottom of panel
+            // Pass node id via data attr — window.enterSubGraph handles cy lookup
+            h += `<div class="ps panel-actions">
+            <button class="panel-action-btn panel-action-sg" data-node-id="${d.id}" onclick="window.enterSubGraph(this.dataset.nodeId)" title="Explore connected subgraph (S)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13">
+                    <circle cx="12" cy="12" r="3"/>
+                    <circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/>
+                    <circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/>
+                    <line x1="5" y1="6" x2="10" y2="11"/><line x1="19" y1="6" x2="14" y2="11"/>
+                    <line x1="5" y1="18" x2="10" y2="13"/><line x1="19" y1="18" x2="14" y2="13"/>
+                </svg>
+                Explore SubGraph
+            </button>
+        </div>`;
+
+            document.getElementById('pbody').innerHTML = h;
+            document.getElementById('panel').classList.add('open');
+        }
+
+        window.closePanel = function () {
+            document.getElementById('panel').classList.remove('open');
+            document.getElementById('hub-warning').classList.remove('show');
+            stopFlow();
+            cy.nodes().removeClass('highlighted neighbor dimmed module-focus');
+            cy.edges().removeClass('highlighted dimmed');
+        };
+
+        window.focusNode = function (id) {
+            const node = cy.getElementById(id);
+            if (!node.length || node.data('_groupNode')) return;
+            cy.animate({ center: { eles: node }, zoom: 1.5 }, { duration: 300 });
+            // Directly highlight + open panel without emitting tap (avoids recursion)
+            applyHighlight(node);
+            openPanel(node.data());
+        };
+
+        window.fitView = function () { cy.animate({ fit: { padding: 60 } }, { duration: 500 }); };
+        window.clearHighlight = function () { closePanel(); cy.nodes().removeClass('highlighted neighbor dimmed module-focus'); cy.edges().removeClass('highlighted dimmed'); };
+
+        /* ────────────────────────────────────
+           Edge flow animation
+        ──────────────────────────────────── */
+        let raf = null, doff = 0;
+        function startFlow() {
+            if (raf) return;
+            function tick() {
+                const hl = cy.edges('.highlighted');
+                if (!hl.length) { raf = null; doff = 0; return; }
+                doff -= 1.5;
+                hl.style('line-dash-offset', doff);
+                raf = requestAnimationFrame(tick);
+            }
             raf = requestAnimationFrame(tick);
         }
+        function stopFlow() { if (raf) { cancelAnimationFrame(raf); raf = null; doff = 0; } }
 
-        raf = requestAnimationFrame(tick);
-    }
-
-    function stopFlow() {
-        if (raf) {
-            cancelAnimationFrame(raf);
-            raf = null;
-            doff = 0;
-        }
-    }
-
-    // ── Node Click ──
-    cy.on('tap', 'node', function (evt) {
-        const node = evt.target;
-        stopFlow();
-        cy.nodes().removeClass('highlighted neighbor dimmed module-focus');
-        cy.edges().removeClass('highlighted dimmed');
-
-        node.addClass('highlighted');
-        const successors = node.successors();
-        const predecessors = node.predecessors();
-
-        successors.nodes().addClass('neighbor');
-        successors.edges().addClass('highlighted');
-        predecessors.nodes().addClass('neighbor');
-        predecessors.edges().addClass('highlighted');
-
-        // Dim non-neighbors
-        cy.elements().not(node).not(successors).not(predecessors).addClass('dimmed');
-
-        startFlow();
-
-        openPanel(node.data());
-
-        // Animate viewport to fit the highlighted flow
-        cy.animate({
-            fit: { eles: node.add(successors).add(predecessors), padding: 80 },
-            duration: 500
+        /* ────────────────────────────────────
+           Node click
+        ──────────────────────────────────── */
+        cy.on('tap', 'node', function (evt) {
+            const node = evt.target;
+            if (node.data('_groupNode')) return;
+            applyHighlight(node);
+            openPanel(node.data());
         });
 
-        // Fetch subgraph for deeper connections
-        fetch(window.logicMapConfig.subgraphUrl + '/' + encodeURIComponent(node.id()))
-            .then(r => r.json())
-            .then(json => {
-                if (json.ok && json.data) {
-                    cy.startBatch();
-                    let added = false;
-                    json.data.nodes.forEach(n => {
-                        if (!cy.getElementById(n.id).length) {
-                            const shortLabel = formatShortLabel(n.name || n.id);
-                            cy.add({data: {...n, label: shortLabel, fullLabel: n.name || n.id}});
-                            added = true;
-                        }
-                    });
-                    json.data.edges.forEach(e => {
-                        const baseEid = `${e.source}->${e.target}:${e.type}`;
-                        // Check if this edge already exists (same source/target/type)
-                        if (!cy.getElementById(baseEid).length && !addedEdgeIds.has(baseEid)) {
-                            const eid = getUniqueEdgeId(e);
-                            cy.add({data: {...e, id: eid}});
-                            added = true;
-                        }
-                    });
-                    cy.endBatch();
-                    if (added) {
-                        runLayout(currentLayout);
-                        // Re-highlight
-                        setTimeout(() => {
-                            const n2 = cy.getElementById(node.id());
-                            openPanel(n2.data());
-                        }, 300);
-                    }
-                }
+        cy.on('cxttap', 'node', function (evt) {
+            if (evt.target.data('_groupNode')) return;
+            evt.preventDefault(); enterSubGraph(evt.target);
+        });
+
+        cy.on('tap', evt => { if (evt.target === cy) closePanel(); });
+
+        /* ────────────────────────────────────
+           Tooltip
+        ──────────────────────────────────── */
+        const tip = document.getElementById('tip');
+        cy.on('mouseover', 'node', function (evt) {
+            const d = evt.target.data();
+            if (d._groupNode) return;
+            tip.innerHTML = `<strong>${d.label}</strong><br><span style="color:var(--tx3);font-size:9px">${d.fullLabel || d.label || d.id}</span><br><span style="color:var(--tx3)">${d.kind}</span>`;
+            tip.classList.add('show');
+        });
+        cy.on('mouseout', 'node', () => tip.classList.remove('show'));
+        cy.on('mousemove', 'node', evt => {
+            const p = evt.renderedPosition || evt.position;
+            tip.style.left = (p.x + 15) + 'px'; tip.style.top = (p.y + 60) + 'px';
+        });
+
+        /* ────────────────────────────────────
+           Search
+        ──────────────────────────────────── */
+        window.doSearch = function () {
+            const q = document.getElementById('si').value.trim().toLowerCase();
+            if (!q) { cy.nodes().removeClass('dimmed highlighted'); return; }
+            cy.nodes().forEach(node => {
+                if (node.data('_groupNode')) return;
+                const m = (node.data('label') || '').toLowerCase().includes(q) || node.id().toLowerCase().includes(q);
+                node.toggleClass('dimmed', !m); node.toggleClass('highlighted', m);
             });
-    });
+            const matches = cy.nodes('.highlighted');
+            if (matches.length === 1) matches[0].emit('tap');
+            else if (matches.length > 0) cy.fit(matches, 50);
+        };
 
-    // ── Right-click for SubGraph ──
-    cy.on('cxttap', 'node', function (evt) {
-        evt.preventDefault();
-        const node = evt.target;
-        enterSubGraph(node);
-    });
-
-    // Tap canvas to clear
-    cy.on('tap', function (evt) {
-        if (evt.target === cy) closePanel();
-    });
-
-    // ── Tooltip ──
-    const tip = document.getElementById('tip');
-    cy.on('mouseover', 'node', function (evt) {
-        const d = evt.target.data();
-        const fullName = d.fullLabel || d.label || d.id;
-        tip.innerHTML = `<strong>${d.label}</strong><br><span style="color:#7380a0;font-size:9px">${fullName}</span><br><span style="color:#7380a0">${d.kind}</span>`;
-        tip.classList.add('show');
-    });
-    cy.on('mouseout', 'node', () => tip.classList.remove('show'));
-    cy.on('mousemove', 'node', function (evt) {
-        const p = evt.renderedPosition || evt.position;
-        tip.style.left = (p.x + 15) + 'px';
-        tip.style.top = (p.y + 60) + 'px';
-    });
-
-    // ── Search ──
-    window.doSearch = function () {
-        const q = document.getElementById('si').value.trim().toLowerCase();
-        if (!q) {
-            cy.nodes().removeClass('dimmed highlighted');
-            return;
-        }
-        cy.nodes().forEach(node => {
-            const match = (node.data('label') || '').toLowerCase().includes(q) || node.id().toLowerCase().includes(q);
-            node.toggleClass('dimmed', !match);
-            node.toggleClass('highlighted', match);
+        document.getElementById('si').addEventListener('keyup', function (e) {
+            if (e.key === 'Enter') doSearch();
+            if (e.key === 'Escape') { this.value = ''; cy.nodes().removeClass('dimmed highlighted'); }
         });
-        const matches = cy.nodes('.highlighted');
-        if (matches.length === 1) matches[0].emit('tap');
-        else if (matches.length > 0) cy.fit(matches, 50);
-    };
 
-    document.getElementById('si').addEventListener('keyup', function (e) {
-        if (e.key === 'Enter') doSearch();
-        if (e.key === 'Escape') {
-            this.value = '';
-            cy.nodes().removeClass('dimmed highlighted');
-        }
-    });
-
-    // ── Keyboard Shortcuts ──
-    document.addEventListener('keydown', function (e) {
-        // Skip if typing in input
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-        try {
-            // Ctrl+K or Cmd+K - Focus search
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                e.preventDefault();
-                document.getElementById('si')?.focus();
-                return;
-            }
-
-            // Escape - Close panel / Exit SubGraph
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                if (typeof closePanel === 'function') closePanel();
-                if (sgMode && typeof exitSubGraph === 'function') exitSubGraph();
-                return;
-            }
-
-            // Avoid shortcuts if any modifier except Shift is pressed (handled individually below)
-            if (e.altKey) return;
-            // For Mac, we want to allow Cmd for Ctrl-equivalent but not for single-letter triggers
-            if (e.metaKey && e.key !== 'k') return;
-            // For Windows/Linux, we want to allow Ctrl only for K
-            if (e.ctrlKey && e.key !== 'k') return;
-
-            // M - Toggle module panel
-            if (e.key.toLowerCase() === 'm') {
-                e.preventDefault();
-                if (typeof toggleModPanel === 'function') toggleModPanel();
-                return;
-            }
-
-            // T - Toggle theme
-            if (e.key.toLowerCase() === 't') {
-                e.preventDefault();
-                if (typeof toggleTheme === 'function') toggleTheme();
-                return;
-            }
-
-            // F - Fit view
-            if (e.key.toLowerCase() === 'f') {
-                e.preventDefault();
-                if (typeof fitView === 'function') fitView();
-                return;
-            }
-
-            // 1-4 - Layouts
-            if (e.key === '1') {
-                e.preventDefault();
-                runLayout('dagre');
-                return;
-            }
-            if (e.key === '2') {
-                e.preventDefault();
-                runLayout('cose');
-                return;
-            }
-            if (e.key === '3') {
-                e.preventDefault();
-                runLayout('lr');
-                return;
-            }
-            if (e.key === '4') {
-                e.preventDefault();
-                runLayout('compact');
-                return;
-            }
-
-            // ? - Help modal
-            if (e.key === '?') {
-                e.preventDefault();
-                const help = document.getElementById('kb-help');
-                if (help) {
-                    help.style.display = help.style.display === 'flex' ? 'none' : 'flex';
+        /* ────────────────────────────────────
+           Keyboard shortcuts
+        ──────────────────────────────────── */
+        document.addEventListener('keydown', function (e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            try {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('si')?.focus(); return; }
+                if (e.key === 'Escape') { e.preventDefault(); closePanel(); if (sgMode) exitSubGraph(); return; }
+                if (e.altKey || (e.metaKey && e.key !== 'k') || (e.ctrlKey && e.key !== 'k')) return;
+                if (e.key.toLowerCase() === 'm') { e.preventDefault(); toggleModPanel(); return; }
+                if (e.key.toLowerCase() === 't') { e.preventDefault(); toggleThemePicker(); return; }
+                if (e.key.toLowerCase() === 'f') { e.preventDefault(); fitView(); return; }
+                if (e.key === '1') { e.preventDefault(); runLayout('dagre'); return; }
+                if (e.key === '2') { e.preventDefault(); runLayout('cose'); return; }
+                if (e.key === '3') { e.preventDefault(); runLayout('lr'); return; }
+                if (e.key === '4') { e.preventDefault(); runLayout('compact'); return; }
+                if (e.key === '?') { e.preventDefault(); const h = document.getElementById('kb-help'); if (h) h.style.display = h.style.display === 'flex' ? 'none' : 'flex'; return; }
+                if (e.key.toLowerCase() === 's') {
+                    e.preventDefault();
+                    const t = cy.nodes(':selected').length ? cy.nodes(':selected') : (cy.nodes('.highlighted').length ? cy.nodes('.highlighted') : null);
+                    if (t) enterSubGraph(t);
                 }
-                return;
-            }
-
-            // S - SubGraph Toggle
-            if (e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                const selected = cy.nodes(':selected');
-                const highlighted = cy.nodes('.highlighted');
-                const target = selected.length ? selected : (highlighted.length ? highlighted : null);
-                if (target && typeof enterSubGraph === 'function') {
-                    enterSubGraph(target);
-                }
-                return;
-            }
-        } catch (err) {
-            console.error('[LogicMap] Keyboard shortcut error:', err);
-        }
-    });
-
-    // Close help modal on click outside
-    document.getElementById('kb-help')?.addEventListener('click', function (e) {
-        if (e.target === this) this.style.display = 'none';
-    });
-
-    // ── SubGraph Mode ──
-    let sgMode = false;
-
-    function enterSubGraph(seedNodes, depth) {
-        depth = depth || parseInt(document.getElementById('sg-hops').value) || 2;
-        sgLastSeed = seedNodes;
-
-        // Store original elements if first entry
-        if (!sgMode) {
-            sgOriginalElements = cy.elements().jsons();
-        }
-
-        sgMode = true;
-
-        // Collect neighborhood up to depth hops
-        let neighborhood = seedNodes;
-        for (let i = 0; i < depth; i++) {
-            neighborhood = neighborhood.union(neighborhood.neighborhood());
-        }
-
-        cy.startBatch();
-        const toRemove = cy.elements().not(neighborhood);
-        toRemove.remove();
-        cy.endBatch();
-
-        runLayout(currentLayout);
-        document.body.classList.add('subgraph-mode');
-        document.getElementById('sg-controls').classList.add('show');
-        showSgBanner();
-    }
-
-    window.rerunSubGraph = function () {
-        if (!sgMode || !sgLastSeed) return;
-
-        // Restore then re-enter
-        cy.startBatch();
-        cy.elements().remove();
-        sgOriginalElements.forEach(el => cy.add(el));
-        cy.endBatch();
-
-        // Re-select seed
-        const seedId = sgLastSeed.id ? sgLastSeed.id() : sgLastSeed[0]?.id();
-        const newSeed = cy.getElementById(seedId);
-        if (newSeed.length) {
-            enterSubGraph(newSeed);
-        }
-    };
-
-    // Slider change handler
-    const sgHopsEl = document.getElementById('sg-hops');
-    if (sgHopsEl) {
-        sgHopsEl.addEventListener('input', function () {
-            const valEl = document.getElementById('sg-hops-val');
-            if (valEl) valEl.textContent = this.value;
+            } catch (err) { console.error('[LogicMap] shortcut error:', err); }
         });
-    }
 
-    function showSgBanner() {
-        let banner = document.getElementById('sg-banner');
-        if (!banner) {
-            banner = document.createElement('div');
-            banner.id = 'sg-banner';
-            banner.style = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#e5b535;color:#000;padding:8px 16px;border-radius:20px;font-weight:bold;z-index:1000;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3)';
-            banner.innerHTML = `<span>SUBGRAPH MODE</span><button onclick="exitSubGraph()" style="background:#000;color:#fff;border:none;padding:4px 12px;border-radius:12px;cursor:pointer;font-size:11px">EXIT (ESC)</button>`;
-            document.body.appendChild(banner);
+        document.getElementById('kb-help')?.addEventListener('click', function (e) { if (e.target === this) this.style.display = 'none'; });
+
+        /* ────────────────────────────────────
+           SubGraph Mode
+        ──────────────────────────────────── */
+        let sgMode = false;
+
+        /* ── SubGraph Mode ─────────────────────────────────────
+           sgLastSeed: always stores a STRING node ID (not a cy collection)
+           so it survives elements.remove() / restore cycles.
+        ──────────────────────────────────── */
+
+        function _sgShowUI(seedLabel) {
+            document.body.classList.add('subgraph-mode');
+            // Show floating control bar
+            const bar = document.getElementById('sg-controls-bar');
+            if (bar) bar.classList.add('show');
+            // Show topbar badge
+            const badge = document.getElementById('sg-badge');
+            if (badge) badge.style.display = 'flex';
         }
-        banner.style.display = 'flex';
-    }
 
-    window.exitSubGraph = function () {
-        if (!sgMode) return;
-        sgMode = false;
-        document.getElementById('sg-banner').style.display = 'none';
-        document.getElementById('sg-controls').classList.remove('show');
-        document.body.classList.remove('subgraph-mode');
+        function _sgHideUI() {
+            document.body.classList.remove('subgraph-mode');
+            const bar = document.getElementById('sg-controls-bar');
+            if (bar) bar.classList.remove('show');
+            const badge = document.getElementById('sg-badge');
+            if (badge) badge.style.display = 'none';
+        }
 
-        // Restore original elements without reload
-        if (sgOriginalElements) {
+        function _getDepth() {
+            const raw = document.getElementById('sg-hops')?.value;
+            const val = parseInt(raw) || 2;
+            return val >= 99 ? 99 : Math.max(1, val);
+        }
+
+        // Core fetch-and-render logic, always takes string seedId
+        function _loadSubgraph(seedId) {
+            if (!seedId) return;
+            const depth = _getDepth();
+
+            // Dim everything while loading
             cy.startBatch();
-            cy.elements().remove();
-            sgOriginalElements.forEach(el => cy.add(el));
+            cy.elements().addClass('dimmed');
             cy.endBatch();
-            runLayout(currentLayout);
-            sgOriginalElements = null;
+
+            // depth 99 = "All": send large value to BE, local fallback uses 10 hops
+            const apiDepth = depth >= 99 ? 10 : depth;
+            fetch(`${window.logicMapConfig.subgraphUrl}/${encodeURIComponent(seedId)}?depth=${apiDepth}`)
+                .then(r => r.json())
+                .then(json => {
+                    // Restore original graph
+                    cy.startBatch();
+                    cy.elements().remove();
+                    sgOriginalElements.forEach(el => cy.add(el));
+
+                    if (json.ok && json.data && json.data.nodes.length) {
+                        // Merge extra nodes/edges returned by BE (beyond overview)
+                        json.data.nodes.forEach(n => {
+                            if (!cy.getElementById(n.id).length) {
+                                cy.add({ data: { ...n, label: formatShortLabel(n.name || n.id), fullLabel: n.name || n.id, _ns: getNamespace(n.id) } });
+                            }
+                        });
+                        json.data.edges.forEach(e => {
+                            const bid = `${e.source}->${e.target}:${e.type}`;
+                            if (!cy.getElementById(bid).length && !addedEdgeIds.has(bid)) {
+                                cy.add({ data: { ...e, id: getUniqueEdgeId(e) } });
+                            }
+                        });
+
+                        // Keep only BE-returned nodes + seed; strip orphans
+                        const keepIds = new Set(json.data.nodes.map(n => n.id));
+                        keepIds.add(seedId);
+                        cy.nodes().forEach(n => {
+                            if (n.data('_groupNode')) return;
+                            // Remove if not in subgraph OR if it's an orphan (no edges)
+                            if (!keepIds.has(n.id()) || n.data('_orphan')) n.remove();
+                        });
+                        // Remove dangling edges
+                        cy.edges().forEach(e => {
+                            if (!e.source().length || !e.target().length) e.remove();
+                        });
+                    } else {
+                        // Fallback: local BFS neighbourhood (no orphans)
+                        const seed = cy.getElementById(seedId);
+                        if (seed.length) {
+                            let nb = seed;
+                            for (let i = 0; i < depth; i++) nb = nb.union(nb.neighborhood());
+                            // Remove everything not in neighbourhood AND all orphan nodes
+                            cy.nodes().forEach(n => {
+                                if (n.data('_groupNode')) return;
+                                if (!nb.has(n) || n.data('_orphan')) n.remove();
+                            });
+                            cy.edges().forEach(e => {
+                                if (!e.source().length || !e.target().length) e.remove();
+                            });
+                        }
+                    }
+                    cy.endBatch();
+                    separateOrphanNodes();
+                    runLayout(currentLayout);
+                    // After layout: re-highlight the seed and open panel
+                    setTimeout(() => {
+                        const seedNode = cy.getElementById(seedId);
+                        if (seedNode.length) {
+                            applyHighlight(seedNode);
+                            openPanel(seedNode.data());
+                        }
+                    }, 400);
+                })
+                .catch(() => {
+                    // Network error: restore + local BFS
+                    cy.startBatch();
+                    cy.elements().remove();
+                    sgOriginalElements.forEach(el => cy.add(el));
+                    const seed = cy.getElementById(seedId);
+                    if (seed.length) {
+                        let nb = seed;
+                        for (let i = 0; i < depth; i++) nb = nb.union(nb.neighborhood());
+                        cy.nodes().forEach(n => {
+                            if (n.data('_groupNode')) return;
+                            if (!nb.has(n) || n.data('_orphan')) n.remove();
+                        });
+                        cy.edges().forEach(e => {
+                            if (!e.source().length || !e.target().length) e.remove();
+                        });
+                    }
+                    cy.endBatch();
+                    separateOrphanNodes();
+                    runLayout(currentLayout);
+                    setTimeout(() => {
+                        const seedNode = cy.getElementById(seedId);
+                        if (seedNode.length) { applyHighlight(seedNode); openPanel(seedNode.data()); }
+                    }, 400);
+                });
         }
-        sgLastSeed = null;
-    };
 
-    // ── Compute Cross-Module Edges ──
-    function computeCrossModuleEdges(nodes, edges) {
-        crossModuleEdges = {};
-        const nodeModules = {};
-
-        // Build module map
-        nodes.forEach(n => {
-            const parts = (n.id || '').split('\\');
-            nodeModules[n.id] = parts.length > 1 ? parts.slice(0, -1).join('\\') : '(root)';
-        });
-
-        // Count cross-module edges
-        edges.forEach(e => {
-            const srcMod = nodeModules[e.source];
-            const tgtMod = nodeModules[e.target];
-            if (srcMod && tgtMod && srcMod !== tgtMod) {
-                const key = `${srcMod}>>>${tgtMod}`;
-                crossModuleEdges[key] = (crossModuleEdges[key] || 0) + 1;
+        window.enterSubGraph = function enterSubGraph(seedNodes) {
+            // Extract string ID immediately — cy collections become invalid after remove()
+            let seedId;
+            if (typeof seedNodes === 'string') {
+                seedId = seedNodes;
+            } else if (seedNodes && seedNodes.id && typeof seedNodes.id === 'function') {
+                seedId = seedNodes.id();                 // single cy node
+            } else if (seedNodes && seedNodes[0]) {
+                seedId = seedNodes[0].id();              // cy collection
             }
-        });
+            if (!seedId) return;
 
-        return crossModuleEdges;
-    }
+            // Store as string
+            sgLastSeed = seedId;
 
-    // ── Focus Module ──
-    window.focusModule = function (namespace) {
-        cy.nodes().removeClass('module-focus dimmed');
-        cy.edges().removeClass('dimmed');
-
-        cy.nodes().forEach(node => {
-            const nodeNs = node.id().split('\\').slice(0, -1).join('\\') || '(root)';
-            if (nodeNs === namespace) {
-                node.addClass('module-focus');
-            } else {
-                node.addClass('dimmed');
+            if (!sgMode) {
+                sgOriginalElements = cy.elements().jsons();
             }
-        });
+            sgMode = true;
 
-        cy.edges().forEach(edge => {
-            const src = edge.source();
-            const tgt = edge.target();
-            if (!src.hasClass('module-focus') && !tgt.hasClass('module-focus')) {
-                edge.addClass('dimmed');
+            const shortLabel = cy.getElementById(seedId)?.data('label') || seedId.split('\\').pop() || seedId;
+            _sgShowUI(shortLabel);
+            _loadSubgraph(seedId);
+        }
+
+        window.rerunSubGraph = function () {
+            if (!sgMode || !sgLastSeed) return;
+            // sgLastSeed is always a string ID here
+            _loadSubgraph(sgLastSeed);
+        };
+
+        // Depth seg-group buttons
+        function initDepthSelector() {
+            const grp = document.getElementById('sg-depth-grp');
+            const inp = document.getElementById('sg-hops');
+            if (!grp || !inp) return;
+            grp.querySelectorAll('.sgc-depth-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    if (this.classList.contains('active')) return;
+                    grp.querySelectorAll('.sgc-depth-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    inp.value = this.dataset.depth;
+                    // Auto re-run if already in subgraph mode
+                    if (sgMode && sgLastSeed) _loadSubgraph(sgLastSeed);
+                });
+            });
+        }
+        initDepthSelector();
+
+        window.exitSubGraph = function () {
+            if (!sgMode) return;
+            sgMode = false;
+            sgLastSeed = null;
+            _sgHideUI();
+
+            if (sgOriginalElements) {
+                cy.startBatch();
+                cy.elements().remove();
+                sgOriginalElements.forEach(el => cy.add(el));
+                cy.endBatch();
+                sgOriginalElements = null;
+                separateOrphanNodes();
+                runLayout(currentLayout);
             }
-        });
-    };
+        };
 
-    // ── Build Module Explorer ──
-    function buildModuleExplorer(nodes, edges) {
-        const groups = {};
-        nodes.forEach(n => {
-            const parts = (n.id || '').split('\\');
-            const ns = parts.length > 1 ? parts.slice(0, -1).join('\\') : '(root)';
-            if (!groups[ns]) groups[ns] = [];
-            groups[ns].push(n);
-        });
+        /* ────────────────────────────────────
+           Orphan nodes — pure positional layout, no compound nodes.
+    
+           Layout model:
+             Flow ↓ / Force / Compact  →  each kind = 1 horizontal ROW
+                                           kinds stacked below connected graph
+    
+             LR →                       →  each kind = 1 vertical COLUMN
+                                           kinds placed side-by-side to the right
+    
+           No wrapper/border box drawn. Nodes just get plain positions.
+        ──────────────────────────────────── */
 
-        // Compute cross-module connections
-        computeCrossModuleEdges(nodes, edges);
-
-        const body = document.getElementById('mod-body');
-        const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
-
-        body.innerHTML = sorted.map(([ns, items]) => {
-            const color = KIND_COLORS[items[0]?.kind] || KIND_COLORS.unknown;
-            const pills = items.map(n =>
-                `<span class="mod-pill" onclick="focusNode('${n.id}')" title="${n.id}">${n.name || n.id.split('\\').pop()}</span>`
-            ).join('');
-
-            // Build connections HTML
-            const outgoing = [];
-            const incoming = [];
-            Object.entries(crossModuleEdges).forEach(([key, count]) => {
-                const [from, to] = key.split('>>>');
-                if (from === ns) outgoing.push({mod: to.split('\\').pop(), count});
-                if (to === ns) incoming.push({mod: from.split('\\').pop(), count});
+        // Tag every orphan node with _orphan:true so we can find them later.
+        // Called once after data load, and again after subgraph lazy-loads.
+        function separateOrphanNodes() {
+            // Build set of node IDs that appear in any edge (raw + cy)
+            const nodesWithEdges = new Set();
+            allEdgesData.forEach(e => {
+                nodesWithEdges.add(e.source);
+                nodesWithEdges.add(e.target);
+            });
+            cy.edges().forEach(e => {
+                nodesWithEdges.add(e.source().id());
+                nodesWithEdges.add(e.target().id());
             });
 
-            let connHtml = '';
-            if (outgoing.length || incoming.length) {
-                connHtml = `<div class="mod-conn open">`;
-                outgoing.slice(0, 3).forEach(c => {
-                    connHtml += `<div class="mod-conn-row"><span class="conn-arr">→</span><span>${c.mod}</span><span class="mod-conn-cnt">${c.count}</span></div>`;
-                });
-                incoming.slice(0, 3).forEach(c => {
-                    connHtml += `<div class="mod-conn-row"><span class="conn-arr">←</span><span>${c.mod}</span><span class="mod-conn-cnt">${c.count}</span></div>`;
-                });
-                connHtml += `</div>`;
-            }
+            // Tag / untag
+            cy.nodes().forEach(n => {
+                if (n.data('_groupNode')) return;
+                const isOrphan = !nodesWithEdges.has(n.id());
+                n.data('_orphan', isOrphan ? true : null);
+            });
+        }
 
-            return `<div class="mod-card">
-                <div class="mod-hdr-row" onclick="focusModule('${ns}'); this.nextElementSibling.classList.toggle('open')">
+        // Called after every layout run. Positions orphan nodes in kind-rows/cols.
+        function positionOrphanGroups() {
+            // Collect visible orphan nodes grouped by kind
+            const byKind = {};
+            cy.nodes().forEach(n => {
+                if (!n.data('_orphan') || n.data('_groupNode')) return;
+                const k = n.data('kind') || 'unknown';
+                if (!byKind[k]) byKind[k] = [];
+                byKind[k].push(n);
+            });
+
+            const kinds = KIND_ORDER.filter(k => byKind[k] && byKind[k].length > 0);
+            if (!kinds.length) return;
+
+            // Bounding box of connected (non-orphan) nodes
+            const connected = cy.nodes().filter(n => !n.data('_orphan') && !n.data('_groupNode'));
+            const bb = connected.length > 0
+                ? connected.boundingBox()
+                : { x1: 0, y1: 0, x2: 600, y2: 400 };
+
+            const isLR = (currentLayout === 'lr' || currentLayout === 'compact');
+            const nodeW = 160, nodeH = 55;
+            const gapX = 20, gapY = 14;   // gap between nodes
+            const kindGap = 40;               // gap between kind groups
+
+            if (isLR) {
+                // ── LR mode: kinds as columns, placed to the right of the graph ──
+                // Each column = one kind.  Nodes go top → bottom in each column.
+                let colX = bb.x2 + kindGap * 2 + nodeW / 2;
+
+                kinds.forEach(kind => {
+                    const nodes = byKind[kind];
+                    nodes.forEach((n, i) => {
+                        n.position({
+                            x: colX,
+                            y: bb.y1 + i * (nodeH + gapY) + nodeH / 2
+                        });
+                    });
+                    colX += nodeW + kindGap;
+                });
+            } else {
+                // ── Flow / Force / Compact: kinds as rows, placed below the graph ──
+                // Each row = one kind.  Nodes go left → right in each row.
+                let rowY = bb.y2 + kindGap * 2 + nodeH / 2;
+
+                kinds.forEach(kind => {
+                    const nodes = byKind[kind];
+                    nodes.forEach((n, i) => {
+                        n.position({
+                            x: bb.x1 + i * (nodeW + gapX) + nodeW / 2,
+                            y: rowY
+                        });
+                    });
+                    rowY += nodeH + kindGap;
+                });
+            }
+        }
+
+        /* ────────────────────────────────────
+           Cross-module edges
+        ──────────────────────────────────── */
+        function computeCrossModuleEdges(nodes, edges) {
+            crossModuleEdges = {};
+            const nm = {};
+            nodes.forEach(n => { nm[n.id] = getNamespace(n.id); });
+            edges.forEach(e => {
+                const s = nm[e.source], t = nm[e.target];
+                if (s && t && s !== t) { const k = `${s}>>>${t}`; crossModuleEdges[k] = (crossModuleEdges[k] || 0) + 1; }
+            });
+        }
+
+        window.focusModule = function (ns) {
+            cy.nodes().removeClass('module-focus dimmed');
+            cy.edges().removeClass('dimmed');
+            cy.nodes().forEach(n => {
+                if (n.data('_groupNode')) return;
+                if ((n.data('_ns') || getNamespace(n.id())) === ns) n.addClass('module-focus');
+                else n.addClass('dimmed');
+            });
+            cy.edges().forEach(e => {
+                if (!e.source().hasClass('module-focus') && !e.target().hasClass('module-focus')) e.addClass('dimmed');
+            });
+        };
+
+        /* ────────────────────────────────────
+           Module Explorer builder
+        ──────────────────────────────────── */
+        function buildModuleExplorer(nodes, edges) {
+            const groups = {};
+            nodes.forEach(n => { const ns = getNamespace(n.id); if (!groups[ns]) groups[ns] = []; groups[ns].push(n); });
+            computeCrossModuleEdges(nodes, edges);
+
+            const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+            document.getElementById('mod-body').innerHTML = sorted.map(([ns, items]) => {
+                const color = KIND_COLORS[items[0]?.kind] || KIND_COLORS.unknown;
+                const pills = items.map(n => {
+                    let short = (n.name || n.label || n.id || '').split('\\').pop().replace(/^[+@\s!#]+/, '').trim();
+                    return `<span class="mod-pill" onclick="focusNode('${n.id}')" title="${n.id}">${short}</span>`;
+                }).join('');
+
+                const out = [], inc = [];
+                Object.entries(crossModuleEdges).forEach(([k, c]) => {
+                    const [f, t] = k.split('>>>');
+                    if (f === ns) out.push({ mod: t.split('\\').pop(), count: c });
+                    if (t === ns) inc.push({ mod: f.split('\\').pop(), count: c });
+                });
+                let connHtml = '';
+                if (out.length || inc.length) {
+                    connHtml = `<div class="mod-conns open">`;
+                    out.slice(0, 3).forEach(c => { connHtml += `<div class="mod-conn-row"><span class="conn-arr">→</span><span>${c.mod}</span><span class="mod-conn-cnt">${c.count}</span></div>`; });
+                    inc.slice(0, 3).forEach(c => { connHtml += `<div class="mod-conn-row"><span class="conn-arr">←</span><span>${c.mod}</span><span class="mod-conn-cnt">${c.count}</span></div>`; });
+                    connHtml += `</div>`;
+                }
+
+                return `<div class="mod-card" data-ns="${ns}">
+                <div class="mod-hdr-row" onclick="focusModule('${ns}');this.nextElementSibling.classList.toggle('open')">
                     <div class="mod-dot" style="background:${color.bd}"></div>
                     <span class="mod-name" title="${ns}">${ns.split('\\').pop() || ns}</span>
                     <span class="mod-cnt">${items.length}</span>
@@ -895,350 +924,382 @@
                 <div class="mod-pills">${pills}</div>
                 ${connHtml}
             </div>`;
-        }).join('');
-    }
-
-    // ── Filter Orphan Nodes ──
-    function filterOrphanNodes(nodes, edges) {
-        const hasEdge = new Set();
-        edges.forEach(e => {
-            hasEdge.add(e.source);
-            hasEdge.add(e.target);
-        });
-
-        return nodes.filter(n => {
-            // Keep routes regardless
-            if (n.kind === 'route') return true;
-            // Keep if has any edges
-            if (hasEdge.has(n.id)) return true;
-            // Keep if has metrics showing connections
-            const m = n.metrics || {};
-            if ((m.fan_in || 0) > 0 || (m.fan_out || 0) > 0) return true;
-            return false;
-        });
-    }
-
-    // ── Detect Disconnected Components ──
-    function findDisconnectedComponents(nodes, edges) {
-        const nodeIds = new Set(nodes.map(n => n.id));
-        const adjList = {};
-
-        nodeIds.forEach(id => {
-            adjList[id] = [];
-        });
-
-        edges.forEach(e => {
-            if (nodeIds.has(e.source) && nodeIds.has(e.target)) {
-                adjList[e.source].push(e.target);
-                adjList[e.target].push(e.source); // undirected for component detection
-            }
-        });
-
-        const visited = new Set();
-        const components = [];
-
-        function bfs(startId) {
-            const component = [];
-            const queue = [startId];
-            visited.add(startId);
-
-            while (queue.length > 0) {
-                const id = queue.shift();
-                component.push(id);
-
-                (adjList[id] || []).forEach(neighbor => {
-                    if (!visited.has(neighbor)) {
-                        visited.add(neighbor);
-                        queue.push(neighbor);
-                    }
-                });
-            }
-            return component;
+            }).join('');
         }
 
-        nodeIds.forEach(id => {
-            if (!visited.has(id)) {
-                components.push(bfs(id));
-            }
-        });
+        // Module visibility toggle removed.
 
-        return components;
-    }
+        /* ────────────────────────────────────
+           Graph analysis helpers
+        ──────────────────────────────────── */
+        function filterOrphanNodes(nodes, edges) {
+            const hasEdge = new Set();
+            edges.forEach(e => { hasEdge.add(e.source); hasEdge.add(e.target); });
+            return nodes.filter(n => {
+                if (n.kind === 'route') return true;
+                if (hasEdge.has(n.id)) return true;
+                const m = n.metrics || {};
+                return (m.fan_in || 0) > 0 || (m.fan_out || 0) > 0;
+            });
+        }
 
-    // ── Detect Cyclic Dependencies ──
-    function detectCycles(nodes, edges) {
-        const nodeIds = new Set(nodes.map(n => n.id));
-        const adjList = {};
+        function findDisconnectedComponents(nodes, edges) {
+            const ids = new Set(nodes.map(n => n.id)), adj = {};
+            ids.forEach(id => { adj[id] = []; });
+            edges.forEach(e => { if (ids.has(e.source) && ids.has(e.target)) { adj[e.source].push(e.target); adj[e.target].push(e.source); } });
+            const vis = new Set(), comps = [];
+            function bfs(s) { const c = [], q = [s]; vis.add(s); while (q.length) { const id = q.shift(); c.push(id); (adj[id] || []).forEach(nb => { if (!vis.has(nb)) { vis.add(nb); q.push(nb); } }); } return c; }
+            ids.forEach(id => { if (!vis.has(id)) comps.push(bfs(id)); });
+            return comps;
+        }
 
-        nodeIds.forEach(id => {
-            adjList[id] = [];
-        });
-
-        edges.forEach(e => {
-            if (nodeIds.has(e.source) && nodeIds.has(e.target)) {
-                adjList[e.source].push(e.target);
-            }
-        });
-
-        const WHITE = 0, GRAY = 1, BLACK = 2;
-        const color = {};
-        const cycles = [];
-
-        nodeIds.forEach(id => {
-            color[id] = WHITE;
-        });
-
-        function dfs(id, path) {
-            color[id] = GRAY;
-            path.push(id);
-
-            for (const neighbor of (adjList[id] || [])) {
-                if (color[neighbor] === GRAY) {
-                    // Found cycle
-                    const cycleStart = path.indexOf(neighbor);
-                    cycles.push(path.slice(cycleStart).concat(neighbor));
-                } else if (color[neighbor] === WHITE) {
-                    dfs(neighbor, path);
+        function detectCycles(nodes, edges) {
+            const ids = new Set(nodes.map(n => n.id)), adj = {};
+            ids.forEach(id => { adj[id] = []; });
+            edges.forEach(e => { if (ids.has(e.source) && ids.has(e.target)) adj[e.source].push(e.target); });
+            const W = 0, G = 1, B = 2, color = {}, cycles = [];
+            ids.forEach(id => { color[id] = W; });
+            function dfs(id, path) {
+                color[id] = G; path.push(id);
+                for (const nb of (adj[id] || [])) {
+                    if (color[nb] === G) { const ci = path.indexOf(nb); cycles.push(path.slice(ci).concat(nb)); }
+                    else if (color[nb] === W) dfs(nb, path);
                 }
+                path.pop(); color[id] = B;
             }
-
-            path.pop();
-            color[id] = BLACK;
+            ids.forEach(id => { if (color[id] === W) dfs(id, []); });
+            return cycles;
         }
 
-        nodeIds.forEach(id => {
-            if (color[id] === WHITE) {
-                dfs(id, []);
-            }
-        });
+        let warnOffset = 0;
+        function showWarning(html, bg, bd, tx, dur = 8000) {
+            const w = document.createElement('div');
+            w.style.cssText = `position:fixed;top:${60 + warnOffset}px;right:16px;background:${bg};border:1px solid ${bd};padding:7px 12px;border-radius:6px;font-size:9.5px;color:${tx};z-index:30;max-width:300px;transition:opacity .3s;display:flex;align-items:center;gap:6px;font-family:inherit;`;
+            w.innerHTML = html; document.body.appendChild(w); warnOffset += 42;
+            setTimeout(() => { w.style.opacity = '0'; setTimeout(() => { w.remove(); warnOffset = Math.max(0, warnOffset - 42); }, 300); }, dur);
+        }
 
-        return cycles;
-    }
+        /* ────────────────────────────────────
+           Legend: draggable + collapsible
+        ──────────────────────────────────── */
+        function initLegend() {
+            const leg = document.getElementById('legend');
+            const hdr = document.getElementById('legend-hdr');
+            if (!leg || !hdr) return;
 
-    // ── Show Empty State ──
-    function showEmptyState() {
-        const loading = document.getElementById('loading');
-        loading.innerHTML = `
-            <div class="ld-logo">Logic Map</div>
-            <div style="margin-top:20px;text-align:center">
-                <div style="font-size:40px;margin-bottom:16px">📭</div>
-                <div style="font-size:13px;color:#7380a0;margin-bottom:8px">No nodes found</div>
-                <div style="font-size:11px;color:#363e58">Run <code style="background:#181c28;padding:2px 6px;border-radius:3px">php artisan logic-map:build</code> to analyze your codebase</div>
+            let drag = false, sx, sy, ol, ob;
+            hdr.addEventListener('mousedown', function (e) {
+                if (e.target.closest('.icon-btn')) return;
+                drag = true; leg._dragged = true; leg.classList.add('dragging');
+                sx = e.clientX; sy = e.clientY;
+                const r = leg.getBoundingClientRect();
+                ol = r.left; ob = window.innerHeight - r.bottom;
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!drag) return;
+                const nl = Math.max(0, Math.min(window.innerWidth - leg.offsetWidth, ol + (e.clientX - sx)));
+                const nb = Math.max(0, Math.min(window.innerHeight - leg.offsetHeight, ob - (e.clientY - sy)));
+                leg.style.left = nl + 'px'; leg.style.bottom = nb + 'px'; leg.style.right = 'auto';
+            });
+            document.addEventListener('mouseup', () => { if (drag) { drag = false; leg.classList.remove('dragging'); } });
+        }
+
+        window.toggleLegend = function () {
+            const body = document.getElementById('legend-body');
+            const chev = document.getElementById('legend-chevron');
+            if (!body) return;
+            const c = body.classList.toggle('collapsed');
+            if (chev) chev.style.transform = c ? 'rotate(180deg)' : '';
+        };
+
+        window.hideLegend = function () {
+            const leg = document.getElementById('legend');
+            const r = document.getElementById('legend-restore');
+            if (!leg || !r) return;
+            // Mirror legend's current position to restore button
+            const rect = leg.getBoundingClientRect();
+            r.style.left = leg.style.left || '16px';
+            r.style.bottom = leg.style.bottom || '16px';
+            leg.style.display = 'none';
+            r.style.display = 'flex';
+        };
+
+        window.showLegend = function () {
+            const leg = document.getElementById('legend');
+            const r = document.getElementById('legend-restore');
+            if (!leg || !r) return;
+            leg.style.display = 'block'; // override CSS display:none
+            r.style.display = 'none';
+        };
+
+        initLegend();
+
+        /* ────────────────────────────────────
+           Load data
+        ──────────────────────────────────── */
+        const ldMsg = document.getElementById('ld-msg');
+
+        /* ────────────────────────────────────
+           Health Panel
+        ──────────────────────────────────── */
+        let _healthData = null;
+        let _violationsData = null;
+
+        fetch(window.logicMapConfig.healthUrl).then(r => r.json()).then(j => {
+            if (!j.ok) return;
+            _healthData = j.data;
+            const d = j.data;
+            document.getElementById('health-display').innerHTML =
+                `<button class="health-badge grade-${d.grade}" onclick="openHealthPanel()" title="View health details">
+                ${d.grade} <span style="opacity:.7">${d.score}/100</span>
+            </button>`;
+        }).catch(() => { });
+
+        if (window.logicMapConfig.violationsUrl) {
+            fetch(window.logicMapConfig.violationsUrl).then(r => r.json()).then(j => {
+                if (j.ok) { _violationsData = j.data; }
+            }).catch(() => { });
+        }
+
+        window.openHealthPanel = function () {
+            const panel = document.getElementById('health-panel');
+            if (!panel) return;
+            renderHealthPanel();
+            panel.classList.add('open');
+        };
+
+        window.closeHealthPanel = function () {
+            document.getElementById('health-panel')?.classList.remove('open');
+        };
+
+        // Toggle collapse state of a section in the health panel
+        window.hpToggle = function (id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('hp-collapsed');
+        };
+
+        function renderHealthPanel() {
+            const d = _healthData;
+            const v = _violationsData;
+            if (!d) return;
+
+            const SEVER_COLORS = {
+                critical: { bg: 'rgba(239,68,68,.12)', bd: '#ef4444', tx: '#ef4444' },
+                high: { bg: 'rgba(249,115,22,.12)', bd: '#f97316', tx: '#f97316' },
+                medium: { bg: 'rgba(234,179,8,.12)', bd: '#eab308', tx: '#ca8a04' },
+                low: { bg: 'rgba(34,197,94,.1)', bd: '#22c55e', tx: '#16a34a' },
+            };
+
+            const VIOLATION_LABELS = {
+                CircularDependency: 'Circular Dependency',
+                FatController: 'Fat Controller',
+                Orphan: 'Orphan Node',
+                HighInstability: 'High Instability',
+                HighCoupling: 'High Coupling',
+            };
+
+            // Score ring
+            const pct = Math.max(0, Math.min(100, d.score));
+            const r = 36, circ = 2 * Math.PI * r;
+            const dash = (pct / 100) * circ;
+            const gradeColors = { A: '#22c55e', B: '#22c55e', C: '#eab308', D: '#f97316', F: '#ef4444' };
+            const gc = gradeColors[d.grade] || '#6b7280';
+
+            let html = `
+        <div class="hp-top">
+            <div class="hp-score-wrap">
+                <svg width="96" height="96" viewBox="0 0 96 96">
+                    <circle cx="48" cy="48" r="${r}" fill="none" stroke="var(--bdr)" stroke-width="7"/>
+                    <circle cx="48" cy="48" r="${r}" fill="none" stroke="${gc}" stroke-width="7"
+                        stroke-dasharray="${dash.toFixed(1)} ${(circ - dash).toFixed(1)}"
+                        stroke-dashoffset="${(circ * 0.25).toFixed(1)}"
+                        stroke-linecap="round"/>
+                </svg>
+                <div class="hp-score-inner">
+                    <div class="hp-score-val" style="color:${gc}">${d.score}</div>
+                    <div class="hp-score-lbl">/ 100</div>
+                </div>
             </div>
-        `;
-        loading.style.opacity = '1';
-    }
+            <div class="hp-meta">
+                <div class="hp-grade" style="color:${gc}">Grade ${d.grade}</div>
+                <div class="hp-summary">${typeof d.summary === 'string' ? d.summary
+                    : typeof d.summary === 'object' && d.summary !== null
+                        ? Object.entries(d.summary).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(' · ')
+                        : ''
+                }</div>
+            </div>
+        </div>`;
 
-    // ── Show Single Node State ──
-    function showSingleNodeState(node) {
-        // Just display the node, but with a helpful message
-        const tip = document.createElement('div');
-        tip.style = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#12151f;border:1px solid rgba(255,255,255,0.07);padding:8px 16px;border-radius:8px;font-size:11px;color:#7380a0;z-index:30';
-        tip.innerHTML = '💡 Only 1 node found. Add more routes/controllers to see the logic flow.';
-        document.body.appendChild(tip);
-        setTimeout(() => tip.remove(), 6000);
-    }
-
-    // ── Warning message stacking ──
-    let warningOffset = 0;
-
-    function showWarning(html, bgColor, borderColor, textColor, duration = 8000) {
-        const warn = document.createElement('div');
-        warn.className = 'lm-warning';
-        warn.style.cssText = `position:fixed;top:${56 + warningOffset}px;right:16px;background:${bgColor};border:1px solid ${borderColor};padding:8px 14px;border-radius:6px;font-size:10px;color:${textColor};z-index:30;max-width:320px;transition:opacity 0.3s`;
-        warn.innerHTML = html;
-        document.body.appendChild(warn);
-        warningOffset += 44;
-
-        setTimeout(() => {
-            warn.style.opacity = '0';
-            setTimeout(() => {
-                warn.remove();
-                warningOffset = Math.max(0, warningOffset - 44);
-            }, 300);
-        }, duration);
-    }
-
-    // ── Show Disconnected Components Warning ──
-    function showDisconnectedWarning(componentCount) {
-        showWarning(
-            `⚠ ${componentCount} disconnected components. Some modules may not be linked.`,
-            'rgba(245,158,11,.12)', '#ef7d38', '#ef7d38'
-        );
-    }
-
-    // ── Show Cyclic Dependencies Warning ──
-    function showCyclicWarning(cycles) {
-        const firstCycle = cycles[0].map(id => formatShortLabel(id)).join(' → ');
-        showWarning(
-            `🔄 Cycle: <b>${firstCycle}</b>${cycles.length > 1 ? ` (+${cycles.length - 1})` : ''}`,
-            'rgba(239,68,68,.12)', '#ef4444', '#ef4444', 10000
-        );
-    }
-
-    // ── Format short label from full ID ──
-    function formatShortLabel(id) {
-        if (!id) return '';
-
-        let result = '';
-
-        // Handle method:Namespace\Class@method format
-        if (id.includes('@')) {
-            const atIndex = id.lastIndexOf('@');
-            const methodName = id.substring(atIndex + 1);
-            const classPart = id.substring(0, atIndex).replace(/^(method|class):/, '');
-            const className = classPart.split('\\').pop();
-            result = methodName; // Just show method name, class visible in tooltip
-        }
-        // Handle class:Namespace\Class format
-        else if (id.startsWith('class:')) {
-            result = id.replace('class:', '').split('\\').pop();
-        }
-        // Handle route:VERB /path format
-        else if (id.startsWith('route:')) {
-            result = id.replace('route:', '');
-        }
-        // Handle method: without @ (shouldn't happen but just in case)
-        else if (id.startsWith('method:')) {
-            const clean = id.replace('method:', '');
-            result = clean.split('\\').pop() || clean;
-        }
-        // Default: get last part after backslash
-        else {
-            const parts = id.split('\\');
-            result = parts[parts.length - 1] || id;
-        }
-
-        // Remove any remaining prefixes
-        result = result.replace(/^(method|class|route):/, '');
-
-        // Truncate if still too long (max 25 chars)
-        if (result.length > 25) {
-            result = result.substring(0, 22) + '...';
-        }
-
-        return result;
-    }
-
-    // ── Load Data ──
-    const loading = document.getElementById('loading');
-    const ldMsg = document.getElementById('ld-msg');
-
-    // Fetch health
-    fetch(window.logicMapConfig.healthUrl)
-        .then(r => r.json())
-        .then(json => {
-            if (json.ok) {
-                const d = json.data;
-                const hd = document.getElementById('health-display');
-                hd.innerHTML = `<span class="health-badge grade-${d.grade}">${d.grade} ${d.score}/100</span>`;
-            }
-        }).catch(() => {
-    });
-
-    // Fetch meta
-    ldMsg.textContent = 'Loading metadata…';
-    fetch(window.logicMapConfig.metaUrl)
-        .then(r => r.json())
-        .then(json => {
-            if (json.ok) {
-                document.getElementById('s-nodes').textContent = json.data.node_count;
-                document.getElementById('s-edges').textContent = json.data.edge_count;
-            }
-        });
-
-    // Fetch overview
-    ldMsg.textContent = 'Loading graph…';
-    fetch(window.logicMapConfig.overviewUrl)
-        .then(r => r.json())
-        .then(json => {
-            if (!json.ok) {
-                ldMsg.textContent = 'Error: ' + json.message;
-                return;
+            // Graph stats
+            if (d.graph_stats) {
+                const gs = d.graph_stats;
+                html += `<div class="hp-section">
+                <div class="hp-section-title">Graph Stats</div>
+                <div class="hp-stats-grid">
+                    <div class="hp-stat"><div class="hp-sv">${gs.total_nodes}</div><div class="hp-sl">Nodes</div></div>
+                    <div class="hp-stat"><div class="hp-sv">${gs.total_edges}</div><div class="hp-sl">Edges</div></div>
+                    <div class="hp-stat"><div class="hp-sv">${gs.avg_fan_out}</div><div class="hp-sl">Avg Fan-out</div></div>
+                    <div class="hp-stat"><div class="hp-sv">${gs.max_depth}</div><div class="hp-sl">Max Depth</div></div>
+                </div>
+            </div>`;
             }
 
+            // ── Scoring Guide (shown first) ──
+            html += `<div class="hp-section hp-collapsible hp-collapsed" id="hps-guide">
+            <div class="hp-section-title hp-toggle" onclick="hpToggle('hps-guide')">
+                <span>Scoring Guide</span>
+                <svg class="hp-chev" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </div>
+            <div class="hp-collapsible-body">
+                <div class="hp-guide">
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:#e05555">Critical</span><span>−25 pts</span><span class="hp-guide-desc">Circular deps, breaking issues</span></div>
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:#d97a3a">High</span><span>−10 pts</span><span class="hp-guide-desc">Fat controllers, structural debt</span></div>
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:#b5920a">Medium</span><span>−5 pts</span><span class="hp-guide-desc">High instability / coupling</span></div>
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:#3a9e6a">Low</span><span>−1 pt</span><span class="hp-guide-desc">Orphan nodes, minor issues</span></div>
+                </div>
+                <div class="hp-grades">
+                    <span class="hp-grade-pill gA">A 90–100</span>
+                    <span class="hp-grade-pill gB">B 80–89</span>
+                    <span class="hp-grade-pill gC">C 70–79</span>
+                    <span class="hp-grade-pill gD">D 60–69</span>
+                    <span class="hp-grade-pill gF">F &lt;60</span>
+                </div>
+            </div>
+        </div>`;
+
+            // ── Violations (collapsible groups) ──
+            if (v && v.violations && v.violations.length) {
+                const groups = { critical: [], high: [], medium: [], low: [] };
+                v.violations.forEach(viol => { (groups[viol.severity] || groups.low).push(viol); });
+                const total = v.violations.length;
+
+                html += `<div class="hp-section" id="hps-violations">
+                <div class="hp-section-title">
+                    Violations
+                    <span class="hp-vcount">${total}</span>
+                </div>`;
+
+                ['critical', 'high', 'medium', 'low'].forEach(sev => {
+                    if (!groups[sev].length) return;
+                    const sc = SEVER_COLORS[sev];
+                    const gid = `hpg-${sev}`;
+                    // Auto-expand critical, collapse others by default
+                    const defaultCollapsed = (sev !== 'critical') ? 'hp-collapsed' : '';
+                    html += `<div class="hp-sev-group hp-collapsible ${defaultCollapsed}" id="${gid}">
+                    <div class="hp-sev-hdr hp-toggle" style="color:${sc.tx}" onclick="hpToggle('${gid}')">
+                        <span class="hp-sev-dot" style="background:${sc.bd}"></span>
+                        <span>${sev.charAt(0).toUpperCase() + sev.slice(1)}</span>
+                        <span class="hp-sev-cnt">${groups[sev].length}</span>
+                        <svg class="hp-chev" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="hp-collapsible-body">`;
+                    groups[sev].forEach(viol => {
+                        const label = VIOLATION_LABELS[viol.type] || viol.type;
+                        const nodeId = viol.node_id || viol.nodeId || '';
+                        const rawMsg = viol.message || viol.description || '';
+
+                        // Format circular dependency messages: split long paths into visual chain
+                        let formattedMsg = '';
+                        if (rawMsg) {
+                            // Extract node names from full qualified paths (e.g. App\Services\Foo@bar)
+                            const shortened = rawMsg.replace(
+                                /[A-Za-z0-9_\\]+\\([A-Za-z0-9_]+)(@[A-Za-z0-9_]+)?/g,
+                                (match, cls, method) => method ? `${cls}${method}` : cls
+                            );
+                            // Split "Part of circular dependency:" prefix
+                            if (shortened.startsWith('Part of circular dependency:')) {
+                                const chain = shortened.replace('Part of circular dependency:', '').trim();
+                                // Split on arrows (→ or ->) and render as badge chain
+                                const steps = chain.split(/\s*(?:→|->)\s*/).filter(Boolean);
+                                if (steps.length > 1) {
+                                    formattedMsg = `<div class="hp-viol-chain">${steps.map((s, i) =>
+                                        `<span class="hp-chain-step">${s.trim()}</span>${i < steps.length - 1 ? '<span class="hp-chain-arr">→</span>' : ''}`
+                                    ).join('')
+                                        }</div>`;
+                                } else {
+                                    formattedMsg = `<div class="hp-viol-msg">${shortened}</div>`;
+                                }
+                            } else {
+                                formattedMsg = `<div class="hp-viol-msg">${shortened}</div>`;
+                            }
+                        }
+
+                        // Short node name for the footer
+                        const shortNode = nodeId ? nodeId.replace(/^(method|class|route):/, '').split('\\').pop().split('@').pop() : '';
+
+                        html += `<div class="hp-viol" style="border-left-color:${sc.bd}${nodeId ? ';cursor:pointer' : ''}" ${nodeId ? `onclick="focusNode('${nodeId}');closeHealthPanel()"` : ''}>
+                        <div class="hp-viol-type">${label}</div>
+                        ${formattedMsg}
+                        ${shortNode ? `<div class="hp-viol-node"><svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"/><polyline points="8 5 8 8 10 10"/></svg>${shortNode}</div>` : ''}
+                    </div>`;
+                    });
+                    html += `</div></div>`;
+                });
+                html += `</div>`;
+            } else if (v) {
+                html += `<div class="hp-section">
+                <div class="hp-section-title">Violations</div>
+                <div class="hp-empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>
+                    No violations found
+                </div>
+            </div>`;
+            }
+
+            document.getElementById('hp-body').innerHTML = html;
+        }
+
+        fetch(window.logicMapConfig.metaUrl).then(r => r.json()).then(j => {
+            if (j.ok) { document.getElementById('s-nodes').textContent = j.data.node_count; document.getElementById('s-edges').textContent = j.data.edge_count; }
+        }).catch(() => { });
+
+        ldMsg.textContent = 'Loading graph…';
+        fetch(window.logicMapConfig.overviewUrl).then(r => r.json()).then(json => {
+            if (!json.ok) { ldMsg.textContent = 'Error: ' + json.message; return; }
             allNodesData = json.data.nodes || [];
             allEdgesData = json.data.edges || [];
 
-            // Edge case: Empty graph
-            if (allNodesData.length === 0) {
-                showEmptyState();
-                return;
+            if (!allNodesData.length) {
+                const l = document.getElementById('loading');
+                l.innerHTML = `<div class="ld-logo">Logic Map</div><div style="margin-top:18px;text-align:center"><div style="font-size:32px;margin-bottom:12px">📭</div><div style="color:var(--tx2);margin-bottom:8px">No nodes found</div><div style="font-size:10px;color:var(--tx3)">Run <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:3px">php artisan logic-map:build</code></div></div>`;
+                l.style.opacity = '1'; return;
             }
 
-            // Filter orphan nodes
             const filteredNodes = filterOrphanNodes(allNodesData, allEdgesData);
+            if (filteredNodes.length > 150) { document.getElementById('lg-warning').classList.add('show'); setTimeout(() => document.getElementById('lg-warning').classList.remove('show'), 8000); }
 
-            // Edge case: Single node
-            if (filteredNodes.length === 1) {
-                showSingleNodeState(filteredNodes[0]);
-            }
-
-            // Large graph warning
-            if (filteredNodes.length > 150) {
-                document.getElementById('lg-warning').classList.add('show');
-                setTimeout(() => document.getElementById('lg-warning').classList.remove('show'), 8000);
-            }
-
-            // Add elements
             cy.startBatch();
-            filteredNodes.forEach(n => {
-                const shortLabel = formatShortLabel(n.name || n.id);
-                cy.add({data: {...n, label: shortLabel, fullLabel: n.name || n.id}});
-            });
+            filteredNodes.forEach(n => cy.add({ data: { ...n, label: formatShortLabel(n.name || n.id), fullLabel: n.name || n.id, _ns: getNamespace(n.id) } }));
             allEdgesData.forEach(e => {
-                // Only add edge if both nodes exist
-                if (cy.getElementById(e.source).length && cy.getElementById(e.target).length) {
-                    const eid = getUniqueEdgeId(e);
-                    cy.add({data: {...e, id: eid}});
-                }
+                if (cy.getElementById(e.source).length && cy.getElementById(e.target).length)
+                    cy.add({ data: { ...e, id: getUniqueEdgeId(e) } });
             });
             cy.endBatch();
 
-            // Build module explorer
+            separateOrphanNodes();
             buildModuleExplorer(filteredNodes, allEdgesData);
 
-            // Detect disconnected components
-            const components = findDisconnectedComponents(filteredNodes, allEdgesData);
-            if (components.length > 1 && filteredNodes.length > 3) {
-                showDisconnectedWarning(components.length);
-            }
+            const comps = findDisconnectedComponents(filteredNodes, allEdgesData);
+            if (comps.length > 1 && filteredNodes.length > 3) showWarning(`⚠ ${comps.length} disconnected components`, 'rgba(249,115,22,.1)', '#f97316', '#f97316');
 
-            // Detect cyclic dependencies
             const cycles = detectCycles(filteredNodes, allEdgesData);
-            if (cycles.length > 0) {
-                showCyclicWarning(cycles);
-                // Highlight cyclic nodes
-                cycles.forEach(cycle => {
-                    cycle.forEach(id => {
-                        const node = cy.getElementById(id);
-                        if (node.length) {
-                            node.style('border-color', '#ef4444');
-                            node.style('border-width', 2);
-                        }
-                    });
-                });
+            if (cycles.length) {
+                showWarning(`🔄 Cycle: <b>${cycles[0].map(id => formatShortLabel(id)).join(' → ')}</b>${cycles.length > 1 ? ` (+${cycles.length - 1})` : ''}`, 'rgba(239,68,68,.1)', '#ef4444', '#ef4444', 10000);
+                cycles.forEach(c => c.forEach(id => { const n = cy.getElementById(id); if (n.length) { n.style('border-color', '#ef4444'); n.style('border-width', 2); } }));
             }
 
-            // Run layout
             ldMsg.textContent = 'Rendering layout…';
             setTimeout(() => {
                 runLayout('dagre');
-
-                // Hide loading
-                loading.style.opacity = '0';
-                setTimeout(() => loading.style.display = 'none', 400);
+                const l = document.getElementById('loading');
+                l.style.opacity = '0'; setTimeout(() => l.style.display = 'none', 400);
             }, 100);
-        })
-        .catch(err => {
-            ldMsg.textContent = 'Failed to load: ' + err.message;
-        });
-    };
+        }).catch(err => { ldMsg.textContent = 'Failed: ' + err.message; });
 
-    // Initialize on DOMContentLoaded or immediately if already loaded
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        init();
-    } else {
-        document.addEventListener('DOMContentLoaded', init);
-    }
+    }; // end init
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') init();
+    else document.addEventListener('DOMContentLoaded', init);
 })();
