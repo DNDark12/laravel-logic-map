@@ -1,5 +1,11 @@
-document.addEventListener('DOMContentLoaded', function () {
-    cytoscape.use(cytoscapeDagre);
+(function () {
+    const init = function () {
+        if (window.logicMapInitialized) return;
+        window.logicMapInitialized = true;
+
+        if (typeof cytoscape.dagre === 'undefined' && typeof cytoscapeDagre !== 'undefined') {
+            cytoscape.use(cytoscapeDagre);
+        }
 
     const KIND_COLORS = {
         route: {bg: '#dcfce7', bd: '#22c55e'},
@@ -187,11 +193,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const z = cy.zoom();
         cy.startBatch();
         if (z < 0.25) {
-            cy.nodes().style('font-size', 0);
-            cy.edges().style('font-size', 0);
+            cy.nodes().style('font-size', 0.01);
+            cy.edges().style('font-size', 0.01);
         } else if (z < 0.5) {
             cy.nodes().style('font-size', 8);
-            cy.edges().style('font-size', 0);
+            cy.edges().style('font-size', 0.01);
         } else {
             cy.nodes().style('font-size', 9);
             cy.edges().style('font-size', 9);
@@ -595,8 +601,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
         try {
-            // Ctrl+K - Focus search
-            if (e.ctrlKey && e.key === 'k') {
+            // Ctrl+K or Cmd+K - Focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
                 document.getElementById('si')?.focus();
                 return;
@@ -610,22 +616,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
+            // Avoid shortcuts if any modifier except Shift is pressed (handled individually below)
+            if (e.altKey) return;
+            // For Mac, we want to allow Cmd for Ctrl-equivalent but not for single-letter triggers
+            if (e.metaKey && e.key !== 'k') return;
+            // For Windows/Linux, we want to allow Ctrl only for K
+            if (e.ctrlKey && e.key !== 'k') return;
+
             // M - Toggle module panel
-            if (e.key === 'm' || e.key === 'M') {
+            if (e.key.toLowerCase() === 'm') {
                 e.preventDefault();
                 if (typeof toggleModPanel === 'function') toggleModPanel();
                 return;
             }
 
             // T - Toggle theme
-            if (e.key === 't' || e.key === 'T') {
+            if (e.key.toLowerCase() === 't') {
                 e.preventDefault();
                 if (typeof toggleTheme === 'function') toggleTheme();
                 return;
             }
 
             // F - Fit view
-            if (e.key === 'f' || e.key === 'F') {
+            if (e.key.toLowerCase() === 'f') {
                 e.preventDefault();
                 if (typeof fitView === 'function') fitView();
                 return;
@@ -664,7 +677,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // S - SubGraph Toggle
-            if (e.key === 's' || e.key === 'S') {
+            if (e.key.toLowerCase() === 's') {
                 e.preventDefault();
                 const selected = cy.nodes(':selected');
                 const highlighted = cy.nodes('.highlighted');
@@ -1209,4 +1222,12 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(err => {
             ldMsg.textContent = 'Failed to load: ' + err.message;
         });
-});
+    };
+
+    // Initialize on DOMContentLoaded or immediately if already loaded
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        init();
+    } else {
+        document.addEventListener('DOMContentLoaded', init);
+    }
+})();
