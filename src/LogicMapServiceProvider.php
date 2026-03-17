@@ -88,8 +88,8 @@ class LogicMapServiceProvider extends ServiceProvider
         // Share resource paths with views
         $packagePath = __DIR__ . '/..';
         View::composer('logic-map::*', function ($view) use ($packagePath) {
-            $view->with('logicMapCss', file_get_contents($packagePath . '/resources/css/logic-map.css'));
-            $view->with('logicMapJs', file_get_contents($packagePath . '/resources/js/logic-map.js'));
+            $view->with('logicMapCss', file_get_contents($packagePath . '/resources/dist/logic-map.css'));
+            $view->with('logicMapJs', file_get_contents($packagePath . '/resources/dist/logic-map.js'));
         });
     }
 }

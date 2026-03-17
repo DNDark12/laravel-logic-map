@@ -334,7 +334,7 @@
             const triggerTxt = triggers.slice(0, 3).map(t => `<strong>${t.label}</strong>`).join(', ');
             html += triggerTxt + (triggers.length > 3 ? ` +${triggers.length - 3} more` : '');
         } else {
-            html += meta.trigger || '<span style="color:var(--tx3)">Entry point</span>';
+            html += meta.trigger || '<span style="color:#8d97b4">Entry point</span>';
         }
         html += `</div></div></div>`;
 
@@ -359,7 +359,7 @@
             const resultTxt = results.slice(0, 3).map(r => `<strong>${r.label}</strong>`).join(', ');
             html += 'Triggers: ' + resultTxt + (results.length > 3 ? ` +${results.length - 3} more` : '');
         } else {
-            html += meta.result || '<span style="color:var(--tx3)">Terminal node</span>';
+            html += meta.result || '<span style="color:#8d97b4">Terminal node</span>';
         }
         html += `</div></div></div>`;
 
@@ -380,7 +380,7 @@
                 </div>`;
             });
             if (timeline.length > 8) {
-                html += `<div class="tli"><span class="tli-dot" style="background:var(--tx3)">+</span><div class="tli-body"><div class="tli-m" style="color:var(--tx3)">${timeline.length - 8} more...</div></div></div>`;
+                html += `<div class="tli"><span class="tli-dot" style="background:#8d97b4">+</span><div class="tli-body"><div class="tli-m" style="color:#8d97b4">${timeline.length - 8} more...</div></div></div>`;
             }
             html += `</div></div>`;
         }
@@ -407,7 +407,7 @@
                 const src = e.source();
                 html += `<div class="conn-item" onclick="focusNode('${src.id()}')">`
                     + `<span class="conn-arr">←</span><span class="conn-name">${src.data('label') || src.id()}</span>`
-                    + `<span style="font-size:8px;color:var(--tx3)">${e.data('type')}</span></div>`;
+                    + `<span style="font-size:8px;color:#8d97b4">${e.data('type')}</span></div>`;
             });
             html += `</div></div>`;
         }
@@ -418,7 +418,7 @@
                 const tgt = e.target();
                 html += `<div class="conn-item" onclick="focusNode('${tgt.id()}')">`
                     + `<span class="conn-arr">→</span><span class="conn-name">${tgt.data('label') || tgt.id()}</span>`
-                    + `<span style="font-size:8px;color:var(--tx3)">${e.data('type')}</span></div>`;
+                    + `<span style="font-size:8px;color:#8d97b4">${e.data('type')}</span></div>`;
             });
             html += `</div></div>`;
         }
@@ -759,7 +759,7 @@
         if (!banner) {
             banner = document.createElement('div');
             banner.id = 'sg-banner';
-            banner.style = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;padding:8px 16px;border-radius:20px;font-weight:bold;z-index:1000;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3)';
+            banner.style = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#e5b535;color:#000;padding:8px 16px;border-radius:20px;font-weight:bold;z-index:1000;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3)';
             banner.innerHTML = `<span>SUBGRAPH MODE</span><button onclick="exitSubGraph()" style="background:#000;color:#fff;border:none;padding:4px 12px;border-radius:12px;cursor:pointer;font-size:11px">EXIT (ESC)</button>`;
             document.body.appendChild(banner);
         }
@@ -1011,8 +1011,8 @@
             <div class="ld-logo">Logic Map</div>
             <div style="margin-top:20px;text-align:center">
                 <div style="font-size:40px;margin-bottom:16px">📭</div>
-                <div style="font-size:13px;color:var(--tx2);margin-bottom:8px">No nodes found</div>
-                <div style="font-size:11px;color:var(--tx3)">Run <code style="background:var(--bg3);padding:2px 6px;border-radius:3px">php artisan logic-map:build</code> to analyze your codebase</div>
+                <div style="font-size:13px;color:#7380a0;margin-bottom:8px">No nodes found</div>
+                <div style="font-size:11px;color:#363e58">Run <code style="background:#181c28;padding:2px 6px;border-radius:3px">php artisan logic-map:build</code> to analyze your codebase</div>
             </div>
         `;
         loading.style.opacity = '1';
@@ -1022,7 +1022,7 @@
     function showSingleNodeState(node) {
         // Just display the node, but with a helpful message
         const tip = document.createElement('div');
-        tip.style = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--bdr);padding:8px 16px;border-radius:8px;font-size:11px;color:var(--tx2);z-index:30';
+        tip.style = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#12151f;border:1px solid rgba(255,255,255,0.07);padding:8px 16px;border-radius:8px;font-size:11px;color:#7380a0;z-index:30';
         tip.innerHTML = '💡 Only 1 node found. Add more routes/controllers to see the logic flow.';
         document.body.appendChild(tip);
         setTimeout(() => tip.remove(), 6000);
