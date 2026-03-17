@@ -171,7 +171,10 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('legend').style.left = panel.classList.contains('open') ? '316px' : '16px';
     };
 
-    document.getElementById('mod-toggle').addEventListener('click', toggleModPanel);
+    const modToggleEl = document.getElementById('mod-toggle');
+    if (modToggleEl) {
+        modToggleEl.addEventListener('click', toggleModPanel);
+    }
 
     // ── LOD (Level of Detail) on Zoom ──
     let lodTimer = null;
@@ -588,65 +591,91 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Keyboard Shortcuts ──
     document.addEventListener('keydown', function (e) {
+        // Skip if typing in input
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-        if (e.ctrlKey && e.key === 'k') {
-            e.preventDefault();
-            document.getElementById('si').focus();
-        }
-        if (e.key === 'Escape') {
-            closePanel();
-            if (sgMode) exitSubGraph();
-        }
-        if (e.key === 'm') {
-            e.preventDefault();
-            toggleModPanel();
-        }
-        if (e.key === 't') {
-            e.preventDefault();
-            toggleTheme();
-        }
-        if (e.key === 'f') {
-            e.preventDefault();
-            fitView();
-        }
-
-        // Layouts
-        if (e.key === '1') {
-            e.preventDefault();
-            runLayout('dagre');
-        }
-        if (e.key === '2') {
-            e.preventDefault();
-            runLayout('cose');
-        }
-        if (e.key === '3') {
-            e.preventDefault();
-            runLayout('lr');
-        }
-        if (e.key === '4') {
-            e.preventDefault();
-            runLayout('compact');
-        }
-
-        // Help modal
-        if (e.key === '?') {
-            e.preventDefault();
-            const help = document.getElementById('kb-help');
-            help.style.display = help.style.display === 'flex' ? 'none' : 'flex';
-        }
-
-        // SubGraph Toggle
-        if (e.key === 's') {
-            e.preventDefault();
-            const selected = cy.nodes(':selected');
-            const highlighted = cy.nodes('.highlighted');
-            const target = selected.length ? selected : (highlighted.length ? highlighted : null);
-            if (target) {
-                enterSubGraph(target);
-            } else {
-                console.log('Select or click a node first to enter SubGraph mode');
+        try {
+            // Ctrl+K - Focus search
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('si')?.focus();
+                return;
             }
+
+            // Escape - Close panel / Exit SubGraph
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                if (typeof closePanel === 'function') closePanel();
+                if (sgMode && typeof exitSubGraph === 'function') exitSubGraph();
+                return;
+            }
+
+            // M - Toggle module panel
+            if (e.key === 'm' || e.key === 'M') {
+                e.preventDefault();
+                if (typeof toggleModPanel === 'function') toggleModPanel();
+                return;
+            }
+
+            // T - Toggle theme
+            if (e.key === 't' || e.key === 'T') {
+                e.preventDefault();
+                if (typeof toggleTheme === 'function') toggleTheme();
+                return;
+            }
+
+            // F - Fit view
+            if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                if (typeof fitView === 'function') fitView();
+                return;
+            }
+
+            // 1-4 - Layouts
+            if (e.key === '1') {
+                e.preventDefault();
+                runLayout('dagre');
+                return;
+            }
+            if (e.key === '2') {
+                e.preventDefault();
+                runLayout('cose');
+                return;
+            }
+            if (e.key === '3') {
+                e.preventDefault();
+                runLayout('lr');
+                return;
+            }
+            if (e.key === '4') {
+                e.preventDefault();
+                runLayout('compact');
+                return;
+            }
+
+            // ? - Help modal
+            if (e.key === '?') {
+                e.preventDefault();
+                const help = document.getElementById('kb-help');
+                if (help) {
+                    help.style.display = help.style.display === 'flex' ? 'none' : 'flex';
+                }
+                return;
+            }
+
+            // S - SubGraph Toggle
+            if (e.key === 's' || e.key === 'S') {
+                e.preventDefault();
+                const selected = cy.nodes(':selected');
+                const highlighted = cy.nodes('.highlighted');
+                const target = selected.length ? selected : (highlighted.length ? highlighted : null);
+                if (target && typeof enterSubGraph === 'function') {
+                    enterSubGraph(target);
+                }
+                return;
+            }
+        } catch (err) {
+            console.error('[LogicMap] Keyboard shortcut error:', err);
         }
     });
 
@@ -704,9 +733,13 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     // Slider change handler
-    document.getElementById('sg-hops').addEventListener('input', function () {
-        document.getElementById('sg-hops-val').textContent = this.value;
-    });
+    const sgHopsEl = document.getElementById('sg-hops');
+    if (sgHopsEl) {
+        sgHopsEl.addEventListener('input', function () {
+            const valEl = document.getElementById('sg-hops-val');
+            if (valEl) valEl.textContent = this.value;
+        });
+    }
 
     function showSgBanner() {
         let banner = document.getElementById('sg-banner');
