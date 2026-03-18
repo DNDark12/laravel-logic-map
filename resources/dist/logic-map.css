@@ -198,7 +198,7 @@ html {
     padding: 0 8px;
     gap: 2px;
     z-index: 50;
-    overflow: hidden;
+    overflow: visible;
     border-bottom: var(--depth-border, 1px solid var(--bdr));
 }
 
@@ -461,12 +461,13 @@ html {
 
 /* Health badge */
 .health-badge {
+    height: 30px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 9.5px;
+    gap: 6px;
+    font-size: 10px;
     font-weight: 700;
-    padding: 5px 10px;
+    padding: 0 10px;
     border-radius: var(--radius);
     border: 1px solid var(--bdr);
     background: var(--bg-elevated);
@@ -475,17 +476,20 @@ html {
     cursor: pointer;
     font-family: inherit;
     color: var(--tx2);
-    transition: color .15s, border-color .15s, background .15s;
+    transition: all .15s;
 }
 
 .health-badge svg {
-    opacity: .7;
+    opacity: .8;
+    width: 13px;
+    height: 13px;
 }
 
 .health-badge:hover {
     color: var(--tx);
     border-color: var(--bdr2);
     background: var(--bg-hover);
+    transform: translateY(-1px);
 }
 
 .grade-A,
@@ -586,11 +590,11 @@ html {
     }
 }
 
-/* 860px: hide health badge, shorten stats */
+/* 860px: compact health badge (grade only), shorten stats */
 @media (max-width: 860px) {
-    #health-display {
-        display: none;
-    }
+    /* Keep health badge visible but compact - show grade only */
+    #health-display .health-badge span { display: none; }
+    #health-display .health-badge { padding: 0 8px; min-width: auto; }
 
     .stat-lbl {
         display: none;
@@ -1486,6 +1490,214 @@ html {
 }
 
 /* ══════════════════════════════════════
+   EXPORT DROPDOWN
+   ══════════════════════════════════════ */
+/* Unified Dropdowns (Export, Layout, Hops) */
+.dropdown-grp {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-trigger {
+    height: 32px;
+    padding: 0 10px;
+    gap: 6px;
+    border-radius: var(--radius);
+    font-weight: 700;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    z-index: 1000;
+    background: var(--bg-panel);
+    border: 1px solid var(--bdr2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    display: none;
+    flex-direction: column;
+    min-width: 180px;
+    padding: 6px;
+    animation: drip .15s ease-out;
+    font-family: inherit;
+}
+
+/* Specific alignments based on trigger position */
+#layout-dropdown .dropdown-menu,
+#hops-dropdown .dropdown-menu { left: 0; right: auto; }
+#export-dropdown .dropdown-menu { right: 0; left: auto; }
+#theme-picker { right: 0; left: auto; }
+
+.dropdown-menu.min-dropdown {
+    min-width: 60px;
+}
+
+.dropdown-grp.show .dropdown-menu {
+    display: flex;
+}
+
+@keyframes drip {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-menu .seg-btn {
+    width: 100%;
+    height: 34px;
+    border-right: none !important;
+    border-bottom: 1px solid var(--bdr);
+    border-radius: 0;
+    justify-content: flex-start;
+    padding: 0 10px;
+}
+
+.dropdown-menu .seg-btn:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.dropdown-menu .seg-btn:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); border-bottom: none; }
+
+.dropdown-menu .seg-btn.active {
+    background: var(--bg-hover);
+    color: var(--accent);
+}
+
+.dropdown-trigger .exp-arr {
+    width: 10px;
+    height: 10px;
+    opacity: .6;
+    margin-left: 2px;
+    transition: transform .2s;
+}
+
+.dropdown-grp.show .exp-arr {
+    transform: rotate(180deg);
+}
+
+.exp-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background .12s;
+}
+
+.exp-item:hover {
+    background: var(--bg-hover);
+}
+
+.exp-ico {
+    font-size: 8px;
+    font-weight: 900;
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr);
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: var(--tx3);
+    min-width: 32px;
+    text-align: center;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+/* .exp-title removed, uses .btn-lbl instead */
+
+.exp-desc {
+    font-size: 11px;
+    color: var(--tx3);
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+
+/* ══════════════════════════════════════
+   RESPONSIVE TOPBAR
+   ══════════════════════════════════════ */
+/* Default: Triggers hidden, Groups visible */
+#topbar .dropdown-trigger { display: none !important; }
+#topbar .seg-group:not(.dropdown-menu) { display: flex !important; }
+
+/* Desktop-specific Export visibility: Use ID or explicit class to override */
+#topbar #export-dropdown .dropdown-trigger,
+#topbar .dropdown-trigger.exp-trigger { display: flex !important; }
+
+@media (max-width: 1200px) {
+    .tb-label-sm, .btn-lbl { display: none; }
+    /* Allow labels inside dropdown triggers AND dropdown menu items to stay visible */
+    .dropdown-trigger .btn-lbl,
+    .dropdown-menu .btn-lbl { display: inline !important; }
+    .seg-btn { padding: 0 8px; }
+    .search-wrap { flex: 1; min-width: 100px; max-width: 250px; }
+}
+
+@media (max-width: 992px) {
+    .logo-text { display: none; }
+    .search-wrap { flex: 1; min-width: 80px; max-width: 220px; }
+    
+    #topbar .dropdown-trigger { display: flex !important; }
+    /* Hide the direct horizontal groups, we'll use dropdowns instead */
+    #topbar .seg-group:not(.dropdown-menu) { display: none !important; }
+    
+    .tb-sep { display: none; }
+}
+
+@media (max-width: 768px) {
+    .tb-sep { display: none; }
+    #topbar { gap: 4px; padding: 0 6px; }
+    .search-wrap { flex: 1; min-width: 80px; max-width: none; }
+}
+
+@media (max-width: 650px) {
+    .logo { display: none; }
+    #topbar { gap: 2px; padding: 0 4px; }
+}
+
+@media (max-width: 550px) {
+    #topbar .search-wrap, 
+    #topbar .tb-icon#shortcuts-btn,
+    #topbar .tb-sep { display: none !important; }
+    /* Restore text labels inside dropdown triggers and menu items */
+    .tb-btn .btn-lbl, .dropdown-menu .btn-lbl { display: inline !important; }
+    
+    /* Force health display to stay flex on mobile */
+    #health-display { display: flex !important; }
+    .health-label { display: none !important; }
+    /* Hide the score <span> but keep the grade */
+    .health-badge span { display: none !important; }
+    .health-badge { padding: 0 8px; gap: 4px; }
+    .tb-btn { padding: 0 4px; }
+    #topbar { justify-content: space-between; gap: 4px; padding: 0 4px; overflow: visible !important; }
+}
+
+@media (max-width: 460px) {
+    /* Hide non-critical elements for ultra-compact fit */
+    #topbar .logo, 
+    #topbar .search-wrap, 
+    #topbar .tb-sep { display: none !important; }
+    
+    /* Ensure trigger labels stay visible even in ultra-compact mode */
+    #topbar .dropdown-trigger .btn-lbl { display: inline !important; font-size: 9px; }
+    
+    #topbar { 
+        justify-content: space-around !important; 
+        gap: 2px !important; 
+        padding: 0 2px !important; 
+        overflow: visible !important; 
+    }
+    
+    #topbar .tb-btn { padding: 0 4px !important; min-width: auto !important; }
+
+    /* Hide the Shortcuts button (?) on very small screens to save 40px */
+    #topbar #shortcuts-btn { display: none !important; }
+    
+    /* Ensure Health badge is compact but visible */
+    #topbar #health-display { display: flex !important; margin: 0 !important; }
+    #topbar .health-badge { padding: 0 6px !important; gap: 4px !important; border: 1px solid var(--bdr) !important; background: var(--bg-elevated) !important; }
+}
+
+
+
+/* ══════════════════════════════════════
    TOOLTIP
 ══════════════════════════════════════ */
 #tip {
@@ -1877,6 +2089,14 @@ kbd {
     font-weight: 700;
     color: var(--tx);
     margin-bottom: 5px;
+}
+
+.hp-viol-desc {
+    font-size: 9px;
+    color: var(--tx3);
+    margin-bottom: 7px;
+    font-style: italic;
+    line-height: 1.3;
 }
 
 /* Plain message: ellipsis if too long */

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark-graphite">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laravel Logic Map</title>
+    <title>{{ config('app.name', 'Laravel') }} Logic Map</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.0/cytoscape.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
@@ -14,7 +14,9 @@
             subgraphUrl:    '{{ url("logic-map/subgraph") }}',
             healthUrl:      '{{ route("logic-map.health") }}',
             metaUrl:        '{{ route("logic-map.meta") }}',
-            violationsUrl:  '{{ route("logic-map.violations") }}'
+            violationsUrl:  '{{ route("logic-map.violations") }}',
+            exportJsonUrl:  '{{ route("logic-map.export.json") }}',
+            exportCsvUrl:   '{{ route("logic-map.export.csv") }}'
         };
     </script>
 </head>
@@ -27,7 +29,7 @@
             <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
             <circle cx="10" cy="10" r="2.5" fill="var(--accent)"/>
         </svg>
-        Logic Map
+        {{ config('app.name', 'Laravel') }} Map
     </div>
     <div class="ld-bw"><div class="ld-b"></div></div>
     <div class="ld-sub" id="ld-msg">Loading graph…</div>
@@ -49,7 +51,7 @@
             <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
             <circle cx="10" cy="10" r="2.5" fill="var(--accent)"/>
         </svg>
-        <span class="logo-text">LOGIC MAP</span>
+        <span class="logo-text">{{ strtoupper(config('app.name', 'Laravel')) }} MAP</span>
     </div>
 
     <div class="tb-sep"></div>
@@ -59,29 +61,55 @@
         <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="si" type="text" placeholder="Search… (⌘K)">
     </div>
-    <button class="tb-btn" id="tb-find" onclick="doSearch()">Find</button>
 
     <div class="tb-sep"></div>
 
     <!-- [4] Layout -->
-    <span class="tb-label-sm">Layout</span>
-    <div class="seg-group" id="layout-grp">
-        <button class="seg-btn active" data-layout="dagre" title="Flow ↓ (1)">
-            <svg viewBox="0 0 16 16"><line x1="8" y1="1" x2="8" y2="7"/><polyline points="5,4 8,7 11,4"/><line x1="4" y1="9" x2="4" y2="15"/><line x1="8" y1="9" x2="8" y2="15"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
-            <span class="btn-lbl">Flow ↓</span>
+    <div class="dropdown-grp" id="layout-dropdown">
+        <button class="tb-btn dropdown-trigger" onclick="toggleDropdown(event, 'layout-dropdown')" title="Change Layout">
+            <svg id="layout-trigger-icon" viewBox="0 0 16 16"><line x1="8" y1="1" x2="8" y2="7"/><polyline points="5,4 8,7 11,4"/><line x1="4" y1="9" x2="4" y2="15"/><line x1="8" y1="9" x2="8" y2="15"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+            <span class="btn-lbl">Layout</span>
+            <svg class="exp-arr" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         </button>
-        <button class="seg-btn" data-layout="cose" title="Force (2)">
-            <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="3" cy="3" r="1" fill="currentColor"/><circle cx="13" cy="3" r="1" fill="currentColor"/><circle cx="3" cy="13" r="1" fill="currentColor"/><circle cx="13" cy="13" r="1" fill="currentColor"/><line x1="8" y1="8" x2="3" y2="3"/><line x1="8" y1="8" x2="13" y2="3"/><line x1="8" y1="8" x2="3" y2="13"/><line x1="8" y1="8" x2="13" y2="13"/></svg>
-            <span class="btn-lbl">Force</span>
+        <div class="seg-group" id="layout-grp">
+            <button class="seg-btn active" data-layout="dagre" title="Flow ↓ (1)">
+                <svg viewBox="0 0 16 16"><line x1="8" y1="1" x2="8" y2="7"/><polyline points="5,4 8,7 11,4"/><line x1="4" y1="9" x2="4" y2="15"/><line x1="8" y1="9" x2="8" y2="15"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+                <span class="btn-lbl">Flow ↓</span>
+            </button>
+            <button class="seg-btn" data-layout="cose" title="Force (2)">
+                <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="3" cy="3" r="1" fill="currentColor"/><circle cx="13" cy="3" r="1" fill="currentColor"/><circle cx="3" cy="13" r="1" fill="currentColor"/><circle cx="13" cy="13" r="1" fill="currentColor"/><line x1="8" y1="8" x2="3" y2="3"/><line x1="8" y1="8" x2="13" y2="3"/><line x1="8" y1="8" x2="3" y2="13"/><line x1="8" y1="8" x2="13" y2="13"/></svg>
+                <span class="btn-lbl">Force</span>
+            </button>
+            <button class="seg-btn" data-layout="lr" title="LR → (3)">
+                <svg viewBox="0 0 16 16"><line x1="1" y1="8" x2="7" y2="8"/><polyline points="4,5 7,8 4,11"/><line x1="9" y1="4" x2="15" y2="4"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+                <span class="btn-lbl">LR →</span>
+            </button>
+            <button class="seg-btn" data-layout="compact" title="Compact (4)">
+                <svg viewBox="0 0 16 16"><rect x="1" y="1" width="5" height="4" rx="1"/><rect x="8" y="1" width="7" height="4" rx="1"/><rect x="1" y="7" width="7" height="4" rx="1"/><rect x="10" y="7" width="5" height="4" rx="1"/><rect x="4" y="13" width="8" height="2" rx="1"/></svg>
+                <span class="btn-lbl">Compact</span>
+            </button>
+        </div>
+        <!-- Mobile Dropdown Clone -->
+        <div class="seg-group dropdown-menu" id="layout-menu"></div>
+    </div>
+
+    <div class="tb-sep"></div>
+
+    <!-- [6] Hops -->
+    <div class="dropdown-grp" id="hops-dropdown">
+        <button class="tb-btn dropdown-trigger" onclick="toggleDropdown(event, 'hops-dropdown')" title="Change Hops">
+            <svg viewBox="0 0 24 24" width="12" height="12"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" stroke-dasharray="2 2"/><circle cx="12" cy="12" r="10" stroke-dasharray="1 3"/></svg>
+            <span class="btn-lbl">Hops: <span id="hops-trigger-val">1</span></span>
+            <svg class="exp-arr" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         </button>
-        <button class="seg-btn" data-layout="lr" title="LR → (3)">
-            <svg viewBox="0 0 16 16"><line x1="1" y1="8" x2="7" y2="8"/><polyline points="4,5 7,8 4,11"/><line x1="9" y1="4" x2="15" y2="4"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
-            <span class="btn-lbl">LR →</span>
-        </button>
-        <button class="seg-btn" data-layout="compact" title="Compact (4)">
-            <svg viewBox="0 0 16 16"><rect x="1" y="1" width="5" height="4" rx="1"/><rect x="8" y="1" width="7" height="4" rx="1"/><rect x="1" y="7" width="7" height="4" rx="1"/><rect x="10" y="7" width="5" height="4" rx="1"/><rect x="4" y="13" width="8" height="2" rx="1"/></svg>
-            <span class="btn-lbl">Compact</span>
-        </button>
+        <div class="seg-group" id="hl-hops-grp">
+            <button class="seg-btn active" data-hops="1">1</button>
+            <button class="seg-btn" data-hops="2">2</button>
+            <button class="seg-btn" data-hops="3">3</button>
+            <button class="seg-btn" data-hops="99">All</button>
+        </div>
+        <!-- Mobile Dropdown Clone -->
+        <div class="seg-group dropdown-menu min-dropdown" id="hops-menu"></div>
     </div>
 
     <div class="tb-sep"></div>
@@ -95,17 +123,6 @@
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
         <span class="btn-lbl">Clear</span>
     </button>
-
-    <div class="tb-sep"></div>
-
-    <!-- [6] Hops -->
-    <span class="tb-label-sm">Hops</span>
-    <div class="seg-group" id="hl-hops-grp">
-        <button class="seg-btn active" data-hops="1">1</button>
-        <button class="seg-btn" data-hops="2">2</button>
-        <button class="seg-btn" data-hops="3">3</button>
-        <button class="seg-btn" data-hops="99">All</button>
-    </div>
     <input type="hidden" id="hl-hops" value="1">
 
     <!-- [7] SubGraph mode indicator in topbar (just a badge, no controls) -->
@@ -123,7 +140,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="12" height="12">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
-            Health…
+            <span class="health-label">Health…</span>
         </button>
     </div>
 
@@ -135,9 +152,35 @@
         <svg id="thm-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
 
+    <!-- [10.5] Export Dropdown -->
+    <div class="dropdown-grp" id="export-dropdown">
+        <button class="tb-btn dropdown-trigger" onclick="toggleDropdown(event, 'export-dropdown')" title="Export Data">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span class="btn-lbl">Export</span>
+            <svg class="exp-arr" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        </button>
+        <div class="seg-group dropdown-menu" id="exp-menu">
+            <button class="seg-btn" onclick="window.location.href=window.logicMapConfig.exportJsonUrl" title="Export as JSON">
+                <span class="exp-ico">JSON</span>
+                <span class="btn-lbl">Full Logic Analysis</span>
+            </button>
+            <button class="seg-btn" onclick="window.location.href=window.logicMapConfig.exportCsvUrl" title="Export as CSV">
+                <span class="exp-ico">CSV</span>
+                <span class="btn-lbl">Node Metrics Only</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="tb-sep"></div>
+
     <!-- [11] Help -->
-    <button class="tb-icon" onclick="document.getElementById('kb-help').style.display='flex'" title="Shortcuts (?)">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <button class="tb-icon" id="shortcuts-btn" onclick="document.getElementById('kb-help').style.display='flex'" title="Shortcuts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+            <line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/>
+            <line x1="6" y1="12" x2="6" y2="12"/><line x1="10" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="14" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/>
+            <line x1="7" y1="16" x2="17" y2="16"/>
+        </svg>
     </button>
 
     <!-- Hidden stat sinks for JS compat -->
@@ -268,7 +311,21 @@
 <div id="kb-help">
     <div class="kb-modal">
         <div class="kb-hdr">
-            <span>Keyboard Shortcuts</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" width="16" height="16">
+                    <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+                    <line x1="6" y1="8" x2="6" y2="8"/>
+                    <line x1="10" y1="8" x2="10" y2="8"/>
+                    <line x1="14" y1="8" x2="14" y2="8"/>
+                    <line x1="18" y1="8" x2="18" y2="8"/>
+                    <line x1="6" y1="12" x2="6" y2="12"/>
+                    <line x1="10" y1="12" x2="10" y2="12"/>
+                    <line x1="14" y1="12" x2="14" y2="12"/>
+                    <line x1="18" y1="12" x2="18" y2="12"/>
+                    <line x1="7" y1="16" x2="17" y2="16"/>
+                </svg>
+                <span>Shortcuts</span>
+            </div>
             <button class="icon-btn" onclick="document.getElementById('kb-help').style.display='none'">
                 <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>

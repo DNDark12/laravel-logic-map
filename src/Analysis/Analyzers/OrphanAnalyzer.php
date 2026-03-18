@@ -35,7 +35,7 @@ class OrphanAnalyzer implements ViolationAnalyzer
 
             if ($fanIn === 0) {
                 $violations[] = new Violation(
-                    type: 'orphan_class',
+                    type: 'orphan',
                     severity: 'low',
                     nodeId: $node->id,
                     message: "No other class depends on this {$node->kind->value} (fan_in = 0)",

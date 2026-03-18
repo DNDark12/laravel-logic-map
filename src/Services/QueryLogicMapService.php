@@ -99,9 +99,11 @@ class QueryLogicMapService
             return $this->errorResponse('No snapshot found. Run `php artisan logic-map:build` first.');
         }
 
-        return $this->successResponse(
-            $this->metaProjector->getMeta($graph)
-        );
+        $meta = $this->metaProjector->getMeta($graph);
+        $meta['kind_labels'] = config('logic-map.analysis.kind_labels', []);
+        $meta['ui_thresholds'] = config('logic-map.analysis.ui_thresholds', ['large_graph' => 150]);
+
+        return $this->successResponse($meta);
     }
 
     /**
@@ -166,6 +168,19 @@ class QueryLogicMapService
             'score' => $report->healthScore,
             'grade' => $report->grade,
             'summary' => $report->summary,
+            'weights' => config('logic-map.analysis.weights', [
+                'critical' => 25,
+                'high' => 10,
+                'medium' => 5,
+                'low' => 1,
+            ]),
+            'labels' => config('logic-map.analysis.labels', []),
+            'descriptions' => config('logic-map.analysis.descriptions', []),
+            'severity_descriptions' => config('logic-map.analysis.severity_descriptions', []),
+            'grade_scales' => config('logic-map.analysis.grade_scales', [
+                90 => 'A', 80 => 'B', 70 => 'C', 60 => 'D', 0 => 'F'
+            ]),
+            'colors' => config('logic-map.analysis.colors', []),
             'graph_stats' => [
                 'total_nodes' => count($nodes),
                 'total_edges' => count($edges),

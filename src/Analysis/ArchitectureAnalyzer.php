@@ -119,13 +119,20 @@ class ArchitectureAnalyzer
 
     protected function scoreToGrade(int $score): string
     {
-        return match (true) {
-            $score >= 90 => 'A',
-            $score >= 80 => 'B',
-            $score >= 70 => 'C',
-            $score >= 60 => 'D',
-            default => 'F',
-        };
+        $scales = config('logic-map.analysis.grade_scales', [
+            90 => 'A', 80 => 'B', 70 => 'C', 60 => 'D', 0 => 'F'
+        ]);
+
+        // Sort keys descending to match first applicable range
+        krsort($scales);
+
+        foreach ($scales as $threshold => $grade) {
+            if ($score >= $threshold) {
+                return $grade;
+            }
+        }
+
+        return 'F';
     }
 
     /**

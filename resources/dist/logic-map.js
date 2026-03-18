@@ -24,7 +24,7 @@
             unknown: { bg: '#f3f4f6', bd: '#6b7280' }
         };
 
-        const KIND_LABELS = {
+        let KIND_LABELS = {
             route: 'Routes', controller: 'Controllers', service: 'Services',
             repository: 'Repositories', model: 'Models', event: 'Events',
             job: 'Jobs', listener: 'Listeners', command: 'Commands',
@@ -128,13 +128,23 @@
                     if (this.classList.contains('active')) return;
                     grp.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
+                    
+                    const hops = this.getAttribute('data-hops');
                     const inp = document.getElementById('hl-hops');
-                    if (inp) inp.value = this.dataset.hops;
+                    if (inp) inp.value = hops;
+                    
+                    // Update trigger label
+                    const triggerVal = document.getElementById('hops-trigger-val');
+                    if (triggerVal) triggerVal.textContent = (hops === '99' ? 'All' : hops);
+                    
                     if (window._hlTimeout) clearTimeout(window._hlTimeout);
                     window._hlTimeout = setTimeout(() => {
                         const hl = cy.nodes('.highlighted').first();
                         if (hl.length) applyHighlight(hl);
                     }, 80);
+                    
+                    // Close dropdown if in mobile/grouped mode
+                    document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
                 });
             });
         }
@@ -187,7 +197,21 @@
 
         function runLayout(name) {
             currentLayout = name;
-            document.querySelectorAll('#layout-grp .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.layout === name));
+            const buttons = document.querySelectorAll('#layout-grp .seg-btn');
+            buttons.forEach(b => {
+                const isActive = b.dataset.layout === name;
+                b.classList.toggle('active', isActive);
+                if (isActive) {
+                    // Update trigger UI
+                    const triggerLabel = document.getElementById('layout-trigger-label');
+                    const triggerIcon = document.getElementById('layout-trigger-icon');
+                    if (triggerLabel) triggerLabel.textContent = b.querySelector('.btn-lbl')?.textContent || name;
+                    if (triggerIcon) {
+                        const btnSvg = b.querySelector('svg');
+                        if (btnSvg) triggerIcon.innerHTML = btnSvg.innerHTML;
+                    }
+                }
+            });
 
             // Temporarily hide orphan nodes so dagre only arranges the connected graph.
             // They will be repositioned manually after layout finishes.
@@ -208,6 +232,9 @@
                 positionOrphanGroups();
             });
             layout.run();
+            
+            // Close dropdown if in mobile mode
+            document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
         }
 
         document.querySelectorAll('#layout-grp .seg-btn').forEach(btn => btn.addEventListener('click', () => runLayout(btn.dataset.layout)));
@@ -520,6 +547,14 @@
         /* ────────────────────────────────────
            Search
         ──────────────────────────────────── */
+        function debounce(func, wait) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
         window.doSearch = function () {
             const q = document.getElementById('si').value.trim().toLowerCase();
             if (!q) { cy.nodes().removeClass('dimmed highlighted'); return; }
@@ -529,9 +564,18 @@
                 node.toggleClass('dimmed', !m); node.toggleClass('highlighted', m);
             });
             const matches = cy.nodes('.highlighted');
-            if (matches.length === 1) matches[0].emit('tap');
+            if (matches.length === 1) {
+                const node = matches[0];
+                cy.animate({ center: { eles: node }, zoom: 1.2 }, { duration: 300 });
+                applyHighlight(node);
+                openPanel(node.data());
+            }
             else if (matches.length > 0) cy.fit(matches, 50);
         };
+
+        const debouncedSearch = debounce(doSearch, 300);
+
+        document.getElementById('si').addEventListener('input', debouncedSearch);
 
         document.getElementById('si').addEventListener('keyup', function (e) {
             if (e.key === 'Enter') doSearch();
@@ -664,12 +708,19 @@
                     cy.endBatch();
                     separateOrphanNodes();
                     runLayout(currentLayout);
-                    // After layout: re-highlight the seed and open panel
+
+                    // Centering & Focus
                     setTimeout(() => {
                         const seedNode = cy.getElementById(seedId);
                         if (seedNode.length) {
                             applyHighlight(seedNode);
                             openPanel(seedNode.data());
+                            // Fit with animation to center the seed and visible nodes
+                            cy.animate({
+                                fit: { padding: 50 },
+                                duration: 500,
+                                easing: 'ease-out-cubic'
+                            });
                         }
                     }, 400);
                 })
@@ -763,6 +814,13 @@
                 sgOriginalElements = null;
                 separateOrphanNodes();
                 runLayout(currentLayout);
+                // Return view to full fit
+                setTimeout(() => {
+                    cy.animate({
+                        fit: { padding: 40 },
+                        duration: 400
+                    });
+                }, 100);
             }
         };
 
@@ -782,6 +840,11 @@
         // Tag every orphan node with _orphan:true so we can find them later.
         // Called once after data load, and again after subgraph lazy-loads.
         function separateOrphanNodes() {
+            if (sgMode) {
+                // In subgraph mode, we strictly don't want ANY unintended orphan nodes
+                cy.nodes().forEach(n => n.data('_orphan', null));
+                return;
+            }
             // Build set of node IDs that appear in any edge (raw + cy)
             const nodesWithEdges = new Set();
             allEdgesData.forEach(e => {
@@ -803,6 +866,7 @@
 
         // Called after every layout run. Positions orphan nodes in kind-rows/cols.
         function positionOrphanGroups() {
+            if (sgMode) return;
             // Collect visible orphan nodes grouped by kind
             const byKind = {};
             cy.nodes().forEach(n => {
@@ -823,8 +887,8 @@
 
             const isLR = (currentLayout === 'lr' || currentLayout === 'compact');
             const nodeW = 160, nodeH = 55;
-            const gapX = 20, gapY = 14;   // gap between nodes
-            const kindGap = 40;               // gap between kind groups
+            const gapX = 40, gapY = 30;   // gap between nodes
+            const kindGap = 60;               // gap between kind groups
 
             if (isLR) {
                 // ── LR mode: kinds as columns, placed to the right of the graph ──
@@ -972,7 +1036,7 @@
         }
 
         let warnOffset = 0;
-        function showWarning(html, bg, bd, tx, dur = 8000) {
+        function showWarning(html, bg, bd, tx, dur = 5000) {
             const w = document.createElement('div');
             w.style.cssText = `position:fixed;top:${60 + warnOffset}px;right:16px;background:${bg};border:1px solid ${bd};padding:7px 12px;border-radius:6px;font-size:9.5px;color:${tx};z-index:30;max-width:300px;transition:opacity .3s;display:flex;align-items:center;gap:6px;font-family:inherit;`;
             w.innerHTML = html; document.body.appendChild(w); warnOffset += 42;
@@ -1065,8 +1129,12 @@
         window.openHealthPanel = function () {
             const panel = document.getElementById('health-panel');
             if (!panel) return;
-            renderHealthPanel();
-            panel.classList.add('open');
+            if (panel.classList.contains('open')) {
+                panel.classList.remove('open');
+            } else {
+                renderHealthPanel();
+                panel.classList.add('open');
+            }
         };
 
         window.closeHealthPanel = function () {
@@ -1085,26 +1153,34 @@
             const v = _violationsData;
             if (!d) return;
 
-            const SEVER_COLORS = {
+            const SEVER_COLORS = Object.assign({
                 critical: { bg: 'rgba(239,68,68,.12)', bd: '#ef4444', tx: '#ef4444' },
                 high: { bg: 'rgba(249,115,22,.12)', bd: '#f97316', tx: '#f97316' },
                 medium: { bg: 'rgba(234,179,8,.12)', bd: '#eab308', tx: '#ca8a04' },
                 low: { bg: 'rgba(34,197,94,.1)', bd: '#22c55e', tx: '#16a34a' },
-            };
+            }, d.colors?.severities || {});
 
-            const VIOLATION_LABELS = {
-                CircularDependency: 'Circular Dependency',
-                FatController: 'Fat Controller',
-                Orphan: 'Orphan Node',
-                HighInstability: 'High Instability',
-                HighCoupling: 'High Coupling',
-            };
+            const VIOLATION_LABELS = Object.assign({
+                circular_dependency: 'Circular Dependency',
+                fat_controller: 'Fat Controller',
+                orphan: 'Orphan Node',
+                high_instability: 'High Instability',
+                high_coupling: 'High Coupling',
+            }, d.labels || {});
+
+            const VIOLATION_DESCRIPTIONS = Object.assign({
+                circular_dependency: 'Recursive dependency chain found (A → B → A). Fix by extracting shared logic to a lower-level service or interface.',
+                fat_controller: 'Controller exceeds dependency threshold. Refactor by delegating business logic to Services or Actions.',
+                orphan: 'Module is not called by or connected to any other parts. May be dead code or incomplete integration.',
+                high_instability: 'Fragile component that depends on many changing parts but is not depended upon by others.',
+                high_coupling: 'Tightly coupled module with high connectivity. Hard to test and isolate.',
+            }, d.descriptions || {});
 
             // Score ring
             const pct = Math.max(0, Math.min(100, d.score));
             const r = 36, circ = 2 * Math.PI * r;
             const dash = (pct / 100) * circ;
-            const gradeColors = { A: '#22c55e', B: '#22c55e', C: '#eab308', D: '#f97316', F: '#ef4444' };
+            const gradeColors = Object.assign({ A: '#22c55e', B: '#22c55e', C: '#eab308', D: '#f97316', F: '#ef4444' }, d.colors?.grades || {});
             const gc = gradeColors[d.grade] || '#6b7280';
 
             let html = `
@@ -1154,17 +1230,18 @@
             </div>
             <div class="hp-collapsible-body">
                 <div class="hp-guide">
-                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:#e05555">Critical</span><span>−25 pts</span><span class="hp-guide-desc">Circular deps, breaking issues</span></div>
-                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:#d97a3a">High</span><span>−10 pts</span><span class="hp-guide-desc">Fat controllers, structural debt</span></div>
-                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:#b5920a">Medium</span><span>−5 pts</span><span class="hp-guide-desc">High instability / coupling</span></div>
-                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:#3a9e6a">Low</span><span>−1 pt</span><span class="hp-guide-desc">Orphan nodes, minor issues</span></div>
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.critical.bd}">Critical</span><span>−${d.weights.critical || 25} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.critical || 'Circular deps, breaking issues'}</span></div>
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.high.bd}">High</span><span>−${d.weights.high || 10} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.high || 'Fat controllers, structural debt'}</span></div>
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.medium.bd}">Medium</span><span>−${d.weights.medium || 5} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.medium || 'High instability / coupling'}</span></div>
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.low.bd}">Low</span><span>−${d.weights.low || 1} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.low || 'Orphan nodes, minor issues'}</span></div>
                 </div>
                 <div class="hp-grades">
-                    <span class="hp-grade-pill gA">A 90–100</span>
-                    <span class="hp-grade-pill gB">B 80–89</span>
-                    <span class="hp-grade-pill gC">C 70–79</span>
-                    <span class="hp-grade-pill gD">D 60–69</span>
-                    <span class="hp-grade-pill gF">F &lt;60</span>
+                    ${Object.entries(d.grade_scales || {90:'A',80:'B',70:'C',60:'D',0:'F'})
+                        .sort((a,b) => b[0]-a[0])
+                        .map(([score, grade], i, arr) => {
+                            const next = arr[i-1] ? (parseInt(arr[i-1][0])-1) : 100;
+                            return `<span class="hp-grade-pill g${grade}">${grade} ${score}${score < 100 ? `–${next}` : ''}</span>`;
+                        }).join('')}
                 </div>
             </div>
         </div>`;
@@ -1197,6 +1274,7 @@
                     <div class="hp-collapsible-body">`;
                     groups[sev].forEach(viol => {
                         const label = VIOLATION_LABELS[viol.type] || viol.type;
+                        const desc = VIOLATION_DESCRIPTIONS[viol.type] || '';
                         const nodeId = viol.node_id || viol.nodeId || '';
                         const rawMsg = viol.message || viol.description || '';
 
@@ -1231,6 +1309,7 @@
 
                         html += `<div class="hp-viol" style="border-left-color:${sc.bd}${nodeId ? ';cursor:pointer' : ''}" ${nodeId ? `onclick="focusNode('${nodeId}');closeHealthPanel()"` : ''}>
                         <div class="hp-viol-type">${label}</div>
+                        ${desc ? `<div class="hp-viol-desc">${desc}</div>` : ''}
                         ${formattedMsg}
                         ${shortNode ? `<div class="hp-viol-node"><svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"/><polyline points="8 5 8 8 10 10"/></svg>${shortNode}</div>` : ''}
                     </div>`;
@@ -1252,7 +1331,12 @@
         }
 
         fetch(window.logicMapConfig.metaUrl).then(r => r.json()).then(j => {
-            if (j.ok) { document.getElementById('s-nodes').textContent = j.data.node_count; document.getElementById('s-edges').textContent = j.data.edge_count; }
+            if (j.ok) { 
+                document.getElementById('s-nodes').textContent = j.data.node_count; 
+                document.getElementById('s-edges').textContent = j.data.edge_count; 
+                window.metaData = j.data;
+                if (j.data.kind_labels) KIND_LABELS = Object.assign(KIND_LABELS, j.data.kind_labels);
+            }
         }).catch(() => { });
 
         ldMsg.textContent = 'Loading graph…';
@@ -1268,7 +1352,8 @@
             }
 
             const filteredNodes = filterOrphanNodes(allNodesData, allEdgesData);
-            if (filteredNodes.length > 150) { document.getElementById('lg-warning').classList.add('show'); setTimeout(() => document.getElementById('lg-warning').classList.remove('show'), 8000); }
+            const largeThreshold = (window.metaData?.ui_thresholds?.large_graph || 150);
+            if (filteredNodes.length > largeThreshold) { document.getElementById('lg-warning').classList.add('show'); setTimeout(() => document.getElementById('lg-warning').classList.remove('show'), 5000); }
 
             cy.startBatch();
             filteredNodes.forEach(n => cy.add({ data: { ...n, label: formatShortLabel(n.name || n.id), fullLabel: n.name || n.id, _ns: getNamespace(n.id) } }));
@@ -1286,7 +1371,7 @@
 
             const cycles = detectCycles(filteredNodes, allEdgesData);
             if (cycles.length) {
-                showWarning(`🔄 Cycle: <b>${cycles[0].map(id => formatShortLabel(id)).join(' → ')}</b>${cycles.length > 1 ? ` (+${cycles.length - 1})` : ''}`, 'rgba(239,68,68,.1)', '#ef4444', '#ef4444', 10000);
+                showWarning(`🔄 Cycle: <b>${cycles[0].map(id => formatShortLabel(id)).join(' → ')}</b>${cycles.length > 1 ? ` (+${cycles.length - 1})` : ''}`, 'rgba(239,68,68,.1)', '#ef4444', '#ef4444', 5000);
                 cycles.forEach(c => c.forEach(id => { const n = cy.getElementById(id); if (n.length) { n.style('border-color', '#ef4444'); n.style('border-width', 2); } }));
             }
 
@@ -1297,6 +1382,70 @@
                 l.style.opacity = '0'; setTimeout(() => l.style.display = 'none', 400);
             }, 100);
         }).catch(err => { ldMsg.textContent = 'Failed: ' + err.message; });
+
+
+        /* ────────────────────────────────────
+           Dropdowns
+        ──────────────────────────────────── */
+        window.toggleDropdown = function (e, id) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            const el = document.getElementById(id);
+            if (!el) { console.warn('[LogicMap] Dropdown not found:', id); return; }
+            const wasOpen = el.classList.contains('show');
+            document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
+            if (!wasOpen) el.classList.add('show');
+        };
+
+        // Legacy alias for export
+        window.toggleExportMenu = function (e) {
+            toggleDropdown(e, 'export-dropdown');
+        };
+
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.dropdown-grp')) {
+                document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
+            }
+        });
+
+        /* ────────────────────────────────────
+           Init
+        ──────────────────────────────────── */
+        // Initialize active triggers
+        function initTriggers() {
+            // Layout (Clone to mobile menu if exists)
+            const layoutGrp = document.getElementById('layout-grp');
+            const layoutMenu = document.getElementById('layout-menu');
+            if (layoutGrp && layoutMenu) {
+                layoutMenu.innerHTML = layoutGrp.innerHTML;
+            }
+
+            const activeLayout = document.querySelector('#layout-grp .seg-btn.active');
+            if (activeLayout) {
+                const triggerLabel = document.getElementById('layout-trigger-label');
+                const triggerIcon = document.getElementById('layout-trigger-icon');
+                if (triggerLabel) triggerLabel.textContent = activeLayout.querySelector('.btn-lbl')?.textContent || activeLayout.dataset.layout;
+                if (triggerIcon) {
+                    const btnSvg = activeLayout.querySelector('svg');
+                    if (btnSvg) triggerIcon.innerHTML = btnSvg.innerHTML;
+                }
+            }
+            // Hops (Clone to mobile menu if exists)
+            const hopsGrp = document.getElementById('hl-hops-grp');
+            const hopsMenu = document.getElementById('hops-menu');
+            if (hopsGrp && hopsMenu) {
+                hopsMenu.innerHTML = hopsGrp.innerHTML;
+            }
+
+            const activeHops = document.querySelector('#hl-hops-grp .seg-btn.active');
+            if (activeHops) {
+                const triggerVal = document.getElementById('hops-trigger-val');
+                if (triggerVal) {
+                    const h = activeHops.getAttribute('data-hops');
+                    triggerVal.textContent = (h === '99' ? 'All' : h);
+                }
+            }
+        }
+        setTimeout(initTriggers, 200); // Slight delay to ensure DOM and data are ready
 
     }; // end init
 

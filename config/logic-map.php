@@ -7,6 +7,7 @@ return [
     'scan_paths' => [
         base_path('app'),
         base_path('routes'),
+        // base_path('packages/dndark'),
     ],
 
     /*
@@ -63,6 +64,38 @@ return [
         ],
 
         /*
+         * Display labels for analyzers
+         */
+        'labels' => [
+            'circular_dependency' => 'Circular Dependency',
+            'fat_controller' => 'Fat Controller',
+            'orphan' => 'Orphan Node',
+            'high_instability' => 'High Instability',
+            'high_coupling' => 'High Coupling',
+        ],
+
+        /*
+         * Descriptions for analyzers (shown in UI)
+         */
+        'descriptions' => [
+            'circular_dependency' => 'Recursive dependency chain found (A → B → A). Fix by extracting shared logic to a lower-level service or interface.',
+            'fat_controller' => 'Controller exceeds dependency threshold. Refactor by delegating business logic to Services or Actions.',
+            'orphan' => 'Module is not called by or connected to any other parts. May be dead code or incomplete integration.',
+            'high_instability' => 'Fragile component that depends on many changing parts but is not depended upon by others.',
+            'high_coupling' => 'Tightly coupled module with high connectivity. Hard to test and isolate.',
+        ],
+
+        /*
+         * Descriptions for severity levels (shown in Scoring Guide)
+         */
+        'severity_descriptions' => [
+            'critical' => 'Circular deps, breaking issues',
+            'high' => 'Fat controllers, structural debt',
+            'medium' => 'High instability / coupling',
+            'low' => 'Orphan nodes, minor issues',
+        ],
+
+        /*
          * Enable/disable individual analyzers
          */
         'analyzers' => [
@@ -100,6 +133,56 @@ return [
             'high' => 5,
             'medium' => 2,
             'low' => 1,
+        ],
+
+        /*
+         * Health grade scales (min_score => grade)
+         */
+        'grade_scales' => [
+            90 => 'A',
+            80 => 'B',
+            70 => 'C',
+            60 => 'D',
+            0  => 'F',
+        ],
+
+        /*
+         * Labels for node kinds
+         */
+        'kind_labels' => [
+            'route' => 'Routes',
+            'controller' => 'Controllers',
+            'service' => 'Services',
+            'repository' => 'Repositories',
+            'model' => 'Models',
+            'event' => 'Events',
+            'job' => 'Jobs',
+            'listener' => 'Listeners',
+            'command' => 'Commands',
+            'component' => 'Components',
+            'unknown' => 'Other',
+        ],
+
+        /*
+         * Colors for UI elements
+         */
+        'colors' => [
+            'grades' => [
+                'A' => '#22c55e', 'B' => '#22c55e', 'C' => '#eab308', 'D' => '#f97316', 'F' => '#ef4444'
+            ],
+            'severities' => [
+                'critical' => ['bg' => 'rgba(239,68,68,.12)', 'bd' => '#ef4444', 'tx' => '#ef4444'],
+                'high' => ['bg' => 'rgba(249,115,22,.1)', 'bd' => '#f97316', 'tx' => '#f97316'],
+                'medium' => ['bg' => 'rgba(234,179,8,.1)', 'bd' => '#eab308', 'tx' => '#ca8a04'],
+                'low' => ['bg' => 'rgba(34,197,94,.1)', 'bd' => '#22c55e', 'tx' => '#16a34a'],
+            ],
+        ],
+
+        /*
+         * Performance thresholds for UI warnings
+         */
+        'ui_thresholds' => [
+            'large_graph' => 150,
         ],
     ],
 
