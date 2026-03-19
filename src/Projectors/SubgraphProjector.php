@@ -2,10 +2,10 @@
 
 namespace dndark\LogicMap\Projectors;
 
-use DNDark\LogicMap\Contracts\GraphProjector;
-use DNDark\LogicMap\Domain\Edge;
-use DNDark\LogicMap\Domain\Graph;
-use DNDark\LogicMap\Domain\Node;
+use dndark\LogicMap\Contracts\GraphProjector;
+use dndark\LogicMap\Domain\Edge;
+use dndark\LogicMap\Domain\Graph;
+use dndark\LogicMap\Domain\Node;
 
 class SubgraphProjector implements GraphProjector
 {

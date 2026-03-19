@@ -21,8 +21,8 @@ Laravel Logic Map combines deterministic AST analysis (`nikic/php-parser`) with 
 
 ## Latest Release
 
-- Current release tag: `v1.1.4`
-- Scope: Sprint 5 Final (Resolution engine, export bundle, CI isolation, and reliability fixes)
+- Current release tag: `v1.1.5`
+- Scope: Package reliability fixes (namespace case-sensitivity), longer snapshot retention, and release metadata refresh
 
 ## 📂 Architecture
 

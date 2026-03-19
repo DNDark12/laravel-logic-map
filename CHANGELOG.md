@@ -4,18 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.5] - 2026-03-19
+
+### Changed
+- Increased default snapshot cache TTL to `24 * 60 * 60` seconds to retain more historical snapshots during local package testing.
+- Refreshed package README release metadata for the `v1.1.5` tag.
+
+### Fixed
+- Fixed critical CI failure due to namespace case-sensitivity mismatch (`DNDark` vs `dndark`) in `SubgraphProjector`.
+
 ## [1.1.4] - 2026-03-19
 
 ### Added
-- Query-time snapshot resolution with fallback policies (missing/corrupted pointers).
-- Detailed `_resolution` meta-data in JSON responses.
-- Explicit `active_fingerprint` and `current_fingerprint` in snapshot lists.
-- New export endpoints: `/export/graph`, `/export/analysis`, `/export/bundle`.
+- Query/application layer split with `SnapshotResolver`, `GraphReadService`, `AnalysisReadService`, and `ExportReadService`.
+- Typed JSON result model with structured `errors[]` entries and `_resolution` metadata on JSON responses.
+- Snapshot-aware export endpoints: `/export/graph`, `/export/analysis`, `/export/bundle`.
+- Explicit `active_fingerprint`, `current_fingerprint`, and `is_active` semantics in snapshot responses.
+- Package-level Testbench base `TestCase` for package feature tests and CI isolation.
+
+### Changed
+- `GET /logic-map/export/json` now aliases the bundle export contract instead of acting as a separate JSON format.
+- Query endpoints now resolve snapshots from the active pointer / latest valid cached snapshot without rebuilding or reparsing on the request path.
+- Snapshot cache TTL default is now `24 * 60 * 60` seconds.
 
 ### Fixed
-- Resolve CI test failures by introducing package-level `TestCase` (isolated testing).
-- Fixed intermittent 404s on subgraph routes by implementing URL-encoding for node IDs.
+- Fixed intermittent 404s on subgraph routes by supporting URL-encoded node IDs consistently.
 - Corrected health grade color mapping in configuration.
+- Restored package test namespace/bootstrap wiring used by CI and isolated package runs.
 
 ## [1.1.0] - 2026-03-19
 

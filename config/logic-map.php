@@ -35,7 +35,7 @@ return [
     /*
      * How long should the snapshot be cached? (in seconds)
      */
-    'cache_ttl' => 3600,
+    'cache_ttl' => 24 * 60 * 60,
 
     /*
      * Node limits for projections
