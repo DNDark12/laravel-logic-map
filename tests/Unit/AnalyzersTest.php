@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace dndark\LogicMap\Tests\Unit;
 
 use dndark\LogicMap\Analysis\Analyzers\CircularDependencyAnalyzer;
 use dndark\LogicMap\Analysis\Analyzers\DeadCodeAnalyzer;
@@ -16,19 +16,10 @@ use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
 use dndark\LogicMap\Domain\Violation;
-use dndark\LogicMap\LogicMapServiceProvider;
-use Illuminate\Support\Facades\Artisan;
-use Tests\TestCase;
+use dndark\LogicMap\Tests\TestCase;
 
 class AnalyzersTest extends TestCase
 {
-    protected function getPackageProviders($app)
-    {
-        return [
-            LogicMapServiceProvider::class,
-        ];
-    }
-
     protected MetricsCalculator $metricsCalculator;
 
     protected function setUp(): void

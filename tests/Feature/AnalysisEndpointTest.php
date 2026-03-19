@@ -1,21 +1,9 @@
 <?php
 
-namespace Tests\Feature;
-
-use dndark\LogicMap\LogicMapServiceProvider;
-use dndark\LogicMap\Tests\TestCase as BaseTestCase;
-use Illuminate\Support\Facades\Artisan;
-use Tests\TestCase;
+use dndark\LogicMap\Tests\TestCase;
 
 class AnalysisEndpointTest extends TestCase
 {
-    protected function getPackageProviders($app)
-    {
-        return [
-            LogicMapServiceProvider::class,
-        ];
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
