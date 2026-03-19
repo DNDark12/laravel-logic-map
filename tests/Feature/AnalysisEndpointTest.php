@@ -1,6 +1,9 @@
 <?php
 
+namespace dndark\LogicMap\Tests\Feature;
+
 use dndark\LogicMap\Tests\TestCase;
+use Illuminate\Support\Facades\Artisan;
 
 class AnalysisEndpointTest extends TestCase
 {
