@@ -10,19 +10,9 @@
         /* ────────────────────────────────────
            Constants
         ──────────────────────────────────── */
-        const KIND_COLORS = {
-            route: { bg: '#dcfce7', bd: '#22c55e' },
-            controller: { bg: '#dbeafe', bd: '#3b82f6' },
-            service: { bg: '#fef3c7', bd: '#f59e0b' },
-            repository: { bg: '#f3e8ff', bd: '#a855f7' },
-            model: { bg: '#fce7f3', bd: '#ec4899' },
-            event: { bg: '#cffafe', bd: '#06b6d4' },
-            job: { bg: '#cffafe', bd: '#06b6d4' },
-            listener: { bg: '#cffafe', bd: '#06b6d4' },
-            command: { bg: '#e0e7ff', bd: '#6366f1' },
-            component: { bg: '#fef3c7', bd: '#eab308' },
-            unknown: { bg: '#f3f4f6', bd: '#6b7280' }
-        };
+        let KIND_COLORS = {};
+        let RISK_COLORS = {};
+        let THEME_TOKENS = {};
 
         let KIND_LABELS = {
             route: 'Routes', controller: 'Controllers', service: 'Services',
@@ -52,12 +42,130 @@
         let layoutBusy = false;
         let pendingLayoutRequest = null;
         let fitBusy = false;
+        let activePanelNodeId = null;
+        let panelState = 'hidden';
+        let panelRestoreState = 'expanded';
         // hiddenModules removed — visibility toggle feature removed
 
         const initialSnapshot = new URLSearchParams(window.location.search).get('snapshot');
         if (initialSnapshot && initialSnapshot.trim() !== '') {
             selectedSnapshot = initialSnapshot.trim();
         }
+
+        function cssVar(name, fallback) {
+            const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+            return value || fallback;
+        }
+
+        function readThemeTokens() {
+            return {
+                canvas: cssVar('--bg-canvas', '#181E28'),
+                text: cssVar('--tx', '#E8EDF5'),
+                accent: cssVar('--accent', '#5080E8'),
+                nodeDefaultBg: cssVar('--kind-unknown-bg', '#f3f4f6'),
+                nodeDefaultBorder: cssVar('--kind-unknown-bd', '#6b7280'),
+                nodeDefaultText: cssVar('--node-text', '#1c2036'),
+                kindColors: {
+                    route: { bg: cssVar('--kind-route-bg', '#dcfce7'), bd: cssVar('--kind-route-bd', '#22c55e') },
+                    controller: { bg: cssVar('--kind-controller-bg', '#dbeafe'), bd: cssVar('--kind-controller-bd', '#3b82f6') },
+                    service: { bg: cssVar('--kind-service-bg', '#fef3c7'), bd: cssVar('--kind-service-bd', '#f59e0b') },
+                    repository: { bg: cssVar('--kind-repository-bg', '#f3e8ff'), bd: cssVar('--kind-repository-bd', '#a855f7') },
+                    model: { bg: cssVar('--kind-model-bg', '#fce7f3'), bd: cssVar('--kind-model-bd', '#ec4899') },
+                    event: { bg: cssVar('--kind-event-bg', '#cffafe'), bd: cssVar('--kind-event-bd', '#06b6d4') },
+                    job: { bg: cssVar('--kind-job-bg', '#cffafe'), bd: cssVar('--kind-job-bd', '#06b6d4') },
+                    listener: { bg: cssVar('--kind-listener-bg', '#cffafe'), bd: cssVar('--kind-listener-bd', '#06b6d4') },
+                    command: { bg: cssVar('--kind-command-bg', '#e0e7ff'), bd: cssVar('--kind-command-bd', '#6366f1') },
+                    component: { bg: cssVar('--kind-component-bg', '#fef3c7'), bd: cssVar('--kind-component-bd', '#eab308') },
+                    unknown: { bg: cssVar('--kind-unknown-bg', '#f3f4f6'), bd: cssVar('--kind-unknown-bd', '#6b7280') }
+                },
+                riskColors: {
+                    critical: cssVar('--risk-critical', '#ef4444'),
+                    high: cssVar('--risk-high', '#f97316'),
+                    medium: cssVar('--risk-medium', '#eab308'),
+                    low: cssVar('--risk-low', '#22c55e'),
+                    healthy: ''
+                },
+                edge: {
+                    base: cssVar('--edge-default', 'rgba(156,163,175,0.4)'),
+                    route: cssVar('--edge-route', '#22c55e'),
+                    call: cssVar('--edge-call', 'rgba(59,130,246,0.6)'),
+                    use: cssVar('--edge-use', 'rgba(245,158,11,0.5)'),
+                    highlight: cssVar('--edge-highlight', '#4a7ff5')
+                },
+                heatmap: {
+                    0: { bg: cssVar('--heat-0-bg', '#dbeafe'), bd: cssVar('--heat-0-bd', '#93c5fd'), tx: cssVar('--heat-0-tx', '#1e293b') },
+                    1: { bg: cssVar('--heat-1-bg', '#fef3c7'), bd: cssVar('--heat-1-bd', '#facc15'), tx: cssVar('--heat-1-tx', '#3f2a0d') },
+                    2: { bg: cssVar('--heat-2-bg', '#fdba74'), bd: cssVar('--heat-2-bd', '#fb923c'), tx: cssVar('--heat-2-tx', '#3f1d06') },
+                    3: { bg: cssVar('--heat-3-bg', '#f97316'), bd: cssVar('--heat-3-bd', '#ea580c'), tx: cssVar('--heat-3-tx', '#ffffff') },
+                    4: { bg: cssVar('--heat-4-bg', '#ef4444'), bd: cssVar('--heat-4-bd', '#dc2626'), tx: cssVar('--heat-4-tx', '#ffffff') }
+                }
+            };
+        }
+
+        function syncThemeTokens() {
+            THEME_TOKENS = readThemeTokens();
+            KIND_COLORS = THEME_TOKENS.kindColors;
+            RISK_COLORS = THEME_TOKENS.riskColors;
+        }
+
+        function buildCyStyle() {
+            const tokens = THEME_TOKENS;
+            const style = [
+                {
+                    selector: 'node', style: {
+                        'background-color': tokens.nodeDefaultBg, 'label': 'data(label)', 'color': tokens.nodeDefaultText,
+                        'font-size': '11px', 'font-family': 'system-ui,-apple-system,sans-serif',
+                        'font-weight': '600', 'text-valign': 'center', 'text-halign': 'center',
+                        'border-width': 1, 'border-color': tokens.nodeDefaultBorder, 'padding': '10px',
+                        'shape': 'round-rectangle', 'width': '160px', 'height': '55px',
+                        'text-max-width': '150px', 'text-wrap': 'wrap', 'line-height': 1.2,
+                        'text-overflow-wrap': 'anywhere', 'min-zoomed-font-size': 6
+                    }
+                },
+                { selector: 'node[risk="critical"]', style: { 'border-color': tokens.riskColors.critical, 'border-width': 2 } },
+                { selector: 'node[risk="high"]', style: { 'border-color': tokens.riskColors.high, 'border-width': 2 } },
+                { selector: 'node[risk="medium"]', style: { 'border-color': tokens.riskColors.medium, 'border-width': 1.5 } },
+                { selector: 'node.heatmap-on[heat_level = 0]', style: { 'background-color': tokens.heatmap[0].bg, 'border-color': tokens.heatmap[0].bd, 'color': tokens.heatmap[0].tx } },
+                { selector: 'node.heatmap-on[heat_level = 1]', style: { 'background-color': tokens.heatmap[1].bg, 'border-color': tokens.heatmap[1].bd, 'color': tokens.heatmap[1].tx } },
+                { selector: 'node.heatmap-on[heat_level = 2]', style: { 'background-color': tokens.heatmap[2].bg, 'border-color': tokens.heatmap[2].bd, 'color': tokens.heatmap[2].tx } },
+                { selector: 'node.heatmap-on[heat_level = 3]', style: { 'background-color': tokens.heatmap[3].bg, 'border-color': tokens.heatmap[3].bd, 'color': tokens.heatmap[3].tx } },
+                { selector: 'node.heatmap-on[heat_level = 4]', style: { 'background-color': tokens.heatmap[4].bg, 'border-color': tokens.heatmap[4].bd, 'color': tokens.heatmap[4].tx } },
+                { selector: 'node.highlighted', style: { 'border-width': 3, 'border-color': tokens.accent, 'z-index': 999 } },
+                { selector: 'node.neighbor', style: { 'border-width': 2, 'border-color': tokens.edge.highlight } },
+                { selector: 'node.dimmed', style: { 'opacity': 0.15, 'events': 'no' } },
+                { selector: 'node.module-focus', style: { 'border-width': 3, 'border-color': tokens.edge.highlight, 'z-index': 998 } },
+                {
+                    selector: 'edge', style: {
+                        'width': 1.5,
+                        'line-color': tokens.edge.base,
+                        'target-arrow-color': tokens.edge.base,
+                        'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
+                        'curve-style': 'bezier'
+                    }
+                },
+                { selector: 'edge[type="route_to_controller"]', style: { 'line-color': tokens.edge.route, 'target-arrow-color': tokens.edge.route } },
+                { selector: 'edge[type="call"]', style: { 'line-color': tokens.edge.call, 'target-arrow-color': tokens.edge.call } },
+                { selector: 'edge[type="use"]', style: { 'line-color': tokens.edge.use, 'target-arrow-color': tokens.edge.use, 'line-style': 'dashed' } },
+                {
+                    selector: 'edge.highlighted', style: {
+                        'width': 2.5, 'line-color': tokens.edge.highlight, 'target-arrow-color': tokens.edge.highlight,
+                        'z-index': 999, 'line-style': 'dashed', 'line-dash-pattern': [8, 4], 'line-dash-offset': 0
+                    }
+                },
+                { selector: 'edge.dimmed', style: { 'opacity': 0.08, 'events': 'no' } },
+            ];
+
+            Object.entries(tokens.kindColors).forEach(([kind, colors]) => {
+                style.push({
+                    selector: `node[kind="${kind}"]`,
+                    style: { 'background-color': colors.bg, 'border-color': colors.bd }
+                });
+            });
+
+            return style;
+        }
+
+        syncThemeTokens();
 
         /* ────────────────────────────────────
            Cytoscape
@@ -68,59 +176,7 @@
             hideEdgesOnViewport: true,
             textureOnViewport: false,
             motionBlur: false,
-            style: [
-                {
-                    selector: 'node', style: {
-                        'background-color': '#f3f4f6', 'label': 'data(label)', 'color': '#1c2036',
-                        'font-size': '11px', 'font-family': 'system-ui,-apple-system,sans-serif',
-                        'font-weight': '600', 'text-valign': 'center', 'text-halign': 'center',
-                        'border-width': 1, 'border-color': '#9ca3af', 'padding': '10px',
-                        'shape': 'round-rectangle', 'width': '160px', 'height': '55px',
-                        'text-max-width': '150px', 'text-wrap': 'wrap', 'line-height': 1.2,
-                        'text-overflow-wrap': 'anywhere', 'min-zoomed-font-size': 6
-                    }
-                },
-                { selector: 'node[kind="route"]', style: { 'background-color': '#dcfce7', 'border-color': '#22c55e' } },
-                { selector: 'node[kind="controller"]', style: { 'background-color': '#dbeafe', 'border-color': '#3b82f6' } },
-                { selector: 'node[kind="service"]', style: { 'background-color': '#fef3c7', 'border-color': '#f59e0b' } },
-                { selector: 'node[kind="repository"]', style: { 'background-color': '#f3e8ff', 'border-color': '#a855f7' } },
-                { selector: 'node[kind="model"]', style: { 'background-color': '#fce7f3', 'border-color': '#ec4899' } },
-                { selector: 'node[kind="event"]', style: { 'background-color': '#cffafe', 'border-color': '#06b6d4' } },
-                { selector: 'node[kind="job"]', style: { 'background-color': '#cffafe', 'border-color': '#06b6d4' } },
-                { selector: 'node[kind="listener"]', style: { 'background-color': '#cffafe', 'border-color': '#06b6d4' } },
-                { selector: 'node[kind="command"]', style: { 'background-color': '#e0e7ff', 'border-color': '#6366f1' } },
-                { selector: 'node[risk="critical"]', style: { 'border-color': '#ef4444', 'border-width': 2 } },
-                { selector: 'node[risk="high"]', style: { 'border-color': '#f97316', 'border-width': 2 } },
-                { selector: 'node[risk="medium"]', style: { 'border-color': '#eab308', 'border-width': 1.5 } },
-                { selector: 'node.heatmap-on[heat_level = 0]', style: { 'background-color': '#dbeafe', 'border-color': '#93c5fd', 'color': '#1e293b' } },
-                { selector: 'node.heatmap-on[heat_level = 1]', style: { 'background-color': '#fef3c7', 'border-color': '#facc15', 'color': '#3f2a0d' } },
-                { selector: 'node.heatmap-on[heat_level = 2]', style: { 'background-color': '#fdba74', 'border-color': '#fb923c', 'color': '#3f1d06' } },
-                { selector: 'node.heatmap-on[heat_level = 3]', style: { 'background-color': '#f97316', 'border-color': '#ea580c', 'color': '#fff' } },
-                { selector: 'node.heatmap-on[heat_level = 4]', style: { 'background-color': '#ef4444', 'border-color': '#dc2626', 'color': '#fff' } },
-                { selector: 'node.highlighted', style: { 'border-width': 3, 'border-color': '#dd3585', 'z-index': 999 } },
-                { selector: 'node.neighbor', style: { 'border-width': 2, 'border-color': '#4a7ff5' } },
-                { selector: 'node.dimmed', style: { 'opacity': 0.15, 'events': 'no' } },
-                { selector: 'node.module-focus', style: { 'border-width': 3, 'border-color': '#4a7ff5', 'z-index': 998 } },
-                {
-                    selector: 'edge', style: {
-                        'width': 1.5,
-                        'line-color': 'rgba(156,163,175,0.4)',
-                        'target-arrow-color': 'rgba(156,163,175,0.4)',
-                        'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
-                        'curve-style': 'bezier'
-                    }
-                },
-                { selector: 'edge[type="route_to_controller"]', style: { 'line-color': '#22c55e', 'target-arrow-color': '#22c55e' } },
-                { selector: 'edge[type="call"]', style: { 'line-color': 'rgba(59,130,246,0.6)', 'target-arrow-color': 'rgba(59,130,246,0.6)' } },
-                { selector: 'edge[type="use"]', style: { 'line-color': 'rgba(245,158,11,0.5)', 'target-arrow-color': 'rgba(245,158,11,0.5)', 'line-style': 'dashed' } },
-                {
-                    selector: 'edge.highlighted', style: {
-                        'width': 2.5, 'line-color': '#4a7ff5', 'target-arrow-color': '#4a7ff5',
-                        'z-index': 999, 'line-style': 'dashed', 'line-dash-pattern': [8, 4], 'line-dash-offset': 0
-                    }
-                },
-                { selector: 'edge.dimmed', style: { 'opacity': 0.08, 'events': 'no' } },
-            ],
+            style: buildCyStyle(),
             layout: { name: 'preset' },
             minZoom: 0.1, maxZoom: 4
         });
@@ -261,11 +317,17 @@
         }
 
         window.exportLogicMap = function (format) {
-            const baseUrl = format === 'csv'
-                ? window.logicMapConfig.exportCsvUrl
-                : window.logicMapConfig.exportJsonUrl;
+            const exportUrlMap = {
+                graph: window.logicMapConfig.exportGraphUrl,
+                analysis: window.logicMapConfig.exportAnalysisUrl,
+                bundle: window.logicMapConfig.exportBundleUrl,
+                json: window.logicMapConfig.exportJsonUrl,
+                csv: window.logicMapConfig.exportCsvUrl,
+            };
 
-            if (format === 'json') {
+            const baseUrl = exportUrlMap[format] || window.logicMapConfig.exportBundleUrl;
+
+            if (format !== 'csv') {
                 fetch(withSnapshot(baseUrl))
                     .then(r => r.json())
                     .then(j => {
@@ -276,7 +338,8 @@
                         const payload = JSON.stringify(j.data, null, 2);
                         const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
                         const fp = (selectedSnapshot || 'current').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'current';
-                        const fileName = `logic-map-export-${fp}.json`;
+                        const suffix = format === 'analysis' ? 'analysis' : (format === 'graph' ? 'graph' : 'bundle');
+                        const fileName = `logic-map-${suffix}-${fp}.json`;
 
                         const link = document.createElement('a');
                         const objectUrl = URL.createObjectURL(blob);
@@ -542,6 +605,7 @@
             menu.dataset.bound = '1';
             syncMobileLayoutButtons(currentLayout);
             setActiveMobileHopsButton(document.getElementById('hl-hops')?.value || '1');
+            syncMobileSubgraphUI();
 
             menu.addEventListener('click', function (e) {
                 const layoutBtn = e.target.closest('.mam-chip[data-mobile-layout]');
@@ -555,6 +619,15 @@
                 if (hopsBtn) {
                     e.preventDefault();
                     applyHopsSelection(hopsBtn.dataset.mobileHops, true);
+                    return;
+                }
+
+                const subgraphDepthBtn = e.target.closest('.mam-chip[data-mobile-sg-depth]');
+                if (subgraphDepthBtn) {
+                    e.preventDefault();
+                    if (!sgMode || isSubgraphLocked()) return;
+                    setSubgraphDepth(subgraphDepthBtn.dataset.mobileSgDepth, true);
+                    document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
                     return;
                 }
 
@@ -583,11 +656,23 @@
                         if (kb) kb.style.display = 'flex';
                         break;
                     }
-                    case 'export-json':
-                        window.exportLogicMap('json');
+                    case 'export-graph':
+                        window.exportLogicMap('graph');
+                        break;
+                    case 'export-analysis':
+                        window.exportLogicMap('analysis');
+                        break;
+                    case 'export-bundle':
+                        window.exportLogicMap('bundle');
                         break;
                     case 'export-csv':
                         window.exportLogicMap('csv');
+                        break;
+                    case 'subgraph-rerun':
+                        if (sgMode) window.rerunSubGraph();
+                        break;
+                    case 'subgraph-exit':
+                        if (sgMode) window.exitSubGraph();
                         break;
                     default:
                         break;
@@ -597,6 +682,53 @@
             });
         }
         initMobileActionsMenu();
+
+        function getSubgraphSeedLabel() {
+            if (!sgLastSeed) return 'No node selected';
+
+            const seedNode = cy.getElementById(sgLastSeed);
+            if (seedNode.length) {
+                return seedNode.data('label') || seedNode.data('fullLabel') || sgLastSeed;
+            }
+
+            return sgLastSeed;
+        }
+
+        function syncMobileSubgraphDepthButtons(depth) {
+            document.querySelectorAll('#mobile-subgraph-controls .mam-chip[data-mobile-sg-depth]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mobileSgDepth === String(depth));
+            });
+        }
+
+        function setSubgraphDepth(depth, rerun = false) {
+            const normalizedDepth = String(depth || '1');
+            const input = document.getElementById('sg-hops');
+            if (input) input.value = normalizedDepth;
+
+            document.querySelectorAll('#sg-depth-grp .sgc-depth-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.depth === normalizedDepth);
+            });
+            syncMobileSubgraphDepthButtons(normalizedDepth);
+
+            if (rerun && sgMode && sgLastSeed && !isSubgraphLocked()) {
+                _loadSubgraph(sgLastSeed);
+            }
+        }
+
+        function syncMobileSubgraphUI() {
+            const section = document.getElementById('mobile-subgraph-controls');
+            if (!section) return;
+
+            const visible = !!sgMode;
+            section.hidden = !visible;
+            section.setAttribute('aria-hidden', visible ? 'false' : 'true');
+
+            const seedLabel = document.getElementById('mobile-subgraph-seed');
+            if (seedLabel) seedLabel.textContent = getSubgraphSeedLabel();
+
+            syncMobileSubgraphDepthButtons(document.getElementById('sg-hops')?.value || '1');
+            syncSubgraphControlsLockState();
+        }
 
         /* Shared highlight logic */
         function applyHighlight(node) {
@@ -749,9 +881,12 @@
             try { localStorage.setItem('lm-theme', theme); } catch (e) { }
             // Close picker
             document.getElementById('theme-picker').classList.remove('open');
-            // Update cytoscape bg
-            cy.style().selector('#cy').update();
-            cy.container().style.background = getComputedStyle(document.documentElement).getPropertyValue('--bg-canvas').trim();
+            syncThemeTokens();
+            cy.style().fromJson(buildCyStyle()).update();
+            cy.container().style.background = THEME_TOKENS.canvas;
+            if (allNodesData.length) {
+                buildModuleExplorer(allNodesData, allEdgesData);
+            }
         };
 
         // Restore saved theme
@@ -762,6 +897,9 @@
                 document.querySelectorAll('#theme-picker .theme-option').forEach(o => {
                     o.classList.toggle('active', o.dataset.themeVal === saved);
                 });
+                syncThemeTokens();
+                cy.style().fromJson(buildCyStyle()).update();
+                cy.container().style.background = THEME_TOKENS.canvas;
             }
         } catch (e) { }
 
@@ -880,21 +1018,158 @@
         /* ────────────────────────────────────
            Detail Panel
         ──────────────────────────────────── */
-        function openPanel(d) {
+        function isCompactPanelViewport() {
+            return window.innerWidth <= 980;
+        }
+
+        function getDefaultPanelState() {
+            return isCompactPanelViewport() ? 'peek' : 'expanded';
+        }
+
+        function getPanelNode() {
+            if (!activePanelNodeId) return null;
+            const node = cy.getElementById(activePanelNodeId);
+
+            if (!node || !node.length || node.data('_groupNode')) {
+                return null;
+            }
+
+            return node;
+        }
+
+        function syncPanelChrome() {
+            const panel = document.getElementById('panel');
+            const restore = document.getElementById('panel-restore');
+            const restoreLabel = document.getElementById('panel-restore-label');
+            if (!panel) return;
+
+            if (activePanelNodeId && !getPanelNode()) {
+                activePanelNodeId = null;
+                panelState = 'hidden';
+            }
+
+            const normalizedState = activePanelNodeId ? panelState : 'hidden';
+
+            panel.classList.remove('open', 'expanded', 'peek', 'hidden');
+            panel.classList.add(normalizedState);
+            panel.classList.toggle('open', normalizedState !== 'hidden');
+            panel.dataset.state = normalizedState;
+            panel.setAttribute('aria-hidden', normalizedState === 'hidden' ? 'true' : 'false');
+
+            document.body.classList.toggle('panel-detail-active', normalizedState !== 'hidden');
+            document.body.classList.toggle('panel-detail-peek', normalizedState === 'peek');
+            document.body.classList.toggle('panel-detail-hidden', normalizedState === 'hidden');
+
+            document.querySelectorAll('#p-state-controls .panel-state-btn').forEach(btn => {
+                btn.disabled = !activePanelNodeId;
+                btn.classList.remove('active');
+            });
+
+            const peekBtn = document.getElementById('p-peek');
+            const expandBtn = document.getElementById('p-expand');
+            const hideBtn = document.getElementById('p-hide');
+
+            if (peekBtn) {
+                peekBtn.classList.toggle('active', normalizedState === 'peek');
+                peekBtn.disabled = !activePanelNodeId || normalizedState === 'peek';
+            }
+            if (expandBtn) {
+                expandBtn.classList.toggle('active', normalizedState === 'expanded');
+                expandBtn.disabled = !activePanelNodeId || normalizedState === 'expanded';
+            }
+            if (hideBtn) {
+                hideBtn.disabled = !activePanelNodeId || normalizedState === 'hidden';
+            }
+
+            if (restore) {
+                const canRestore = normalizedState === 'hidden' && !!activePanelNodeId;
+                restore.hidden = !canRestore;
+                restore.setAttribute('aria-hidden', canRestore ? 'false' : 'true');
+
+                if (canRestore && restoreLabel) {
+                    restoreLabel.textContent = `Show detail · ${formatShortLabel(activePanelNodeId) || 'Selected node'}`;
+                }
+            }
+        }
+
+        function setPanelState(nextState) {
+            if (!activePanelNodeId && nextState !== 'hidden') {
+                return;
+            }
+
+            panelState = nextState === 'peek'
+                ? 'peek'
+                : nextState === 'expanded'
+                    ? 'expanded'
+                    : 'hidden';
+
+            if (panelState !== 'hidden') {
+                panelRestoreState = panelState;
+            }
+
+            syncPanelChrome();
+        }
+
+        function resetPanelSelection() {
+            activePanelNodeId = null;
+            panelState = 'hidden';
+            panelRestoreState = getDefaultPanelState();
+            document.getElementById('hub-warning').classList.remove('show');
+            document.getElementById('pbody').innerHTML = '';
+            syncPanelChrome();
+        }
+
+        window.peekPanel = function () {
+            if (!activePanelNodeId) return;
+            setPanelState('peek');
+        };
+
+        window.expandPanel = function () {
+            if (!activePanelNodeId) return;
+            setPanelState('expanded');
+        };
+
+        window.hidePanel = function () {
+            if (!activePanelNodeId) {
+                syncPanelChrome();
+                return;
+            }
+
+            if (panelState !== 'hidden') {
+                panelRestoreState = panelState;
+            }
+
+            document.getElementById('hub-warning').classList.remove('show');
+            setPanelState('hidden');
+        };
+
+        window.closePanel = window.hidePanel;
+
+        window.restorePanel = function () {
+            const node = getPanelNode();
+            if (!node) {
+                resetPanelSelection();
+                return;
+            }
+
+            openPanel(node.data(), panelRestoreState || getDefaultPanelState());
+        };
+
+        function openPanel(d, preferredState = null) {
             if (!d || d._groupNode) return;
             const kind = d.kind || 'unknown';
             const kc = KIND_COLORS[kind] || KIND_COLORS.unknown;
+            activePanelNodeId = d.id;
 
             document.getElementById('p-badge').style.cssText = `color:${kc.bd};border-color:${kc.bd}`;
             document.getElementById('p-badge').textContent = kind.toUpperCase();
             // Risk badge
-            const riskColors = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#22c55e', healthy: '' };
             const riskBadge = document.getElementById('p-risk-badge');
             if (riskBadge) {
                 const risk = d.risk;
-                if (risk && risk !== 'healthy' && riskColors[risk]) {
+                if (risk && risk !== 'healthy' && RISK_COLORS[risk]) {
                     riskBadge.textContent = risk.toUpperCase();
-                    riskBadge.style.cssText = `color:${riskColors[risk]};border-color:${riskColors[risk]};background:${riskColors[risk]}18;display:inline-flex`;
+                    riskBadge.style.cssText = `color:${RISK_COLORS[risk]};border-color:${RISK_COLORS[risk]};background:${RISK_COLORS[risk]}18;display:inline-flex`;
                 } else {
                     riskBadge.style.display = 'none';
                 }
@@ -984,16 +1259,8 @@
             }
 
             document.getElementById('pbody').innerHTML = h;
-            document.getElementById('panel').classList.add('open');
+            setPanelState(preferredState || getDefaultPanelState());
         }
-
-        window.closePanel = function () {
-            document.getElementById('panel').classList.remove('open');
-            document.getElementById('hub-warning').classList.remove('show');
-            stopFlow();
-            cy.nodes().removeClass('highlighted neighbor dimmed module-focus');
-            cy.edges().removeClass('highlighted dimmed');
-        };
 
         window.focusNode = function (id) {
             const node = cy.getElementById(id);
@@ -1021,7 +1288,12 @@
                 }
             );
         };
-        window.clearHighlight = function () { closePanel(); cy.nodes().removeClass('highlighted neighbor dimmed module-focus'); cy.edges().removeClass('highlighted dimmed'); };
+        window.clearHighlight = function () {
+            resetPanelSelection();
+            stopFlow();
+            cy.nodes().removeClass('highlighted neighbor dimmed module-focus');
+            cy.edges().removeClass('highlighted dimmed');
+        };
 
         /* ────────────────────────────────────
            Edge flow animation
@@ -1055,7 +1327,7 @@
             evt.preventDefault(); enterSubGraph(evt.target);
         });
 
-        cy.on('tap', evt => { if (evt.target === cy) closePanel(); });
+        cy.on('tap', evt => { if (evt.target === cy) hidePanel(); });
 
         /* ────────────────────────────────────
            Tooltip
@@ -1118,7 +1390,17 @@
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             try {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('si')?.focus(); return; }
-                if (e.key === 'Escape') { e.preventDefault(); closePanel(); if (sgMode) exitSubGraph(); return; }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (panelState !== 'hidden') {
+                        hidePanel();
+                        return;
+                    }
+                    if (sgMode) {
+                        exitSubGraph();
+                        return;
+                    }
+                }
                 if (e.altKey || (e.metaKey && e.key !== 'k') || (e.ctrlKey && e.key !== 'k')) return;
                 if (e.key.toLowerCase() === 'm') { e.preventDefault(); toggleModPanel(); return; }
                 if (e.key.toLowerCase() === 't') { e.preventDefault(); toggleThemePicker(); return; }
@@ -1139,6 +1421,23 @@
 
         document.getElementById('kb-help')?.addEventListener('click', function (e) { if (e.target === this) this.style.display = 'none'; });
 
+        window.addEventListener('resize', function () {
+            if (panelState === 'hidden') {
+                syncPanelChrome();
+                return;
+            }
+
+            if (isCompactPanelViewport() && panelState === 'expanded') {
+                panelRestoreState = 'peek';
+                panelState = 'peek';
+            } else if (!isCompactPanelViewport() && panelState === 'peek' && panelRestoreState === 'expanded') {
+                panelState = 'expanded';
+            }
+
+            syncPanelChrome();
+        });
+        syncPanelChrome();
+
         /* ────────────────────────────────────
            SubGraph Mode
         ──────────────────────────────────── */
@@ -1155,6 +1454,9 @@
             // Show topbar badge
             const badge = document.getElementById('sg-badge');
             if (badge) badge.style.display = 'flex';
+            const mobileSeed = document.getElementById('mobile-subgraph-seed');
+            if (mobileSeed) mobileSeed.textContent = seedLabel || getSubgraphSeedLabel();
+            syncMobileSubgraphUI();
         }
 
         function _sgHideUI() {
@@ -1163,6 +1465,7 @@
             if (bar) bar.classList.remove('show');
             const badge = document.getElementById('sg-badge');
             if (badge) badge.style.display = 'none';
+            syncMobileSubgraphUI();
         }
 
         function _getDepth() {
@@ -1181,12 +1484,22 @@
             depthButtons.forEach(btn => {
                 btn.disabled = locked;
             });
+            document.querySelectorAll('#mobile-subgraph-controls .mam-chip[data-mobile-sg-depth]').forEach(btn => {
+                btn.disabled = locked || !sgMode;
+            });
 
             const rerunBtn = document.querySelector('#sg-controls-bar .sgc-btn');
             if (rerunBtn) {
                 rerunBtn.disabled = locked;
                 rerunBtn.classList.toggle('is-busy', sgBusy);
             }
+
+            document.querySelectorAll('#mobile-subgraph-controls .mam-action[data-mobile-action="subgraph-rerun"]').forEach(btn => {
+                btn.disabled = locked || !sgMode;
+            });
+            document.querySelectorAll('#mobile-subgraph-controls .mam-action[data-mobile-action="subgraph-exit"]').forEach(btn => {
+                btn.disabled = !sgMode;
+            });
         }
 
         function startSubgraphActionCooldown(ms = SG_ACTION_COOLDOWN_MS) {
@@ -1377,15 +1690,12 @@
         // Depth seg-group buttons
         function initDepthSelector() {
             const grp = document.getElementById('sg-depth-grp');
-            const inp = document.getElementById('sg-hops');
-            if (!grp || !inp) return;
+            if (!grp || !document.getElementById('sg-hops')) return;
             grp.querySelectorAll('.sgc-depth-btn').forEach(btn => {
                 btn.addEventListener('click', function () {
                     if (isSubgraphLocked()) return;
                     if (this.classList.contains('active')) return;
-                    grp.querySelectorAll('.sgc-depth-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    inp.value = this.dataset.depth;
+                    setSubgraphDepth(this.dataset.depth, false);
                     // Auto re-run if already in subgraph mode
                     if (sgMode && sgLastSeed && !isSubgraphLocked()) _loadSubgraph(sgLastSeed);
                 });

@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+## [1.2.0] - 2026-03-19
+
+### Added
+- `GET /logic-map/hotspots` with `kind`, `module`, `risk`, and `limit` filters plus deterministic hotspot sorting.
+- `HealthPayloadBuilder` and `HotspotsBuilder` to keep `AnalysisReadService` orchestration-only.
+- Package docs for build/query architecture and resolver troubleshooting.
+- Browser smoke test docs and a Playwright regression script for the detail-panel `hide -> restore -> clear` flow across desktop, tablet, and mobile breakpoints.
+
+### Changed
+- Deprecated `GET /logic-map/export/json` in favor of `/logic-map/export/bundle`; alias responses now emit migration headers.
+- Snapshot resolution metadata now includes `requested_snapshot`, `resolved_via`, `resolved_fingerprint`, `pointer_state`, and `analysis_state`.
+- `graph.metadata.generated_at` is now sourced from build-time snapshot metadata instead of query-time timestamps.
+- Active snapshot lifecycle is explicit: `putSnapshot()` only updates the latest fingerprint, while successful builds call `setActiveFingerprint()` after graph + analysis persistence.
+- Added `logic-map.query.resolver.strict_resolution` to disable fallback behavior in CI/test scenarios.
+- Viewer export controls now expose explicit Graph JSON, Analysis JSON, Bundle JSON, and CSV actions across desktop and mobile layouts.
+- Viewer themes now read semantic CSS token variables for canvas, node, edge, and risk rendering.
+- Viewer detail panel now supports `expanded`, `peek`, and `hidden` states with restore controls on both desktop and mobile layouts.
+- Package PHPUnit tests now use `#[Test]` attributes instead of deprecated doc-comment metadata.
+
+### Fixed
+- Resolver now logs warnings for missing/corrupted active pointers and for graph snapshots that have no matching analysis report.
+- `logic-map:clear-cache` removes snapshots, analysis payloads, latest fingerprints, and active pointers together.
+- Analysis report fallback now prefers the most recent compatible config-hash entry instead of the first registry hit.
+- Hiding the detail panel no longer clears active graph highlight or edge-flow animation; only explicit clear actions reset graph context.
+- Mobile and tablet subgraph detail views no longer obscure most of the canvas and can be restored without losing the inspected logic flow.
+
 ## [1.1.5] - 2026-03-19
 
 ### Changed

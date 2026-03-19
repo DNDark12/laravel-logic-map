@@ -2,6 +2,7 @@
 
 namespace dndark\LogicMap\Commands;
 
+use dndark\LogicMap\Contracts\GraphRepository;
 use dndark\LogicMap\Services\BuildLogicMapService;
 use Illuminate\Console\Command;
 
@@ -13,7 +14,7 @@ class BuildLogicMapCommand extends Command
 
     protected $description = 'Scan project and build logic map snapshot';
 
-    public function handle(BuildLogicMapService $service): int
+    public function handle(BuildLogicMapService $service, GraphRepository $repository): int
     {
         $this->info('Scanning project files and building logic map...');
 
@@ -91,13 +92,15 @@ class BuildLogicMapCommand extends Command
 
         $this->newLine();
         $this->info('Logic map snapshot generated successfully.');
+        $activeFingerprint = $repository->getActiveFingerprint() ?? 'none';
         $this->newLine();
 
         $baseUrl = url('logic-map');
+        $this->line('<fg=cyan>  ▸ Active Fingerprint:</> ' . $activeFingerprint);
         $this->line('<fg=cyan>  ▸ Visual Explorer:</> ' . $baseUrl);
         $this->line('<fg=cyan>  ▸ Health API:</>      ' . $baseUrl . '/health');
         $this->line('<fg=cyan>  ▸ Violations API:</>  ' . $baseUrl . '/violations');
-        $this->line('<fg=cyan>  ▸ Export JSON:</>     ' . $baseUrl . '/export/json');
+        $this->line('<fg=cyan>  ▸ Export Bundle:</>   ' . $baseUrl . '/export/bundle');
         $this->newLine();
         $this->line('<comment>Tip:</comment> Run <fg=green>php artisan logic-map:analyze --show-violations</> to see details in terminal.');
 

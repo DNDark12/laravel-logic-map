@@ -17,6 +17,7 @@ use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
 use dndark\LogicMap\Domain\Violation;
 use dndark\LogicMap\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class AnalyzersTest extends TestCase
 {
@@ -30,7 +31,7 @@ class AnalyzersTest extends TestCase
 
     // ─── FatControllerAnalyzer ────────────────────────────
 
-    /** @test */
+    #[Test]
     public function fat_controller_detects_high_fan_out()
     {
         $graph = $this->buildFatControllerGraph(15);
@@ -47,7 +48,7 @@ class AnalyzersTest extends TestCase
         $this->assertEquals('ctrl', $violations[0]->nodeId);
     }
 
-    /** @test */
+    #[Test]
     public function fat_controller_ignores_below_threshold()
     {
         $graph = $this->buildFatControllerGraph(5);
@@ -61,7 +62,7 @@ class AnalyzersTest extends TestCase
         $this->assertEmpty($violations);
     }
 
-    /** @test */
+    #[Test]
     public function fat_controller_only_checks_controllers()
     {
         $graph = new Graph();
@@ -83,7 +84,7 @@ class AnalyzersTest extends TestCase
 
     // ─── CircularDependencyAnalyzer ──────────────────────
 
-    /** @test */
+    #[Test]
     public function circular_dependency_detects_two_node_cycle()
     {
         $graph = new Graph();
@@ -105,7 +106,7 @@ class AnalyzersTest extends TestCase
         $this->assertContains('b', $nodeIds);
     }
 
-    /** @test */
+    #[Test]
     public function circular_dependency_detects_three_node_cycle()
     {
         $graph = new Graph();
@@ -127,7 +128,7 @@ class AnalyzersTest extends TestCase
         $this->assertContains('c', $nodeIds);
     }
 
-    /** @test */
+    #[Test]
     public function circular_dependency_ignores_acyclic_graph()
     {
         $graph = new Graph();
@@ -143,7 +144,7 @@ class AnalyzersTest extends TestCase
 
     // ─── OrphanAnalyzer ──────────────────────────────────
 
-    /** @test */
+    #[Test]
     public function orphan_detects_zero_fan_in_on_eligible_kinds()
     {
         $graph = new Graph();
@@ -163,7 +164,7 @@ class AnalyzersTest extends TestCase
         $this->assertEquals('low', $violations[0]->severity);
     }
 
-    /** @test */
+    #[Test]
     public function orphan_skips_ineligible_kinds()
     {
         $graph = new Graph();
@@ -179,7 +180,7 @@ class AnalyzersTest extends TestCase
         $this->assertEmpty($analyzer->analyze($graph));
     }
 
-    /** @test */
+    #[Test]
     public function orphan_respects_ignore_node_ids()
     {
         $graph = new Graph();
@@ -194,7 +195,7 @@ class AnalyzersTest extends TestCase
         $this->assertEmpty($analyzer->analyze($graph));
     }
 
-    /** @test */
+    #[Test]
     public function orphan_does_not_flag_nodes_with_fan_in()
     {
         $graph = new Graph();
@@ -212,7 +213,7 @@ class AnalyzersTest extends TestCase
 
     // ─── DeadCodeAnalyzer ───────────────────────────────
 
-    /** @test */
+    #[Test]
     public function dead_code_flags_unreachable_nodes_by_depth()
     {
         $graph = new Graph();
@@ -246,7 +247,7 @@ class AnalyzersTest extends TestCase
         $this->assertNotContains('ctrl', $ids);
     }
 
-    /** @test */
+    #[Test]
     public function dead_code_ignores_reachable_and_non_eligible_nodes()
     {
         $graph = new Graph();
@@ -273,7 +274,7 @@ class AnalyzersTest extends TestCase
 
     // ─── RiskCalculator ──────────────────────────────────
 
-    /** @test */
+    #[Test]
     public function risk_calculator_assigns_critical_for_circular_dependency()
     {
         $graph = new Graph();
@@ -296,7 +297,7 @@ class AnalyzersTest extends TestCase
         $this->assertGreaterThanOrEqual(20, $riskMap['a']['score']);
     }
 
-    /** @test */
+    #[Test]
     public function risk_calculator_cach_b_medium_from_metrics_directly()
     {
         $graph = new Graph();
@@ -326,7 +327,7 @@ class AnalyzersTest extends TestCase
         $this->assertContains('instability=0.95 (threshold=0.9)', $riskMap['a']['reasons']);
     }
 
-    /** @test */
+    #[Test]
     public function risk_calculator_returns_empty_for_healthy_nodes()
     {
         $graph = new Graph();
@@ -353,7 +354,7 @@ class AnalyzersTest extends TestCase
 
     // ─── ArchitectureAnalyzer (orchestrator) ─────────────
 
-    /** @test */
+    #[Test]
     public function architecture_analyzer_produces_valid_report()
     {
         $graph = $this->buildSimpleGraph();
@@ -375,7 +376,7 @@ class AnalyzersTest extends TestCase
         $this->assertArrayHasKey('analyzer_count', $report->metadata);
     }
 
-    /** @test */
+    #[Test]
     public function architecture_analyzer_returns_empty_when_disabled()
     {
         $this->app['config']->set('logic-map.analysis.enabled', false);
@@ -391,7 +392,7 @@ class AnalyzersTest extends TestCase
         $this->assertEmpty($report->violations);
     }
 
-    /** @test */
+    #[Test]
     public function architecture_analyzer_config_hash_changes_with_config()
     {
         $analyzer = new ArchitectureAnalyzer();
@@ -405,7 +406,7 @@ class AnalyzersTest extends TestCase
         $this->assertNotEquals($hash1, $hash2);
     }
 
-    /** @test */
+    #[Test]
     public function analysis_report_serializes_and_deserializes()
     {
         $graph = $this->buildSimpleGraph();

@@ -11,6 +11,7 @@ use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
 use dndark\LogicMap\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class CutBAnalyzersTest extends TestCase
 {
@@ -24,7 +25,7 @@ class CutBAnalyzersTest extends TestCase
 
     // ─── HighInstabilityAnalyzer ──────────────────────────
 
-    /** @test */
+    #[Test]
     public function high_instability_detects_unstable_service()
     {
         $graph = new Graph();
@@ -50,7 +51,7 @@ class CutBAnalyzersTest extends TestCase
         $this->assertEquals('svc', $violations[0]->nodeId);
     }
 
-    /** @test */
+    #[Test]
     public function high_instability_skips_isolated_nodes()
     {
         $graph = new Graph();
@@ -65,7 +66,7 @@ class CutBAnalyzersTest extends TestCase
         $this->assertEmpty($analyzer->analyze($graph));
     }
 
-    /** @test */
+    #[Test]
     public function high_instability_ignores_stable_nodes()
     {
         $graph = new Graph();
@@ -92,7 +93,7 @@ class CutBAnalyzersTest extends TestCase
 
     // ─── HighCouplingAnalyzer ────────────────────────────
 
-    /** @test */
+    #[Test]
     public function high_coupling_detects_hub_node()
     {
         $graph = new Graph();
@@ -122,7 +123,7 @@ class CutBAnalyzersTest extends TestCase
         $this->assertEquals('hub', $violations[0]->nodeId);
     }
 
-    /** @test */
+    #[Test]
     public function high_coupling_ignores_low_coupling()
     {
         $graph = new Graph();

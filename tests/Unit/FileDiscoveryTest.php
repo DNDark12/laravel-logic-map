@@ -4,6 +4,7 @@ namespace dndark\LogicMap\Tests\Unit;
 
 use dndark\LogicMap\Support\FileDiscovery;
 use dndark\LogicMap\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class FileDiscoveryTest extends TestCase
 {
@@ -15,7 +16,7 @@ class FileDiscoveryTest extends TestCase
         $this->discovery = new FileDiscovery();
     }
 
-    /** @test */
+    #[Test]
     public function it_finds_php_files_in_directory()
     {
         $files = $this->discovery->findFiles([__DIR__ . '/../../src']);
@@ -29,7 +30,7 @@ class FileDiscoveryTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_empty_array_for_nonexistent_path()
     {
         $files = $this->discovery->findFiles(['/nonexistent/path']);
@@ -38,7 +39,7 @@ class FileDiscoveryTest extends TestCase
         $this->assertEmpty($files);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_single_file_path()
     {
         $singleFile = __DIR__ . '/../../src/LogicMapServiceProvider.php';
@@ -48,7 +49,7 @@ class FileDiscoveryTest extends TestCase
         $this->assertEquals($singleFile, $files[0]);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_sorted_file_list()
     {
         $files = $this->discovery->findFiles([__DIR__ . '/../../src']);
@@ -59,7 +60,7 @@ class FileDiscoveryTest extends TestCase
         $this->assertEquals($sortedFiles, $files);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_multiple_paths()
     {
         $files = $this->discovery->findFiles([

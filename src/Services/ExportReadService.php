@@ -2,6 +2,7 @@
 
 namespace dndark\LogicMap\Services;
 
+use dndark\LogicMap\Contracts\GraphRepository;
 use dndark\LogicMap\Domain\QueryResult;
 use dndark\LogicMap\Domain\SnapshotResolution;
 
@@ -9,6 +10,7 @@ class ExportReadService
 {
     public function __construct(
         protected SnapshotResolver $snapshotResolver,
+        protected GraphRepository $repository,
     ) {
     }
 
@@ -124,12 +126,16 @@ class ExportReadService
 
     protected function graphPayload(SnapshotResolution $resolution): array
     {
+        $metadata = $resolution->resolvedFingerprint !== null
+            ? $this->repository->getSnapshotMetadata($resolution->resolvedFingerprint)
+            : [];
+
         return [
             'nodes' => array_map(fn($node) => $node->toArray(), array_values($resolution->graph->getNodes())),
             'edges' => array_map(fn($edge) => $edge->toArray(), $resolution->graph->getEdges()),
             'metadata' => [
                 'fingerprint' => $resolution->resolvedFingerprint,
-                'generated_at' => now()->toIso8601String(),
+                'generated_at' => $metadata['generated_at'] ?? null,
             ],
         ];
     }

@@ -44,6 +44,9 @@ class BuildLogicMapService
                 // Check if analysis also cached with current config
                 $configHash = $this->architectureAnalyzer->getConfigHash();
                 $report = $this->repository->getAnalysisReport($currentFingerprint, $configHash);
+                if ($report !== null) {
+                    $this->repository->setActiveFingerprint($currentFingerprint);
+                }
 
                 return [
                     'graph' => $snapshot,
@@ -72,6 +75,7 @@ class BuildLogicMapService
         $analysisReport = $this->architectureAnalyzer->analyze($graph);
         $analysisReport->metadata['graph_fingerprint'] = $currentFingerprint;
         $this->repository->putAnalysisReport($currentFingerprint, $analysisReport);
+        $this->repository->setActiveFingerprint($currentFingerprint);
 
         return [
             'graph' => $graph,

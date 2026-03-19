@@ -7,7 +7,7 @@ return [
     'scan_paths' => [
         base_path('app'),
         base_path('routes'),
-        // base_path('packages/dndark'),
+        base_path('packages/dndark'),
     ],
 
     /*
@@ -231,6 +231,7 @@ return [
      */
     'query' => [
         'resolver' => [
+            'strict_resolution' => false,
             'fallback_on_missing_pointer' => true,
             'fallback_on_corrupted_pointer' => true,
         ],

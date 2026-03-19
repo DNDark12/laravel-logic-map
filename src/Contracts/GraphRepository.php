@@ -32,6 +32,13 @@ interface GraphRepository
     public function putSnapshot(string $fingerprint, Graph $graph): void;
 
     /**
+     * Get snapshot metadata for a given fingerprint.
+     *
+     * @return array<string, mixed>
+     */
+    public function getSnapshotMetadata(string $fingerprint): array;
+
+    /**
      * Store analysis report separately from graph snapshot (ADR-011).
      * Uses compound key: {graphFingerprint}.{analysisConfigHash}
      */
@@ -74,4 +81,9 @@ interface GraphRepository
      * Get latest available valid fingerprint.
      */
     public function getLatestFingerprint(): ?string;
+
+    /**
+     * Promote an existing fingerprint to the active snapshot pointer.
+     */
+    public function setActiveFingerprint(string $fingerprint): void;
 }

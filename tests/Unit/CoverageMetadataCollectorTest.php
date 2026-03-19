@@ -7,10 +7,11 @@ use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
 use dndark\LogicMap\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class CoverageMetadataCollectorTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function it_maps_class_and_method_coverage_from_clover(): void
     {
         $path = $this->writeCloverFixture(<<<XML
@@ -60,7 +61,7 @@ XML);
         $this->assertSame('class_fallback', $indexCoverage['scope']);
     }
 
-    /** @test */
+    #[Test]
     public function it_marks_missing_symbols_as_uncovered_when_assume_enabled(): void
     {
         $path = $this->writeCloverFixture(<<<XML

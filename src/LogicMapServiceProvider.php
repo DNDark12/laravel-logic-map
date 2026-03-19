@@ -20,6 +20,8 @@ use dndark\LogicMap\Services\AnalysisReadService;
 use dndark\LogicMap\Services\BuildLogicMapService;
 use dndark\LogicMap\Services\ExportReadService;
 use dndark\LogicMap\Services\GraphReadService;
+use dndark\LogicMap\Services\HealthPayloadBuilder;
+use dndark\LogicMap\Services\HotspotsBuilder;
 use dndark\LogicMap\Services\QueryLogicMapService;
 use dndark\LogicMap\Services\SnapshotResolver;
 use dndark\LogicMap\Support\FileDiscovery;
@@ -64,6 +66,8 @@ class LogicMapServiceProvider extends ServiceProvider
         $this->app->singleton(BuildLogicMapService::class);
         $this->app->singleton(SnapshotResolver::class);
         $this->app->singleton(GraphReadService::class);
+        $this->app->singleton(HealthPayloadBuilder::class);
+        $this->app->singleton(HotspotsBuilder::class);
         $this->app->singleton(AnalysisReadService::class);
         $this->app->singleton(ExportReadService::class);
         $this->app->singleton(QueryLogicMapService::class);

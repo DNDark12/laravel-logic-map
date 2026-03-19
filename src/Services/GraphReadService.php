@@ -178,9 +178,11 @@ class GraphReadService
         $pointerState = $to !== null && $to !== '' ? 'bypassed' : 'ok';
 
         return QueryResult::success($data)->withResolution([
+            'requested_snapshot' => $to !== null && $to !== '' ? $toFingerprint : null,
             'resolved_via' => $resolvedVia,
             'resolved_fingerprint' => $toFingerprint,
             'pointer_state' => $pointerState,
+            'analysis_state' => 'not_requested',
         ]);
     }
 

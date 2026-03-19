@@ -4,6 +4,7 @@ namespace dndark\LogicMap\Tests\Feature;
 
 use dndark\LogicMap\Tests\TestCase;
 use Illuminate\Support\Facades\Artisan;
+use PHPUnit\Framework\Attributes\Test;
 
 class AnalysisEndpointTest extends TestCase
 {
@@ -13,7 +14,7 @@ class AnalysisEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function violations_endpoint_returns_valid_envelope()
     {
         $response = $this->getJson(route('logic-map.violations'));
@@ -33,7 +34,7 @@ class AnalysisEndpointTest extends TestCase
         $this->assertNull($response->json('errors'));
     }
 
-    /** @test */
+    #[Test]
     public function violations_summary_has_all_severity_keys()
     {
         $response = $this->getJson(route('logic-map.violations'));
@@ -45,7 +46,7 @@ class AnalysisEndpointTest extends TestCase
         $this->assertArrayHasKey('low', $summary);
     }
 
-    /** @test */
+    #[Test]
     public function violations_can_filter_by_severity()
     {
         $response = $this->getJson(route('logic-map.violations', ['severity' => 'critical']));
@@ -59,7 +60,7 @@ class AnalysisEndpointTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function violations_can_filter_by_type()
     {
         $response = $this->getJson(route('logic-map.violations', ['type' => 'fat_controller']));
@@ -73,7 +74,7 @@ class AnalysisEndpointTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function health_endpoint_returns_valid_envelope()
     {
         $response = $this->getJson(route('logic-map.health'));
@@ -99,7 +100,7 @@ class AnalysisEndpointTest extends TestCase
         $this->assertTrue($response->json('ok'));
     }
 
-    /** @test */
+    #[Test]
     public function health_score_is_between_0_and_100()
     {
         $response = $this->getJson(route('logic-map.health'));
@@ -109,7 +110,7 @@ class AnalysisEndpointTest extends TestCase
         $this->assertLessThanOrEqual(100, $score);
     }
 
-    /** @test */
+    #[Test]
     public function health_grade_is_valid_letter()
     {
         $response = $this->getJson(route('logic-map.health'));
@@ -118,7 +119,7 @@ class AnalysisEndpointTest extends TestCase
         $this->assertContains($grade, ['S', 'A', 'B', 'C', 'D', 'F']);
     }
 
-    /** @test */
+    #[Test]
     public function health_has_graph_stats()
     {
         $response = $this->getJson(route('logic-map.health'));
@@ -128,7 +129,7 @@ class AnalysisEndpointTest extends TestCase
         $this->assertGreaterThanOrEqual(0, $stats['total_edges']);
     }
 
-    /** @test */
+    #[Test]
     public function health_includes_coverage_correlation_block()
     {
         $response = $this->getJson(route('logic-map.health'));
@@ -142,7 +143,7 @@ class AnalysisEndpointTest extends TestCase
         $this->assertArrayHasKey('high_risk_low_coverage', $correlation);
     }
 
-    /** @test */
+    #[Test]
     public function violations_returns_error_without_snapshot()
     {
         Artisan::call('logic-map:clear-cache');
@@ -157,7 +158,7 @@ class AnalysisEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function health_returns_error_without_snapshot()
     {
         Artisan::call('logic-map:clear-cache');
@@ -171,7 +172,7 @@ class AnalysisEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function existing_overview_endpoint_still_works()
     {
         $response = $this->getJson(route('logic-map.overview'));
@@ -181,7 +182,7 @@ class AnalysisEndpointTest extends TestCase
         $this->assertNotEmpty($response->json('data.nodes'));
     }
 
-    /** @test */
+    #[Test]
     public function existing_meta_endpoint_still_works()
     {
         $response = $this->getJson(route('logic-map.meta'));

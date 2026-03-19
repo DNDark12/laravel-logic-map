@@ -17,7 +17,7 @@ class AstParserTest extends TestCase
         $this->parser = new AstParser();
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_graph_instance()
     {
         $graph = $this->parser->parse([]);
@@ -25,7 +25,7 @@ class AstParserTest extends TestCase
         $this->assertInstanceOf(Graph::class, $graph);
     }
 
-    /** @test */
+    #[Test]
     public function it_extracts_nodes_from_php_files()
     {
         $files = [
@@ -49,7 +49,7 @@ class AstParserTest extends TestCase
         $this->assertTrue($hasGraphClass, 'Should extract Graph class');
     }
 
-    /** @test */
+    #[Test]
     public function it_extracts_methods_from_classes()
     {
         $files = [
@@ -65,7 +65,7 @@ class AstParserTest extends TestCase
         $this->assertNotEmpty($methodNodes, 'Should extract method nodes');
     }
 
-    /** @test */
+    #[Test]
     public function it_tracks_diagnostics()
     {
         $files = [
@@ -85,7 +85,7 @@ class AstParserTest extends TestCase
         $this->assertEquals(0, $diagnostics['skipped_files']);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_missing_files_gracefully()
     {
         $files = [
@@ -99,7 +99,7 @@ class AstParserTest extends TestCase
         $this->assertNotEmpty($diagnostics['error_files']);
     }
 
-    /** @test */
+    #[Test]
     public function it_extracts_edges_for_method_calls()
     {
         // Parse a file with method calls
@@ -115,7 +115,7 @@ class AstParserTest extends TestCase
         $this->assertIsArray($edges);
     }
 
-    /** @test */
+    #[Test]
     public function it_assigns_correct_node_kinds()
     {
         $files = [
@@ -140,7 +140,7 @@ class AstParserTest extends TestCase
         $this->assertContains('controller', array_values($kinds));
     }
 
-    /** @test */
+    #[Test]
     public function it_implements_graph_extractor_contract()
     {
         $this->assertInstanceOf(
@@ -149,7 +149,7 @@ class AstParserTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_non_business_classes_and_calls()
     {
         $fixture = <<<'PHP'
@@ -199,7 +199,7 @@ PHP;
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_extracts_doc_intent_and_body_strings_from_method_metadata()
     {
         $fixture = <<<'PHP'
@@ -244,7 +244,7 @@ PHP;
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_resolves_interface_types_to_concrete_implementations()
     {
         $fixture = <<<'PHP'
@@ -260,6 +260,7 @@ interface PaymentGateway
 namespace App\Services\Billing;
 
 use App\Contracts\PaymentGateway;
+use PHPUnit\Framework\Attributes\Test;
 
 class StripeGateway implements PaymentGateway
 {

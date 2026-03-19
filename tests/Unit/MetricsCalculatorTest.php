@@ -9,6 +9,7 @@ use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
 use dndark\LogicMap\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class MetricsCalculatorTest extends TestCase
 {
@@ -20,7 +21,7 @@ class MetricsCalculatorTest extends TestCase
         $this->calculator = new MetricsCalculator();
     }
 
-    /** @test */
+    #[Test]
     public function it_populates_all_seven_metrics_on_each_node()
     {
         $graph = $this->buildSimpleGraph();
@@ -37,7 +38,7 @@ class MetricsCalculatorTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_in_degree_as_raw_edge_count()
     {
         $graph = new Graph();
@@ -58,7 +59,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertEquals(2, $nodeA->metrics['fan_in']);     // unique sources (b, c)
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_out_degree_as_raw_edge_count()
     {
         $graph = new Graph();
@@ -78,7 +79,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertEquals(2, $nodeA->metrics['fan_out']);     // unique targets (b, c)
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_instability_correctly()
     {
         $graph = new Graph();
@@ -99,7 +100,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertEquals(0.0, $graph->getNode('b')->metrics['instability']);
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_coupling_as_sum_of_fan_in_and_fan_out()
     {
         $graph = new Graph();
@@ -116,7 +117,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertEquals(2, $graph->getNode('a')->metrics['coupling']);
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_depth_from_route_entrypoints()
     {
         $graph = new Graph();
@@ -142,7 +143,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertEquals(3, $graph->getNode('model')->metrics['depth']);
     }
 
-    /** @test */
+    #[Test]
     public function unreachable_nodes_have_null_depth()
     {
         $graph = new Graph();
@@ -163,7 +164,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertNull($graph->getNode('orphan')->metrics['depth']);
     }
 
-    /** @test */
+    #[Test]
     public function depth_uses_shortest_path_with_cycles()
     {
         $graph = new Graph();
@@ -185,7 +186,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertEquals(2, $graph->getNode('b')->metrics['depth']);
     }
 
-    /** @test */
+    #[Test]
     public function isolated_node_has_zero_metrics()
     {
         $graph = new Graph();
@@ -203,7 +204,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertNull($node->metrics['depth']);
     }
 
-    /** @test */
+    #[Test]
     public function it_flags_hub_utility_nodes_in_metadata()
     {
         $this->app['config']->set('logic-map.analysis.ui_thresholds.hub_utility_fan_in', 4);
@@ -229,7 +230,7 @@ class MetricsCalculatorTest extends TestCase
         $this->assertTrue($hub->metadata['is_hub_utility'] ?? false);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_flag_hub_utility_when_node_has_outgoing_calls_or_is_route()
     {
         $this->app['config']->set('logic-map.analysis.ui_thresholds.hub_utility_fan_in', 2);

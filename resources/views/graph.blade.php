@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark-graphite">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,9 +13,13 @@
             overviewUrl:    '{{ route("logic-map.overview") }}',
             subgraphUrl:    '{{ url("logic-map/subgraph") }}',
             healthUrl:      '{{ route("logic-map.health") }}',
+            hotspotsUrl:    '{{ route("logic-map.hotspots") }}',
             metaUrl:        '{{ route("logic-map.meta") }}',
             snapshotsUrl:   '{{ route("logic-map.snapshots") }}',
             violationsUrl:  '{{ route("logic-map.violations") }}',
+            exportGraphUrl: '{{ route("logic-map.export.graph") }}',
+            exportAnalysisUrl:'{{ route("logic-map.export.analysis") }}',
+            exportBundleUrl:'{{ route("logic-map.export.bundle") }}',
             exportJsonUrl:  '{{ route("logic-map.export.json") }}',
             exportCsvUrl:   '{{ route("logic-map.export.csv") }}'
         };
@@ -179,13 +183,21 @@
             <svg class="exp-arr" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         </button>
         <div class="seg-group dropdown-menu" id="exp-menu">
-            <button class="seg-btn" onclick="exportLogicMap('json')" title="Export as JSON">
+            <button class="seg-btn" onclick="exportLogicMap('graph')" title="Export Graph JSON">
+                <span class="exp-ico">G</span>
+                <span class="btn-lbl">Export Graph JSON</span>
+            </button>
+            <button class="seg-btn" onclick="exportLogicMap('analysis')" title="Export Analysis JSON">
+                <span class="exp-ico">A</span>
+                <span class="btn-lbl">Export Analysis JSON</span>
+            </button>
+            <button class="seg-btn" onclick="exportLogicMap('bundle')" title="Export Bundle JSON">
                 <span class="exp-ico">JSON</span>
-                <span class="btn-lbl">Full Logic Analysis</span>
+                <span class="btn-lbl">Export Bundle JSON</span>
             </button>
             <button class="seg-btn" onclick="exportLogicMap('csv')" title="Export as CSV">
                 <span class="exp-ico">CSV</span>
-                <span class="btn-lbl">Node Metrics Only</span>
+                <span class="btn-lbl">Export CSV</span>
             </button>
         </div>
     </div>
@@ -242,6 +254,23 @@
                 </div>
             </div>
 
+            <div class="mam-sec mam-subgraph-controls" id="mobile-subgraph-controls" hidden aria-hidden="true">
+                <div class="mam-subgraph-head">
+                    <div class="mam-title">Subgraph</div>
+                    <div class="mam-subgraph-seed" id="mobile-subgraph-seed">No node selected</div>
+                </div>
+                <div class="mam-row">
+                    <button class="mam-chip mam-sg-chip active" data-mobile-sg-depth="1">1</button>
+                    <button class="mam-chip mam-sg-chip" data-mobile-sg-depth="2">2</button>
+                    <button class="mam-chip mam-sg-chip" data-mobile-sg-depth="3">3</button>
+                    <button class="mam-chip mam-sg-chip" data-mobile-sg-depth="99">All</button>
+                </div>
+                <div class="mam-grid mam-subgraph-grid">
+                    <button class="mam-action" data-mobile-action="subgraph-rerun">Re-run</button>
+                    <button class="mam-action" data-mobile-action="subgraph-exit">Exit Subgraph</button>
+                </div>
+            </div>
+
             <div class="mam-sec mam-grid">
                 <button class="mam-action" data-mobile-action="fit">Fit</button>
                 <button class="mam-action" data-mobile-action="clear">Clear</button>
@@ -249,7 +278,9 @@
                 <button class="mam-action" data-mobile-action="module">Module</button>
                 <button class="mam-action" data-mobile-action="theme">Theme</button>
                 <button class="mam-action" data-mobile-action="shortcuts">Shortcuts</button>
-                <button class="mam-action" data-mobile-action="export-json">Export JSON</button>
+                <button class="mam-action" data-mobile-action="export-graph">Export Graph JSON</button>
+                <button class="mam-action" data-mobile-action="export-analysis">Export Analysis JSON</button>
+                <button class="mam-action" data-mobile-action="export-bundle">Export Bundle JSON</button>
                 <button class="mam-action" data-mobile-action="export-csv">Export CSV</button>
             </div>
         </div>
@@ -324,9 +355,17 @@
         </div>
         <div id="p-name"></div>
         <div id="p-id"></div>
-        <button class="icon-btn" id="p-close" onclick="closePanel()">
-            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <div id="p-state-controls">
+            <button class="icon-btn panel-state-btn" id="p-peek" onclick="peekPanel()" title="Compact detail">
+                <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <button class="icon-btn panel-state-btn" id="p-expand" onclick="expandPanel()" title="Expand detail">
+                <svg viewBox="0 0 24 24"><polyline points="9 3 3 3 3 9"/><line x1="3" y1="3" x2="10" y2="10"/><polyline points="15 21 21 21 21 15"/><line x1="14" y1="14" x2="21" y2="21"/></svg>
+            </button>
+            <button class="icon-btn panel-state-btn" id="p-hide" onclick="hidePanel()" title="Hide detail">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
     </div>
     <div id="hub-warning">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -334,6 +373,11 @@
     </div>
     <div id="pbody"></div>
 </div>
+
+<button id="panel-restore" onclick="restorePanel()" hidden aria-hidden="true" title="Show detail">
+    <svg viewBox="0 0 24 24"><polyline points="9 3 3 3 3 9"/><line x1="3" y1="3" x2="10" y2="10"/><polyline points="15 21 21 21 21 15"/><line x1="14" y1="14" x2="21" y2="21"/></svg>
+    <span id="panel-restore-label">Show detail</span>
+</button>
 
 <!-- ── Large Graph Warning ── -->
 <div id="lg-warning">
