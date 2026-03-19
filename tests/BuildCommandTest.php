@@ -3,10 +3,11 @@
 namespace dndark\LogicMap\Tests;
 
 use Illuminate\Support\Facades\Artisan;
+use PHPUnit\Framework\Attributes\Test;
 
 class BuildCommandTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function it_can_build_the_logic_map()
     {
         Artisan::call('logic-map:build', ['--force' => true]);
@@ -18,7 +19,7 @@ class BuildCommandTest extends TestCase
         $this->assertStringContainsString('Edges', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_shows_diagnostics_in_output()
     {
         Artisan::call('logic-map:build', ['--force' => true]);
@@ -29,7 +30,18 @@ class BuildCommandTest extends TestCase
         $this->assertStringContainsString('Parsed', $output);
     }
 
-    /** @test */
+    #[Test]
+    public function it_reports_active_fingerprint_and_bundle_export_in_output()
+    {
+        Artisan::call('logic-map:build', ['--force' => true]);
+
+        $output = Artisan::output();
+
+        $this->assertStringContainsString('Active Fingerprint', $output);
+        $this->assertStringContainsString('/export/bundle', $output);
+    }
+
+    #[Test]
     public function it_uses_cache_when_not_forced()
     {
         // First build
@@ -42,7 +54,7 @@ class BuildCommandTest extends TestCase
         $this->assertStringContainsString('Cached', $output);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_clear_the_cache()
     {
         // First build so there's something to clear
@@ -55,7 +67,7 @@ class BuildCommandTest extends TestCase
         $this->assertStringContainsString('cached snapshot', $output);
     }
 
-    /** @test */
+    #[Test]
     public function clear_cache_reports_no_snapshots_when_empty()
     {
         // Clear first to ensure empty state
@@ -68,7 +80,7 @@ class BuildCommandTest extends TestCase
         $this->assertStringContainsString('No cached snapshots', $output);
     }
 
-    /** @test */
+    #[Test]
     public function build_produces_nodes()
     {
         Artisan::call('logic-map:build', ['--force' => true]);
@@ -79,7 +91,7 @@ class BuildCommandTest extends TestCase
         $this->assertGreaterThan(0, $data['node_count']);
     }
 
-    /** @test */
+    #[Test]
     public function build_produces_edges()
     {
         Artisan::call('logic-map:build', ['--force' => true]);
@@ -90,7 +102,7 @@ class BuildCommandTest extends TestCase
         $this->assertGreaterThanOrEqual(0, $data['edge_count']);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_standard_api_envelopes_for_meta()
     {
         Artisan::call('logic-map:build', ['--force' => true]);
@@ -111,7 +123,7 @@ class BuildCommandTest extends TestCase
         $this->assertTrue($response->json('ok'));
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_standard_api_envelopes_for_overview()
     {
         Artisan::call('logic-map:build', ['--force' => true]);
@@ -132,7 +144,7 @@ class BuildCommandTest extends TestCase
         $this->assertTrue($response->json('ok'));
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_ghost_edges_in_overview()
     {
         Artisan::call('logic-map:build', ['--force' => true]);
@@ -151,7 +163,7 @@ class BuildCommandTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_error_when_no_snapshot_exists()
     {
         // Clear cache first
@@ -164,7 +176,7 @@ class BuildCommandTest extends TestCase
         $this->assertNotNull($response->json('message'));
     }
 
-    /** @test */
+    #[Test]
     public function search_endpoint_returns_valid_envelope()
     {
         Artisan::call('logic-map:build', ['--force' => true]);

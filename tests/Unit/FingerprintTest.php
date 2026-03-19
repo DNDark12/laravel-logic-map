@@ -4,6 +4,7 @@ namespace dndark\LogicMap\Tests\Unit;
 
 use dndark\LogicMap\Support\Fingerprint;
 use dndark\LogicMap\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class FingerprintTest extends TestCase
 {
@@ -15,7 +16,7 @@ class FingerprintTest extends TestCase
         $this->fingerprint = new Fingerprint();
     }
 
-    /** @test */
+    #[Test]
     public function it_generates_deterministic_fingerprint()
     {
         $files = [
@@ -28,7 +29,7 @@ class FingerprintTest extends TestCase
         $this->assertEquals($fp1, $fp2);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_sha1_hash()
     {
         $files = [
@@ -40,7 +41,7 @@ class FingerprintTest extends TestCase
         $this->assertMatchesRegularExpression('/^[a-f0-9]{40}$/', $fp);
     }
 
-    /** @test */
+    #[Test]
     public function it_produces_different_fingerprints_for_different_files()
     {
         $fp1 = $this->fingerprint->generate([
@@ -54,7 +55,7 @@ class FingerprintTest extends TestCase
         $this->assertNotEquals($fp1, $fp2);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_empty_file_list()
     {
         $fp = $this->fingerprint->generate([]);
@@ -62,7 +63,7 @@ class FingerprintTest extends TestCase
         $this->assertMatchesRegularExpression('/^[a-f0-9]{40}$/', $fp);
     }
 
-    /** @test */
+    #[Test]
     public function it_includes_file_metadata_in_hash()
     {
         // The fingerprint should include file path, mtime, and size

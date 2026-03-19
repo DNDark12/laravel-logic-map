@@ -21,7 +21,22 @@ class CacheGraphRepository implements GraphRepository
             return null;
         }
 
+        if (is_array($data) && isset($data['graph']) && is_array($data['graph'])) {
+            return Graph::fromArray($data['graph']);
+        }
+
         return Graph::fromArray($data);
+    }
+
+    public function getSnapshotMetadata(string $fingerprint): array
+    {
+        $data = Cache::get($this->getSnapshotKey($fingerprint));
+
+        if (is_array($data) && isset($data['metadata']) && is_array($data['metadata'])) {
+            return $data['metadata'];
+        }
+
+        return [];
     }
 
     public function getLatestSnapshot(): ?Graph
@@ -41,7 +56,12 @@ class CacheGraphRepository implements GraphRepository
 
         Cache::put(
             $this->getSnapshotKey($fingerprint),
-            $graph->toArray(),
+            [
+                'graph' => $graph->toArray(),
+                'metadata' => [
+                    'generated_at' => now()->toIso8601String(),
+                ],
+            ],
             $ttl
         );
 
@@ -54,7 +74,6 @@ class CacheGraphRepository implements GraphRepository
 
         // Store latest fingerprint pointer
         Cache::put(self::LATEST_KEY, $fingerprint, $ttl);
-        Cache::put($this->getConfiguredFingerprintKey(), $fingerprint, $ttl);
     }
 
     /**
@@ -96,7 +115,7 @@ class CacheGraphRepository implements GraphRepository
         $registry = Cache::get(self::ANALYSIS_REGISTRY_KEY, []);
         $prefix = $this->getAnalysisKeyPrefix($fingerprint);
 
-        foreach ($registry as $key) {
+        foreach (array_reverse($registry) as $key) {
             if (str_starts_with($key, $prefix)) {
                 $data = Cache::get($key);
                 if ($data) {
@@ -190,6 +209,16 @@ class CacheGraphRepository implements GraphRepository
         $latest = end($registry);
 
         return is_string($latest) && $latest !== '' ? $latest : null;
+    }
+
+    public function setActiveFingerprint(string $fingerprint): void
+    {
+        if (!$this->hasSnapshot($fingerprint)) {
+            return;
+        }
+
+        $ttl = config('logic-map.cache_ttl', 3600);
+        Cache::put($this->getConfiguredFingerprintKey(), $fingerprint, $ttl);
     }
 
     protected function getConfiguredFingerprintKey(): string

@@ -4,10 +4,11 @@ namespace dndark\LogicMap\Tests\Unit;
 
 use dndark\LogicMap\Analysis\Support\ModuleExtractor;
 use dndark\LogicMap\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class ModuleExtractorTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function it_extracts_module_from_method_id()
     {
         $module = ModuleExtractor::moduleOf('method:App\\Services\\Alert\\AlertService@syncOrders');
@@ -15,7 +16,7 @@ class ModuleExtractorTest extends TestCase
         $this->assertSame('Alert', $module);
     }
 
-    /** @test */
+    #[Test]
     public function it_extracts_module_from_class_id()
     {
         $module = ModuleExtractor::moduleOf('class:App\\Http\\Controllers\\Payment\\WebhookController');
@@ -23,7 +24,7 @@ class ModuleExtractorTest extends TestCase
         $this->assertSame('Payment', $module);
     }
 
-    /** @test */
+    #[Test]
     public function it_falls_back_to_class_name_when_namespace_is_generic()
     {
         $module = ModuleExtractor::moduleOf('class:App\\Services\\SyncService');
@@ -31,7 +32,7 @@ class ModuleExtractorTest extends TestCase
         $this->assertSame('Sync', $module);
     }
 
-    /** @test */
+    #[Test]
     public function it_maps_route_ids_to_route_module()
     {
         $module = ModuleExtractor::moduleOf('route:/logic-map/overview');

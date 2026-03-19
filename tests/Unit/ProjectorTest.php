@@ -14,6 +14,7 @@ use dndark\LogicMap\Projectors\GraphDiffProjector;
 use dndark\LogicMap\Projectors\SearchProjector;
 use dndark\LogicMap\Projectors\SubgraphProjector;
 use dndark\LogicMap\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class ProjectorTest extends TestCase
 {
@@ -45,7 +46,7 @@ class ProjectorTest extends TestCase
         return $graph;
     }
 
-    /** @test */
+    #[Test]
     public function overview_projector_returns_nodes_and_edges()
     {
         $projector = new OverviewProjector();
@@ -59,7 +60,7 @@ class ProjectorTest extends TestCase
         $this->assertNotEmpty($result['edges']);
     }
 
-    /** @test */
+    #[Test]
     public function overview_projector_respects_node_limit()
     {
         // Create a large graph
@@ -78,7 +79,7 @@ class ProjectorTest extends TestCase
         $this->assertTrue($result['meta']['limit_applied']);
     }
 
-    /** @test */
+    #[Test]
     public function overview_edges_only_reference_visible_nodes()
     {
         $projector = new OverviewProjector();
@@ -92,7 +93,7 @@ class ProjectorTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function subgraph_projector_returns_neighborhood()
     {
         $projector = new SubgraphProjector();
@@ -111,7 +112,7 @@ class ProjectorTest extends TestCase
         $this->assertTrue($result['meta']['found']);
     }
 
-    /** @test */
+    #[Test]
     public function subgraph_projector_returns_empty_for_unknown_node()
     {
         $projector = new SubgraphProjector();
@@ -122,7 +123,7 @@ class ProjectorTest extends TestCase
         $this->assertFalse($result['meta']['found']);
     }
 
-    /** @test */
+    #[Test]
     public function search_projector_finds_nodes_by_name()
     {
         $projector = new SearchProjector();
@@ -139,7 +140,7 @@ class ProjectorTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function search_projector_filters_by_kind()
     {
         $projector = new SearchProjector();
@@ -150,7 +151,7 @@ class ProjectorTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function search_projector_returns_all_nodes_for_empty_query()
     {
         $projector = new SearchProjector();
@@ -159,7 +160,7 @@ class ProjectorTest extends TestCase
         $this->assertCount(count($this->graph->getNodes()), $result['nodes']);
     }
 
-    /** @test */
+    #[Test]
     public function meta_projector_returns_statistics()
     {
         $projector = new MetaProjector();
@@ -176,7 +177,7 @@ class ProjectorTest extends TestCase
         $this->assertEquals(3, $result['edge_count']);
     }
 
-    /** @test */
+    #[Test]
     public function meta_projector_counts_kinds_correctly()
     {
         $projector = new MetaProjector();
@@ -188,7 +189,7 @@ class ProjectorTest extends TestCase
         $this->assertArrayHasKey('route', $result['kinds']);
     }
 
-    /** @test */
+    #[Test]
     public function meta_projector_counts_edge_types()
     {
         $projector = new MetaProjector();
@@ -199,7 +200,7 @@ class ProjectorTest extends TestCase
         $this->assertArrayHasKey('use', $result['edge_types']);
     }
 
-    /** @test */
+    #[Test]
     public function projectors_include_cross_module_edges()
     {
         $graph = new Graph();
@@ -233,7 +234,7 @@ class ProjectorTest extends TestCase
         $this->assertSame(2, $first['count']);
     }
 
-    /** @test */
+    #[Test]
     public function graph_diff_projector_reports_added_removed_and_modified_entities()
     {
         $from = new Graph();

@@ -4,6 +4,8 @@ namespace dndark\LogicMap\Tests\Feature;
 
 use dndark\LogicMap\Tests\TestCase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Carbon;
+use PHPUnit\Framework\Attributes\Test;
 
 class ExportEndpointTest extends TestCase
 {
@@ -13,7 +15,7 @@ class ExportEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function export_json_alias_returns_bundle_structure()
     {
         $response = $this->getJson(route('logic-map.export.json'));
@@ -51,7 +53,7 @@ class ExportEndpointTest extends TestCase
         $this->assertNull($response->json('errors'));
     }
 
-    /** @test */
+    #[Test]
     public function export_graph_returns_only_graph_payload()
     {
         $response = $this->getJson(route('logic-map.export.graph'));
@@ -62,7 +64,7 @@ class ExportEndpointTest extends TestCase
         $this->assertArrayNotHasKey('analysis', $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function export_analysis_returns_only_analysis_payload()
     {
         $response = $this->getJson(route('logic-map.export.analysis'));
@@ -73,7 +75,7 @@ class ExportEndpointTest extends TestCase
         $this->assertArrayNotHasKey('graph', $response->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function export_bundle_returns_same_shape_as_json_alias()
     {
         $bundle = $this->getJson(route('logic-map.export.bundle'));
@@ -84,7 +86,17 @@ class ExportEndpointTest extends TestCase
         $this->assertSame($bundle->json('data'), $alias->json('data'));
     }
 
-    /** @test */
+    #[Test]
+    public function export_json_alias_includes_deprecation_headers()
+    {
+        $response = $this->getJson(route('logic-map.export.json'));
+
+        $response->assertStatus(200);
+        $response->assertHeader('X-Logic-Map-Deprecated', 'true');
+        $response->assertHeader('X-Logic-Map-Replacement', '/logic-map/export/bundle');
+    }
+
+    #[Test]
     public function export_bundle_does_not_mutate_graph_nodes_with_risk()
     {
         $response = $this->getJson(route('logic-map.export.bundle'));
@@ -100,7 +112,26 @@ class ExportEndpointTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
+    public function export_graph_uses_stable_snapshot_generated_at_metadata()
+    {
+        Carbon::setTestNow('2026-03-19 10:00:00');
+        $first = $this->getJson(route('logic-map.export.graph'));
+
+        Carbon::setTestNow('2026-03-19 12:30:00');
+        $second = $this->getJson(route('logic-map.export.graph'));
+
+        Carbon::setTestNow();
+
+        $first->assertStatus(200);
+        $second->assertStatus(200);
+        $this->assertSame(
+            $first->json('data.graph.metadata.generated_at'),
+            $second->json('data.graph.metadata.generated_at')
+        );
+    }
+
+    #[Test]
     public function export_csv_returns_csv_content()
     {
         $response = $this->get(route('logic-map.export.csv'));
@@ -114,7 +145,7 @@ class ExportEndpointTest extends TestCase
         $this->assertStringContainsString('coupling', $content);
     }
 
-    /** @test */
+    #[Test]
     public function export_csv_has_download_header()
     {
         $response = $this->get(route('logic-map.export.csv'));
@@ -125,7 +156,7 @@ class ExportEndpointTest extends TestCase
         $this->assertStringContainsString('.csv', $disposition);
     }
 
-    /** @test */
+    #[Test]
     public function export_json_returns_error_without_snapshot()
     {
         Artisan::call('logic-map:clear-cache');
@@ -140,7 +171,7 @@ class ExportEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function export_csv_returns_error_without_snapshot()
     {
         Artisan::call('logic-map:clear-cache');
@@ -156,14 +187,14 @@ class ExportEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function analyze_command_works_with_existing_snapshot()
     {
         $this->artisan('logic-map:analyze')
             ->assertExitCode(0);
     }
 
-    /** @test */
+    #[Test]
     public function analyze_command_fails_without_snapshot()
     {
         Artisan::call('logic-map:clear-cache');
@@ -174,7 +205,7 @@ class ExportEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function analyze_command_shows_violations_with_flag()
     {
         $this->artisan('logic-map:analyze', ['--show-violations' => true])

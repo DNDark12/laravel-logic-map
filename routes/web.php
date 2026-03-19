@@ -15,6 +15,7 @@ Route::middleware(['web'])->prefix('logic-map')->group(function () {
     Route::get('/diff', [LogicMapController::class, 'diff'])->name('logic-map.diff');
     Route::get('/violations', [LogicMapController::class, 'violations'])->name('logic-map.violations');
     Route::get('/health', [LogicMapController::class, 'health'])->name('logic-map.health');
+    Route::get('/hotspots', [LogicMapController::class, 'hotspots'])->name('logic-map.hotspots');
     Route::get('/export/graph', [LogicMapController::class, 'exportGraph'])->name('logic-map.export.graph');
     Route::get('/export/analysis', [LogicMapController::class, 'exportAnalysis'])->name('logic-map.export.analysis');
     Route::get('/export/bundle', [LogicMapController::class, 'exportBundle'])->name('logic-map.export.bundle');

@@ -80,6 +80,14 @@ class LogicMapController extends Controller
         return $this->respond($result);
     }
 
+    public function hotspots(Request $request): JsonResponse
+    {
+        $snapshot = $this->readSnapshot($request);
+        $result = $this->queryService->hotspots($request->except('snapshot'), $snapshot);
+
+        return $this->respond($result);
+    }
+
     public function exportGraph(Request $request): JsonResponse
     {
         $snapshot = $this->readSnapshot($request);
@@ -109,7 +117,10 @@ class LogicMapController extends Controller
         $snapshot = $this->readSnapshot($request);
         $result = $this->queryService->exportBundle($snapshot);
 
-        return $this->respond($result);
+        return $this->respond($result, [
+            'X-Logic-Map-Deprecated' => 'true',
+            'X-Logic-Map-Replacement' => '/logic-map/export/bundle',
+        ]);
     }
 
     public function exportCsv(Request $request): Response
@@ -130,9 +141,9 @@ class LogicMapController extends Controller
     /**
      * Convert service response to JSON with proper HTTP status.
      */
-    protected function respond(QueryResult $result): JsonResponse
+    protected function respond(QueryResult $result, array $headers = []): JsonResponse
     {
-        return response()->json($result->toArray(), $result->httpStatus);
+        return response()->json($result->toArray(), $result->httpStatus, $headers);
     }
 
     public function snapshots(Request $request): JsonResponse

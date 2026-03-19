@@ -53,6 +53,11 @@ class QueryLogicMapService
         return $this->analysisReads->health($snapshot);
     }
 
+    public function hotspots(array $filters = [], ?string $snapshot = null): QueryResult
+    {
+        return $this->analysisReads->hotspots($filters, $snapshot);
+    }
+
     public function exportGraph(?string $snapshot = null): QueryResult
     {
         return $this->exportReads->graph($snapshot);

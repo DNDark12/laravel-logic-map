@@ -11,6 +11,7 @@ use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
 use dndark\LogicMap\Tests\TestCase;
 use Illuminate\Support\Facades\Artisan;
+use PHPUnit\Framework\Attributes\Test;
 
 class ApiEndpointTest extends TestCase
 {
@@ -22,7 +23,7 @@ class ApiEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function overview_endpoint_returns_valid_envelope()
     {
         $response = $this->getJson(route('logic-map.overview'));
@@ -43,7 +44,7 @@ class ApiEndpointTest extends TestCase
         $this->assertNull($response->json('errors'));
     }
 
-    /** @test */
+    #[Test]
     public function meta_endpoint_returns_statistics()
     {
         $response = $this->getJson(route('logic-map.meta'));
@@ -66,7 +67,7 @@ class ApiEndpointTest extends TestCase
         $this->assertGreaterThan(0, $response->json('data.node_count'));
     }
 
-    /** @test */
+    #[Test]
     public function index_page_contains_snapshot_and_heatmap_controls()
     {
         $response = $this->get(route('logic-map.index'));
@@ -76,7 +77,31 @@ class ApiEndpointTest extends TestCase
         $response->assertSee('heatmap-toggle', false);
     }
 
-    /** @test */
+    #[Test]
+    public function index_page_contains_mobile_subgraph_actions_for_small_screens()
+    {
+        $response = $this->get(route('logic-map.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('mobile-subgraph-controls', false);
+        $response->assertSee('data-mobile-sg-depth="1"', false);
+        $response->assertSee('data-mobile-action="subgraph-rerun"', false);
+        $response->assertSee('data-mobile-action="subgraph-exit"', false);
+    }
+
+    #[Test]
+    public function index_page_contains_panel_state_controls_for_peek_hide_and_restore()
+    {
+        $response = $this->get(route('logic-map.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('id="p-peek"', false);
+        $response->assertSee('id="p-expand"', false);
+        $response->assertSee('id="p-hide"', false);
+        $response->assertSee('id="panel-restore"', false);
+    }
+
+    #[Test]
     public function search_endpoint_returns_matching_nodes()
     {
         $response = $this->getJson(route('logic-map.search', ['q' => 'logic-map']));
@@ -100,7 +125,7 @@ class ApiEndpointTest extends TestCase
         $this->assertNotEmpty($response->json('data.nodes'));
     }
 
-    /** @test */
+    #[Test]
     public function snapshots_endpoint_returns_available_snapshots()
     {
         $response = $this->getJson(route('logic-map.snapshots'));
@@ -133,7 +158,49 @@ class ApiEndpointTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
+    public function snapshot_backed_success_endpoints_include_resolution_metadata()
+    {
+        $overviewResponse = $this->getJson(route('logic-map.overview'));
+        $nodeId = $overviewResponse->json('data.nodes.0.id');
+
+        $endpoints = [
+            route('logic-map.overview'),
+            route('logic-map.search', ['q' => 'logic-map']),
+            route('logic-map.meta'),
+            route('logic-map.snapshots'),
+            route('logic-map.subgraph', ['id' => urlencode($nodeId)]),
+            route('logic-map.health'),
+            route('logic-map.violations'),
+            route('logic-map.hotspots'),
+            route('logic-map.export.graph'),
+            route('logic-map.export.analysis'),
+            route('logic-map.export.bundle'),
+            route('logic-map.export.json'),
+        ];
+
+        foreach ($endpoints as $endpoint) {
+            $response = $this->getJson($endpoint);
+
+            $response->assertStatus(200);
+            $response->assertJsonStructure([
+                'ok',
+                'data' => [
+                    '_resolution' => [
+                        'requested_snapshot',
+                        'resolved_via',
+                        'resolved_fingerprint',
+                        'pointer_state',
+                        'analysis_state',
+                    ],
+                ],
+                'message',
+                'errors',
+            ]);
+        }
+    }
+
+    #[Test]
     public function search_endpoint_handles_empty_query()
     {
         $response = $this->getJson(route('logic-map.search', ['q' => '']));
@@ -142,7 +209,7 @@ class ApiEndpointTest extends TestCase
         $this->assertTrue($response->json('ok'));
     }
 
-    /** @test */
+    #[Test]
     public function subgraph_endpoint_returns_neighborhood()
     {
         // First get a valid node ID from overview
@@ -174,7 +241,7 @@ class ApiEndpointTest extends TestCase
         $this->assertTrue($response->json('data.meta.found'));
     }
 
-    /** @test */
+    #[Test]
     public function subgraph_endpoint_returns_404_for_unknown_node()
     {
         $response = $this->getJson(route('logic-map.subgraph', ['id' => 'nonexistent:id']));
@@ -184,7 +251,7 @@ class ApiEndpointTest extends TestCase
         $this->assertNotNull($response->json('message'));
     }
 
-    /** @test */
+    #[Test]
     public function overview_endpoint_returns_404_for_unknown_snapshot()
     {
         $response = $this->getJson(route('logic-map.overview', ['snapshot' => 'missing-fingerprint']));
@@ -194,7 +261,7 @@ class ApiEndpointTest extends TestCase
         $this->assertNotNull($response->json('message'));
     }
 
-    /** @test */
+    #[Test]
     public function overview_edges_reference_only_visible_nodes()
     {
         $response = $this->getJson(route('logic-map.overview'));
@@ -211,7 +278,7 @@ class ApiEndpointTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function all_endpoints_use_consistent_envelope_on_error()
     {
         // Clear cache to simulate missing snapshot scenario
@@ -241,7 +308,7 @@ class ApiEndpointTest extends TestCase
         Artisan::call('logic-map:build', ['--force' => true]);
     }
 
-    /** @test */
+    #[Test]
     public function diff_endpoint_returns_graph_changes_between_two_snapshots()
     {
         Artisan::call('logic-map:clear-cache');
@@ -294,7 +361,7 @@ class ApiEndpointTest extends TestCase
         $this->assertSame(1, $response->json('data.summary.removed_nodes'));
     }
 
-    /** @test */
+    #[Test]
     public function diff_endpoint_returns_error_when_there_are_not_enough_snapshots()
     {
         Artisan::call('logic-map:clear-cache');
