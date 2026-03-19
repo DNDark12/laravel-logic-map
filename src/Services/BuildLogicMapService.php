@@ -5,6 +5,7 @@ namespace dndark\LogicMap\Services;
 use dndark\LogicMap\Analysis\ArchitectureAnalyzer;
 use dndark\LogicMap\Analysis\AstParser;
 use dndark\LogicMap\Analysis\MetricsCalculator;
+use dndark\LogicMap\Analysis\Runtime\CoverageMetadataCollector;
 use dndark\LogicMap\Analysis\Runtime\RouteMetadataCollector;
 use dndark\LogicMap\Contracts\GraphRepository;
 use dndark\LogicMap\Domain\Graph;
@@ -19,6 +20,7 @@ class BuildLogicMapService
         protected AstParser $parser,
         protected GraphRepository $repository,
         protected RouteMetadataCollector $routeMetadata,
+        protected CoverageMetadataCollector $coverageMetadata,
         protected MetricsCalculator $metricsCalculator,
         protected ArchitectureAnalyzer $architectureAnalyzer,
     ) {
@@ -58,6 +60,7 @@ class BuildLogicMapService
 
         // Enrich with runtime metadata
         $this->routeMetadata->collect($graph);
+        $this->coverageMetadata->collect($graph);
 
         // Calculate structural metrics → Node.metrics (canonical)
         $this->metricsCalculator->calculate($graph);

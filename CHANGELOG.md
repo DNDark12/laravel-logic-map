@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-03-19
+
+### Added
+
+- Snapshot time-travel endpoint (`GET /logic-map/snapshots`) and topbar selector.
+- Snapshot-to-snapshot graph diff endpoint (`GET /logic-map/diff`).
+- Complexity heatmap mode (UI toggle + keyboard shortcut `H`).
+- Dead code analyzer (`depth === null` from route entrypoints).
+- Coverage correlation ingestion and health-panel insights.
+- Mobile overflow actions menu for full feature access on narrow screens.
+
+### Changed
+
+- Health grade color mapping refined (`S`, `A`, `B` now use distinct colors).
+- JSON export now downloads a `.json` file instead of redirecting to raw JSON.
+- Snapshot and layout/hops controls synchronized across desktop and mobile UI.
+- Header controls normalized to consistent heights across breakpoints.
+
+### Fixed
+
+- Subgraph route now supports slash-containing IDs (`route:logic-map/...`).
+- Subgraph no longer removes isolated seed nodes (prevents blank canvas).
+- Initial render always runs layout (prevents node overlap at origin on first load).
+- Subgraph panel hides duplicate `Explore SubGraph` action while already in Subgraph mode.
+- Subgraph floating controls stay visible on short-height viewports.
+
 ## [1.0.0] - 2026-03-16
 
 ### Added

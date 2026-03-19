@@ -57,4 +57,16 @@ interface GraphRepository
      * @return bool
      */
     public function hasSnapshot(string $fingerprint): bool;
+
+    /**
+     * List available snapshot fingerprints in chronological insertion order.
+     *
+     * @return array<int, string>
+     */
+    public function listFingerprints(): array;
+
+    /**
+     * Get latest available fingerprint pointer.
+     */
+    public function getLatestFingerprint(): ?string;
 }

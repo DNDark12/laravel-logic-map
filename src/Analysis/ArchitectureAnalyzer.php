@@ -3,6 +3,7 @@
 namespace dndark\LogicMap\Analysis;
 
 use dndark\LogicMap\Analysis\Analyzers\CircularDependencyAnalyzer;
+use dndark\LogicMap\Analysis\Analyzers\DeadCodeAnalyzer;
 use dndark\LogicMap\Analysis\Analyzers\FatControllerAnalyzer;
 use dndark\LogicMap\Analysis\Analyzers\OrphanAnalyzer;
 use dndark\LogicMap\Contracts\ViolationAnalyzer;
@@ -88,6 +89,7 @@ class ArchitectureAnalyzer
         $this->registerAnalyzer(new FatControllerAnalyzer());
         $this->registerAnalyzer(new CircularDependencyAnalyzer());
         $this->registerAnalyzer(new OrphanAnalyzer());
+        $this->registerAnalyzer(new DeadCodeAnalyzer());
         $this->registerAnalyzer(new Analyzers\HighInstabilityAnalyzer());
         $this->registerAnalyzer(new Analyzers\HighCouplingAnalyzer());
     }

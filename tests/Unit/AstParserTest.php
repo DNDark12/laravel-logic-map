@@ -148,4 +148,169 @@ class AstParserTest extends TestCase
             $this->parser
         );
     }
+
+    /** @test */
+    public function it_filters_non_business_classes_and_calls()
+    {
+        $fixture = <<<'PHP'
+<?php
+
+namespace App\Models;
+
+class User
+{
+    public function find(int $id): ?self
+    {
+        return null;
+    }
+}
+
+namespace App\Services;
+
+use App\Models\User;
+
+class OrderService
+{
+    public function __construct(private User $user)
+    {
+    }
+
+    public function syncOrders(): void
+    {
+        $this->user->find(1);
+    }
+}
+PHP;
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'logic-map-filter-');
+        file_put_contents($tmpFile, $fixture);
+
+        try {
+            $graph = $this->parser->parse([$tmpFile]);
+
+            $nodeIds = array_keys($graph->getNodes());
+            $edgeTargets = array_map(fn($e) => $e->target, $graph->getEdges());
+
+            $this->assertNotContains('class:App\\Models\\User', $nodeIds);
+            $this->assertNotContains('method:App\\Models\\User@find', $nodeIds);
+            $this->assertNotContains('method:App\\Models\\User@find', $edgeTargets);
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    /** @test */
+    public function it_extracts_doc_intent_and_body_strings_from_method_metadata()
+    {
+        $fixture = <<<'PHP'
+<?php
+
+namespace App\Services\Billing;
+
+class InvoiceService
+{
+    /**
+     * @intent Synchronize invoice status with payment provider
+     */
+    public function syncInvoice(): array
+    {
+        $log = 'sync started';
+
+        return [
+            'message' => 'Invoice synchronized successfully',
+            'status' => 'ok',
+        ];
+    }
+}
+PHP;
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'logic-map-intent-');
+        file_put_contents($tmpFile, $fixture);
+
+        try {
+            $graph = $this->parser->parse([$tmpFile]);
+            $node = $graph->getNode('method:App\\Services\\Billing\\InvoiceService@syncInvoice');
+
+            $this->assertNotNull($node);
+            $this->assertArrayHasKey('docIntent', $node->metadata);
+            $this->assertArrayHasKey('bodyStrings', $node->metadata);
+            $this->assertArrayHasKey('resultMessages', $node->metadata);
+
+            $this->assertSame('Synchronize invoice status with payment provider', $node->metadata['docIntent']);
+            $this->assertContains('sync started', $node->metadata['bodyStrings']);
+            $this->assertContains('Invoice synchronized successfully', $node->metadata['resultMessages']);
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    /** @test */
+    public function it_resolves_interface_types_to_concrete_implementations()
+    {
+        $fixture = <<<'PHP'
+<?php
+
+namespace App\Contracts;
+
+interface PaymentGateway
+{
+    public function charge(int $amount): bool;
+}
+
+namespace App\Services\Billing;
+
+use App\Contracts\PaymentGateway;
+
+class StripeGateway implements PaymentGateway
+{
+    public function charge(int $amount): bool
+    {
+        return true;
+    }
+}
+
+class CheckoutService
+{
+    public function __construct(private PaymentGateway $gateway)
+    {
+    }
+
+    public function checkout(): void
+    {
+        $this->gateway->charge(100);
+    }
+}
+PHP;
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'logic-map-interface-');
+        file_put_contents($tmpFile, $fixture);
+
+        try {
+            $graph = $this->parser->parse([$tmpFile]);
+            $edges = $graph->getEdges();
+
+            $targets = array_map(
+                fn($edge) => [$edge->source, $edge->target],
+                $edges
+            );
+
+            $this->assertContains(
+                [
+                    'method:App\\Services\\Billing\\CheckoutService@checkout',
+                    'method:App\\Services\\Billing\\StripeGateway@charge',
+                ],
+                $targets
+            );
+
+            $this->assertNotContains(
+                [
+                    'method:App\\Services\\Billing\\CheckoutService@checkout',
+                    'method:App\\Contracts\\PaymentGateway@charge',
+                ],
+                $targets
+            );
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
 }

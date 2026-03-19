@@ -1,8 +1,9 @@
 <?php
 
-namespace dndark\LogicMap\Tests\Unit;
+namespace Tests\Unit;
 
 use dndark\LogicMap\Analysis\Analyzers\CircularDependencyAnalyzer;
+use dndark\LogicMap\Analysis\Analyzers\DeadCodeAnalyzer;
 use dndark\LogicMap\Analysis\Analyzers\FatControllerAnalyzer;
 use dndark\LogicMap\Analysis\Analyzers\OrphanAnalyzer;
 use dndark\LogicMap\Analysis\ArchitectureAnalyzer;
@@ -15,10 +16,19 @@ use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
 use dndark\LogicMap\Domain\Violation;
-use dndark\LogicMap\Tests\TestCase;
+use dndark\LogicMap\LogicMapServiceProvider;
+use Illuminate\Support\Facades\Artisan;
+use Tests\TestCase;
 
 class AnalyzersTest extends TestCase
 {
+    protected function getPackageProviders($app)
+    {
+        return [
+            LogicMapServiceProvider::class,
+        ];
+    }
+
     protected MetricsCalculator $metricsCalculator;
 
     protected function setUp(): void
@@ -158,7 +168,7 @@ class AnalyzersTest extends TestCase
         $violations = $analyzer->analyze($graph);
 
         $this->assertCount(2, $violations);
-        $this->assertEquals('orphan_class', $violations[0]->type);
+        $this->assertEquals('orphan', $violations[0]->type);
         $this->assertEquals('low', $violations[0]->severity);
     }
 
@@ -207,6 +217,67 @@ class AnalyzersTest extends TestCase
 
         $analyzer = new OrphanAnalyzer();
         $this->assertEmpty($analyzer->analyze($graph));
+    }
+
+    // ─── DeadCodeAnalyzer ───────────────────────────────
+
+    /** @test */
+    public function dead_code_flags_unreachable_nodes_by_depth()
+    {
+        $graph = new Graph();
+        $graph->addNode(new Node('r1', NodeKind::ROUTE, 'GET /'));
+        $graph->addNode(new Node('ctrl', NodeKind::CONTROLLER, 'HomeController'));
+        $graph->addNode(new Node('svc_a', NodeKind::SERVICE, 'A'));
+        $graph->addNode(new Node('svc_b', NodeKind::SERVICE, 'B'));
+
+        // Reachable chain
+        $graph->addEdge(new Edge('r1', 'ctrl', EdgeType::ROUTE_TO_CONTROLLER));
+        // Unreachable cluster (no route path)
+        $graph->addEdge(new Edge('svc_a', 'svc_b', EdgeType::CALL));
+
+        $this->app['config']->set('logic-map.analysis.depth.traversal_edge_types', [
+            'route_to_controller', 'call', 'dispatch', 'listen', 'use',
+        ]);
+        $this->app['config']->set('logic-map.analysis.dead_code.eligible_kinds', ['service']);
+
+        $this->metricsCalculator->calculate($graph);
+
+        $analyzer = new DeadCodeAnalyzer();
+        $violations = $analyzer->analyze($graph);
+
+        $this->assertCount(2, $violations);
+        $this->assertEquals('dead_code', $violations[0]->type);
+        $this->assertEquals('low', $violations[0]->severity);
+
+        $ids = array_map(fn(Violation $v) => $v->nodeId, $violations);
+        $this->assertContains('svc_a', $ids);
+        $this->assertContains('svc_b', $ids);
+        $this->assertNotContains('ctrl', $ids);
+    }
+
+    /** @test */
+    public function dead_code_ignores_reachable_and_non_eligible_nodes()
+    {
+        $graph = new Graph();
+        $graph->addNode(new Node('r1', NodeKind::ROUTE, 'GET /users'));
+        $graph->addNode(new Node('ctrl', NodeKind::CONTROLLER, 'UserController'));
+        $graph->addNode(new Node('svc', NodeKind::SERVICE, 'UserService'));
+        $graph->addNode(new Node('evt', NodeKind::EVENT, 'UserCreated'));
+
+        $graph->addEdge(new Edge('r1', 'ctrl', EdgeType::ROUTE_TO_CONTROLLER));
+        $graph->addEdge(new Edge('ctrl', 'svc', EdgeType::CALL));
+
+        $this->app['config']->set('logic-map.analysis.depth.traversal_edge_types', [
+            'route_to_controller', 'call', 'dispatch', 'listen', 'use',
+        ]);
+        $this->app['config']->set('logic-map.analysis.dead_code.eligible_kinds', ['controller', 'service']);
+
+        $this->metricsCalculator->calculate($graph);
+
+        $analyzer = new DeadCodeAnalyzer();
+        $violations = $analyzer->analyze($graph);
+
+        $this->assertEmpty($violations);
     }
 
     // ─── RiskCalculator ──────────────────────────────────

@@ -2,6 +2,9 @@
 
 namespace dndark\LogicMap\Analysis\Support;
 
+use PhpParser\Comment\Doc;
+use PhpParser\Node;
+
 class IntentExtractor
 {
     protected static array $knownWordsCache = [];
@@ -161,6 +164,169 @@ class IntentExtractor
         ];
     }
 
+    public static function extractDocIntent(?Doc $doc): string
+    {
+        if (!$doc) {
+            return '';
+        }
+
+        $text = $doc->getText();
+        if (preg_match('/@intent\s+(.+)/u', $text, $matches) === 1) {
+            return trim($matches[1]);
+        }
+
+        $lines = preg_split('/\R/', $text) ?: [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            $line = preg_replace('/^\/\*\*?/', '', $line) ?? $line;
+            $line = preg_replace('/\*\/$/', '', $line) ?? $line;
+            $line = ltrim($line, "* \t");
+
+            if ($line === '' || str_starts_with($line, '@')) {
+                continue;
+            }
+
+            return trim($line);
+        }
+
+        return '';
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function extractBodyStrings(Node\Stmt\ClassMethod $method, int $max = 12): array
+    {
+        $strings = [];
+        $collect = function (Node $node) use (&$collect, &$strings, $max): void {
+            if (count($strings) >= $max) {
+                return;
+            }
+
+            $value = self::stringValueFromNode($node);
+            if ($value !== null) {
+                $value = trim($value);
+                if ($value !== '' && strlen($value) >= 4 && !in_array($value, $strings, true)) {
+                    $strings[] = $value;
+                }
+            }
+
+            foreach ($node->getSubNodeNames() as $name) {
+                $sub = $node->$name;
+                if ($sub instanceof Node) {
+                    $collect($sub);
+                } elseif (is_array($sub)) {
+                    foreach ($sub as $child) {
+                        if ($child instanceof Node) {
+                            $collect($child);
+                        }
+                    }
+                }
+            }
+        };
+
+        foreach ($method->stmts ?? [] as $stmt) {
+            $collect($stmt);
+        }
+
+        return $strings;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function extractResultMessages(Node\Stmt\ClassMethod $method, int $max = 6): array
+    {
+        $messages = [];
+        $capture = function (string $value) use (&$messages, $max): void {
+            $value = trim($value);
+            if ($value === '' || strlen($value) < 4 || in_array($value, $messages, true)) {
+                return;
+            }
+
+            if (count($messages) < $max) {
+                $messages[] = $value;
+            }
+        };
+
+        $collectFromArray = function (Node\Expr\Array_ $array) use (&$capture): void {
+            foreach ($array->items as $item) {
+                if (!$item || !$item->key) {
+                    continue;
+                }
+
+                $key = self::stringValueFromNode($item->key);
+                if ($key === null) {
+                    continue;
+                }
+
+                $key = strtolower($key);
+                if (!in_array($key, ['message', 'msg', 'error', 'errors', 'result', 'status'], true)) {
+                    continue;
+                }
+
+                $value = self::stringValueFromNode($item->value);
+                if ($value !== null) {
+                    $capture($value);
+                }
+            }
+        };
+
+        $walk = function (Node $node) use (&$walk, &$capture, &$collectFromArray): void {
+            if ($node instanceof Node\Stmt\Return_) {
+                if ($node->expr instanceof Node\Expr\Array_) {
+                    $collectFromArray($node->expr);
+                } else {
+                    $value = self::stringValueFromNode($node->expr);
+                    if ($value !== null) {
+                        $capture($value);
+                    }
+                }
+            }
+
+            if ($node instanceof Node\Expr\MethodCall || $node instanceof Node\Expr\StaticCall || $node instanceof Node\Expr\FuncCall) {
+                $name = '';
+                if ($node instanceof Node\Expr\FuncCall && $node->name instanceof Node\Name) {
+                    $name = strtolower($node->name->toString());
+                } elseif (($node instanceof Node\Expr\MethodCall || $node instanceof Node\Expr\StaticCall) && $node->name instanceof Node\Identifier) {
+                    $name = strtolower($node->name->toString());
+                }
+
+                if (preg_match('/(success|error|fail|warning|info|message|json|with)/', $name) === 1) {
+                    foreach ($node->args as $arg) {
+                        $value = self::stringValueFromNode($arg->value);
+                        if ($value !== null) {
+                            $capture($value);
+                        }
+                    }
+                }
+            }
+
+            if ($node instanceof Node\Expr\Array_) {
+                $collectFromArray($node);
+            }
+
+            foreach ($node->getSubNodeNames() as $name) {
+                $sub = $node->$name;
+                if ($sub instanceof Node) {
+                    $walk($sub);
+                } elseif (is_array($sub)) {
+                    foreach ($sub as $child) {
+                        if ($child instanceof Node) {
+                            $walk($child);
+                        }
+                    }
+                }
+            }
+        };
+
+        foreach ($method->stmts ?? [] as $stmt) {
+            $walk($stmt);
+        }
+
+        return $messages;
+    }
+
     public static function splitWords(string $name): array
     {
         // Handle camelCase, PascalCase, snake_case, and kebab-case
@@ -201,6 +367,29 @@ class IntentExtractor
             }
         }
         return [$s];
+    }
+
+    protected static function stringValueFromNode(?Node $node): ?string
+    {
+        if ($node instanceof Node\Scalar\String_) {
+            return $node->value;
+        }
+
+        if ($node instanceof Node\Scalar\Encapsed) {
+            $parts = [];
+            foreach ($node->parts as $part) {
+                if ($part instanceof Node\InterpolatedStringPart) {
+                    $parts[] = $part->value;
+                } elseif ($part instanceof Node\Scalar\String_) {
+                    $parts[] = $part->value;
+                }
+            }
+
+            $value = trim(implode('', $parts));
+            return $value !== '' ? $value : null;
+        }
+
+        return null;
     }
 
     protected static function triggerMap(string $class): string

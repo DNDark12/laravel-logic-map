@@ -3,6 +3,7 @@
 namespace dndark\LogicMap\Analysis;
 
 use dndark\LogicMap\Analysis\Visitors\ClassMethodVisitor;
+use dndark\LogicMap\Analysis\Visitors\InterfaceMapVisitor;
 use dndark\LogicMap\Analysis\Visitors\RouteVisitor;
 use dndark\LogicMap\Contracts\GraphExtractor;
 use dndark\LogicMap\Domain\Graph;
@@ -56,11 +57,7 @@ class AstParser implements GraphExtractor
         ];
 
         $graph = new Graph();
-        $traverser = new NodeTraverser();
-
-        $traverser->addVisitor(new NameResolver());
-        $traverser->addVisitor(new RouteVisitor($graph));
-        $traverser->addVisitor(new ClassMethodVisitor($graph));
+        $parsedStatements = [];
 
         foreach ($files as $file) {
             try {
@@ -87,7 +84,7 @@ class AstParser implements GraphExtractor
                 $stmts = $this->parser->parse($code);
 
                 if ($stmts) {
-                    $traverser->traverse($stmts);
+                    $parsedStatements[$file] = $stmts;
                     $this->diagnostics['parsed_files']++;
                 } else {
                     $this->diagnostics['skipped_files']++;
@@ -118,6 +115,24 @@ class AstParser implements GraphExtractor
                     'trace' => $e->getTraceAsString(),
                 ]);
             }
+        }
+
+        // Pass 1: Name resolution + interface implementation map.
+        $interfaceMapVisitor = new InterfaceMapVisitor();
+        foreach ($parsedStatements as $file => $stmts) {
+            $resolverTraverser = new NodeTraverser();
+            $resolverTraverser->addVisitor(new NameResolver());
+            $resolverTraverser->addVisitor($interfaceMapVisitor);
+            $parsedStatements[$file] = $resolverTraverser->traverse($stmts);
+        }
+
+        // Pass 2: Graph extraction with enriched type resolution.
+        $analysisTraverser = new NodeTraverser();
+        $analysisTraverser->addVisitor(new RouteVisitor($graph));
+        $analysisTraverser->addVisitor(new ClassMethodVisitor($graph, $interfaceMapVisitor->getInterfaceMap()));
+
+        foreach ($parsedStatements as $stmts) {
+            $analysisTraverser->traverse($stmts);
         }
 
         // Log summary

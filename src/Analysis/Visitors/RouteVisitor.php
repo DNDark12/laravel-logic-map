@@ -3,6 +3,7 @@
 namespace dndark\LogicMap\Analysis\Visitors;
 
 use dndark\LogicMap\Analysis\Support\IntentExtractor;
+use dndark\LogicMap\Analysis\Support\ModuleExtractor;
 use dndark\LogicMap\Domain\Edge;
 use dndark\LogicMap\Domain\Enums\Confidence;
 use dndark\LogicMap\Domain\Enums\EdgeType;
@@ -115,6 +116,7 @@ class RouteVisitor extends NodeVisitorAbstract
                     'result' => $intent['result'],
                     'shortLabel' => $intent['short'],
                     'trigger' => $intent['trigger'],
+                    'module' => $controllerName !== '' ? ModuleExtractor::moduleOf($controllerName) : ModuleExtractor::moduleOf('route:' . $uri),
                 ]
             );
 

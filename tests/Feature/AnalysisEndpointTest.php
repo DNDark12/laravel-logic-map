@@ -1,12 +1,21 @@
 <?php
 
-namespace dndark\LogicMap\Tests\Feature;
+namespace Tests\Feature;
 
-use dndark\LogicMap\Tests\TestCase;
+use dndark\LogicMap\LogicMapServiceProvider;
+use dndark\LogicMap\Tests\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Artisan;
+use Tests\TestCase;
 
 class AnalysisEndpointTest extends TestCase
 {
+    protected function getPackageProviders($app)
+    {
+        return [
+            LogicMapServiceProvider::class,
+        ];
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -115,7 +124,7 @@ class AnalysisEndpointTest extends TestCase
         $response = $this->getJson(route('logic-map.health'));
 
         $grade = $response->json('data.grade');
-        $this->assertContains($grade, ['A', 'B', 'C', 'D', 'F']);
+        $this->assertContains($grade, ['S', 'A', 'B', 'C', 'D', 'F']);
     }
 
     /** @test */
@@ -126,6 +135,20 @@ class AnalysisEndpointTest extends TestCase
         $stats = $response->json('data.graph_stats');
         $this->assertGreaterThan(0, $stats['total_nodes']);
         $this->assertGreaterThanOrEqual(0, $stats['total_edges']);
+    }
+
+    /** @test */
+    public function health_includes_coverage_correlation_block()
+    {
+        $response = $this->getJson(route('logic-map.health'));
+
+        $response->assertStatus(200);
+
+        $correlation = $response->json('data.coverage_correlation');
+        $this->assertIsArray($correlation);
+        $this->assertArrayHasKey('enabled', $correlation);
+        $this->assertArrayHasKey('eligible_nodes', $correlation);
+        $this->assertArrayHasKey('high_risk_low_coverage', $correlation);
     }
 
     /** @test */

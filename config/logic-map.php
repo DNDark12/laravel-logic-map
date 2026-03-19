@@ -44,6 +44,14 @@ return [
     'subgraph_node_limit' => 50,
 
     /*
+     * Diff payload limits (graph-to-graph comparison)
+     */
+    'diff' => [
+        'max_node_changes' => 200,
+        'max_edge_changes' => 300,
+    ],
+
+    /*
      * Default filters for projections
      */
     'filters' => [
@@ -70,6 +78,7 @@ return [
             'circular_dependency' => 'Circular Dependency',
             'fat_controller' => 'Fat Controller',
             'orphan' => 'Orphan Node',
+            'dead_code' => 'Dead Code',
             'high_instability' => 'High Instability',
             'high_coupling' => 'High Coupling',
         ],
@@ -81,6 +90,7 @@ return [
             'circular_dependency' => 'Recursive dependency chain found (A → B → A). Fix by extracting shared logic to a lower-level service or interface.',
             'fat_controller' => 'Controller exceeds dependency threshold. Refactor by delegating business logic to Services or Actions.',
             'orphan' => 'Module is not called by or connected to any other parts. May be dead code or incomplete integration.',
+            'dead_code' => 'Node is unreachable from configured route entrypoints (depth = null). Candidate for cleanup or wiring.',
             'high_instability' => 'Fragile component that depends on many changing parts but is not depended upon by others.',
             'high_coupling' => 'Tightly coupled module with high connectivity. Hard to test and isolate.',
         ],
@@ -92,7 +102,7 @@ return [
             'critical' => 'Circular deps, breaking issues',
             'high' => 'Fat controllers, structural debt',
             'medium' => 'High instability / coupling',
-            'low' => 'Orphan nodes, minor issues',
+            'low' => 'Orphan / dead-code signals, minor issues',
         ],
 
         /*
@@ -102,6 +112,7 @@ return [
             'fat_controller' => true,
             'circular_dependency' => true,
             'orphan' => true,
+            'dead_code' => true,
             'high_instability' => false,
             'high_coupling' => false,
         ],
@@ -113,6 +124,15 @@ return [
          */
         'orphan' => [
             'eligible_kinds' => ['controller', 'service', 'model'],
+            'ignore_node_ids' => [],
+        ],
+
+        /*
+         * DeadCodeAnalyzer scoping (ADR-015)
+         * Flags nodes with depth = null (unreachable from route entrypoints).
+         */
+        'dead_code' => [
+            'eligible_kinds' => ['controller', 'service', 'repository', 'model', 'job', 'component'],
             'ignore_node_ids' => [],
         ],
 
@@ -139,6 +159,7 @@ return [
          * Health grade scales (min_score => grade)
          */
         'grade_scales' => [
+            100 => 'S',
             90 => 'A',
             80 => 'B',
             70 => 'C',
@@ -168,7 +189,12 @@ return [
          */
         'colors' => [
             'grades' => [
-                'A' => '#22c55e', 'B' => '#22c55e', 'C' => '#eab308', 'D' => '#f97316', 'F' => '#ef4444'
+                'S' => '#16a34a',
+                'A' => '#22c55e',
+                'B' => '#84cc16',
+                'C' => '#eab308',
+                'D' => '#f97316',
+                'F' => '#ef4444',
             ],
             'severities' => [
                 'critical' => ['bg' => 'rgba(239,68,68,.12)', 'bd' => '#ef4444', 'tx' => '#ef4444'],
@@ -183,7 +209,21 @@ return [
          */
         'ui_thresholds' => [
             'large_graph' => 150,
+            'hub_utility_fan_in' => 5,
         ],
+    ],
+
+    /*
+     * Test coverage correlation (Clover XML)
+     */
+    'coverage' => [
+        'enabled' => env('LOGIC_MAP_COVERAGE_ENABLED', true),
+        'clover_path' => env('LOGIC_MAP_COVERAGE_CLOVER_PATH', base_path('coverage/clover.xml')),
+        'assume_uncovered_when_missing' => false,
+        'low_threshold' => 0.5,
+        'high_threshold' => 0.8,
+        'correlation_kinds' => ['controller', 'service', 'repository', 'model', 'job', 'component'],
+        'correlation_risk_levels' => ['critical', 'high'],
     ],
 
     /*

@@ -3,6 +3,7 @@
 namespace dndark\LogicMap\Analysis\Visitors;
 
 use dndark\LogicMap\Analysis\Support\IntentExtractor;
+use dndark\LogicMap\Analysis\Support\ModuleExtractor;
 use dndark\LogicMap\Domain\Edge;
 use dndark\LogicMap\Domain\Enums\Confidence;
 use dndark\LogicMap\Domain\Enums\EdgeType;
@@ -10,10 +11,45 @@ use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node as DomainNode;
 use PhpParser\Node;
+use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
 
 class ClassMethodVisitor extends NodeVisitorAbstract
 {
+    /** @var list<string> */
+    protected const BLOCKED_NAMESPACE_PREFIXES = [
+        'App\\Models\\',
+        'App\\Http\\Requests\\',
+        'App\\Http\\Resources\\',
+        'App\\Providers\\',
+        'App\\Exceptions\\',
+        'Database\\Factories\\',
+        'Database\\Seeders\\',
+        'Illuminate\\',
+        'Symfony\\',
+        'Psr\\',
+    ];
+
+    /** @var list<string> */
+    protected const BLOCKED_CLASS_SUFFIXES = [
+        'Request', 'Resource', 'Provider', 'Middleware', 'Policy', 'Exception', 'Factory', 'Seeder', 'Model',
+    ];
+
+    /** @var list<string> */
+    protected const PROXY_CLASSES = [
+        'ApiResponse', 'Log', 'Cache', 'DB', 'Route', 'Auth', 'Config', 'Validator', 'Event', 'Queue',
+        'Storage', 'Response', 'Request', 'Controller', 'Str', 'Arr', 'Collection',
+    ];
+
+    /** @var list<string> */
+    protected const BLACKLIST_METHODS = [
+        'all', 'get', 'set', 'find', 'first', 'last', 'where', 'with', 'save', 'delete', 'update',
+        'create', 'make', 'query', 'pluck', 'count', 'exists',
+    ];
+
+    /** @var list<string> */
+    protected const BLACKLIST_PREFIXES = ['find', 'exists', 'is', 'has', 'set', 'get'];
+
     protected ?string $currentClass = null;
     protected ?string $currentMethod = null;
 
@@ -23,18 +59,32 @@ class ClassMethodVisitor extends NodeVisitorAbstract
     /** @var array<string, string> Maps parameter name to resolved class type */
     protected array $constructorParams = [];
 
-    public function __construct(protected Graph $graph)
+    /** @var array<string, list<string>> Maps interface FQCN to concrete implementations */
+    protected array $interfaceMap = [];
+
+    /**
+     * @param array<string, list<string>> $interfaceMap
+     */
+    public function __construct(protected Graph $graph, array $interfaceMap = [])
     {
+        $this->interfaceMap = $this->normalizeInterfaceMap($interfaceMap);
     }
 
     public function enterNode(Node $node)
     {
         if ($node instanceof Node\Stmt\Class_) {
-            $this->currentClass = $node->namespacedName
+            $resolvedClass = $node->namespacedName
                 ? $node->namespacedName->toString()
                 : (string)$node->name;
+            $this->currentClass = ltrim($resolvedClass, '\\');
             $this->propertyTypes = [];
             $this->constructorParams = [];
+
+            if (!$this->currentClass || $this->shouldSkipClass($this->currentClass)) {
+                $this->currentClass = null;
+                return NodeTraverser::DONT_TRAVERSE_CHILDREN;
+            }
+
             $this->processClass($node);
             $this->extractPropertyTypes($node);
         }
@@ -89,6 +139,7 @@ class ClassMethodVisitor extends NodeVisitorAbstract
             metadata: [
                 'extends' => $node->extends ? $node->extends->toString() : null,
                 'implements' => array_map(fn($i) => $i->toString(), $node->implements),
+                'module' => ModuleExtractor::moduleOf($this->currentClass),
             ]
         );
 
@@ -103,6 +154,13 @@ class ClassMethodVisitor extends NodeVisitorAbstract
         // Methods inherit kind from parent class context
         $methodKind = $parentKind !== NodeKind::UNKNOWN ? $parentKind : NodeKind::UNKNOWN;
         $intent = IntentExtractor::extractFromMethod($node->name->toString(), $this->currentClass);
+        $docIntent = IntentExtractor::extractDocIntent($node->getDocComment());
+        $bodyStrings = IntentExtractor::extractBodyStrings($node);
+        $resultMessages = IntentExtractor::extractResultMessages($node);
+        $result = $intent['result'];
+        if (($result === '' || $result === null) && !empty($resultMessages)) {
+            $result = $resultMessages[0];
+        }
 
         $methodNode = new DomainNode(
             id: $methodId,
@@ -114,9 +172,13 @@ class ClassMethodVisitor extends NodeVisitorAbstract
                 'is_static' => $node->isStatic(),
                 'action' => $intent['action'],
                 'domain' => $intent['domain'],
-                'result' => $intent['result'],
-                'shortLabel' => $intent['short'],
+                'result' => $result,
+                'shortLabel' => $docIntent !== '' ? $docIntent : $intent['short'],
                 'trigger' => $intent['trigger'],
+                'module' => ModuleExtractor::moduleOf($this->currentClass),
+                'docIntent' => $docIntent,
+                'bodyStrings' => $bodyStrings,
+                'resultMessages' => $resultMessages,
             ]
         );
 
@@ -128,12 +190,12 @@ class ClassMethodVisitor extends NodeVisitorAbstract
         foreach ($node->getProperties() as $property) {
             $type = $property->type;
             if ($type instanceof Node\Name) {
-                $typeName = $type->toString();
+                $typeName = $this->resolveConcreteClass($type->toString());
                 foreach ($property->props as $prop) {
                     $this->propertyTypes[$prop->name->toString()] = $typeName;
                 }
             } elseif ($type instanceof Node\NullableType && $type->type instanceof Node\Name) {
-                $typeName = $type->type->toString();
+                $typeName = $this->resolveConcreteClass($type->type->toString());
                 foreach ($property->props as $prop) {
                     $this->propertyTypes[$prop->name->toString()] = $typeName;
                 }
@@ -149,15 +211,17 @@ class ClassMethodVisitor extends NodeVisitorAbstract
             $type = $param->type;
 
             if ($type instanceof Node\Name) {
-                $this->constructorParams[$paramName] = $type->toString();
+                $resolved = $this->resolveConcreteClass($type->toString());
+                $this->constructorParams[$paramName] = $resolved;
                 // Also add as property if it's a promoted property
                 if ($param->flags > 0) {
-                    $this->propertyTypes[$paramName] = $type->toString();
+                    $this->propertyTypes[$paramName] = $resolved;
                 }
             } elseif ($type instanceof Node\NullableType && $type->type instanceof Node\Name) {
-                $this->constructorParams[$paramName] = $type->type->toString();
+                $resolved = $this->resolveConcreteClass($type->type->toString());
+                $this->constructorParams[$paramName] = $resolved;
                 if ($param->flags > 0) {
-                    $this->propertyTypes[$paramName] = $type->type->toString();
+                    $this->propertyTypes[$paramName] = $resolved;
                 }
             }
         }
@@ -173,6 +237,10 @@ class ClassMethodVisitor extends NodeVisitorAbstract
         $targetClass = $this->resolveCallTarget($node->var);
 
         if (!$targetClass) {
+            return;
+        }
+
+        if ($this->shouldSkipClass($targetClass) || $this->shouldSkipCall($targetClass, $targetMethod)) {
             return;
         }
 
@@ -202,8 +270,10 @@ class ClassMethodVisitor extends NodeVisitorAbstract
             return; // Skip parent calls for now
         }
 
+        $targetClass = ltrim($targetClass, '\\');
+
         // Skip common framework facades with dynamic forwarding
-        if ($this->isFrameworkFacade($targetClass)) {
+        if ($this->isFrameworkFacade($targetClass) || $this->shouldSkipClass($targetClass) || $this->shouldSkipCall($targetClass, $targetMethod)) {
             return;
         }
 
@@ -216,10 +286,10 @@ class ClassMethodVisitor extends NodeVisitorAbstract
             return;
         }
 
-        $targetClass = $node->class->toString();
+        $targetClass = ltrim($node->class->toString(), '\\');
 
         // Skip common value objects and framework classes
-        if ($this->isCommonInstantiation($targetClass)) {
+        if ($this->isCommonInstantiation($targetClass) || $this->shouldSkipClass($targetClass)) {
             return;
         }
 
@@ -296,7 +366,8 @@ class ClassMethodVisitor extends NodeVisitorAbstract
             'Validator', 'Gate', 'Mail', 'Notification', 'Bus', 'App',
         ];
 
-        return in_array($className, $facades);
+        $short = $this->shortClassName($className);
+        return in_array($className, $facades, true) || in_array($short, $facades, true);
     }
 
     protected function isCommonInstantiation(string $className): bool
@@ -312,6 +383,138 @@ class ClassMethodVisitor extends NodeVisitorAbstract
         }
 
         return in_array($className, $common);
+    }
+
+    protected function shouldSkipClass(string $className): bool
+    {
+        $className = ltrim($className, '\\');
+        if ($className === '') {
+            return true;
+        }
+
+        $customIgnored = config('logic-map.ignore_namespaces', []);
+        if (is_array($customIgnored)) {
+            foreach ($customIgnored as $prefix) {
+                if (!is_string($prefix) || $prefix === '') {
+                    continue;
+                }
+
+                $normalized = ltrim(trim($prefix), '\\');
+                if ($normalized !== '' && str_starts_with($className, $normalized)) {
+                    return true;
+                }
+            }
+        }
+
+        foreach (self::BLOCKED_NAMESPACE_PREFIXES as $prefix) {
+            if (str_starts_with($className, $prefix)) {
+                return true;
+            }
+        }
+
+        $short = $this->shortClassName($className);
+        if (in_array($short, self::PROXY_CLASSES, true)) {
+            return true;
+        }
+
+        foreach (self::BLOCKED_CLASS_SUFFIXES as $suffix) {
+            if (str_ends_with($short, $suffix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function shouldSkipCall(string $targetClass, string $targetMethod): bool
+    {
+        $targetClass = ltrim($targetClass, '\\');
+        $method = strtolower($targetMethod);
+
+        $shortClass = $this->shortClassName($targetClass);
+        if (in_array($shortClass, self::PROXY_CLASSES, true)) {
+            return true;
+        }
+
+        $targetKind = $this->guessKind($targetClass);
+        $isBusinessFlowKind = in_array($targetKind, [
+            NodeKind::CONTROLLER,
+            NodeKind::SERVICE,
+            NodeKind::JOB,
+            NodeKind::EVENT,
+            NodeKind::LISTENER,
+            NodeKind::COMPONENT,
+        ], true);
+
+        if ($isBusinessFlowKind) {
+            return false;
+        }
+
+        if (in_array($method, self::BLACKLIST_METHODS, true)) {
+            return true;
+        }
+
+        foreach (self::BLACKLIST_PREFIXES as $prefix) {
+            if (str_starts_with($method, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function shortClassName(string $className): string
+    {
+        $className = ltrim($className, '\\');
+        if (!str_contains($className, '\\')) {
+            return $className;
+        }
+
+        $parts = explode('\\', $className);
+        return end($parts) ?: $className;
+    }
+
+    /**
+     * @param array<string, mixed> $interfaceMap
+     * @return array<string, list<string>>
+     */
+    protected function normalizeInterfaceMap(array $interfaceMap): array
+    {
+        $normalized = [];
+
+        foreach ($interfaceMap as $interface => $implementations) {
+            $interfaceKey = ltrim((string)$interface, '\\');
+            if ($interfaceKey === '') {
+                continue;
+            }
+
+            $list = is_array($implementations) ? $implementations : [$implementations];
+            $list = array_values(array_unique(array_filter(array_map(
+                fn($item) => ltrim((string)$item, '\\'),
+                $list
+            ), fn($item) => $item !== '')));
+
+            if (!empty($list)) {
+                $normalized[$interfaceKey] = $list;
+            }
+        }
+
+        return $normalized;
+    }
+
+    protected function resolveConcreteClass(string $typeName): string
+    {
+        $normalized = ltrim($typeName, '\\');
+        if ($normalized === '') {
+            return $normalized;
+        }
+
+        $candidates = $this->interfaceMap[$normalized] ?? null;
+        if (!is_array($candidates) || empty($candidates)) {
+            return $normalized;
+        }
+
+        return $candidates[0];
     }
 
     protected function getVisibility(Node\Stmt\ClassMethod $node): string

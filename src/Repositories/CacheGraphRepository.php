@@ -26,7 +26,7 @@ class CacheGraphRepository implements GraphRepository
 
     public function getLatestSnapshot(): ?Graph
     {
-        $fingerprint = Cache::get(self::LATEST_KEY);
+        $fingerprint = $this->getLatestFingerprint();
 
         if (!$fingerprint) {
             return null;
@@ -54,6 +54,7 @@ class CacheGraphRepository implements GraphRepository
 
         // Store latest fingerprint pointer
         Cache::put(self::LATEST_KEY, $fingerprint, $ttl);
+        Cache::put($this->getConfiguredFingerprintKey(), $fingerprint, $ttl);
     }
 
     /**
@@ -123,6 +124,7 @@ class CacheGraphRepository implements GraphRepository
         }
         Cache::forget(self::REGISTRY_KEY);
         Cache::forget(self::LATEST_KEY);
+        Cache::forget($this->getConfiguredFingerprintKey());
 
         // Clear analysis reports
         $analysisKeys = Cache::get(self::ANALYSIS_REGISTRY_KEY, []);
@@ -139,6 +141,47 @@ class CacheGraphRepository implements GraphRepository
     public function hasSnapshot(string $fingerprint): bool
     {
         return Cache::has($this->getSnapshotKey($fingerprint));
+    }
+
+    public function listFingerprints(): array
+    {
+        $registry = Cache::get(self::REGISTRY_KEY, []);
+        if (!is_array($registry)) {
+            return [];
+        }
+
+        $valid = [];
+        foreach ($registry as $fingerprint) {
+            if (!is_string($fingerprint) || $fingerprint === '') {
+                continue;
+            }
+
+            if ($this->hasSnapshot($fingerprint)) {
+                $valid[] = $fingerprint;
+            }
+        }
+
+        return array_values(array_unique($valid));
+    }
+
+    public function getLatestFingerprint(): ?string
+    {
+        $fingerprint = Cache::get($this->getConfiguredFingerprintKey());
+        if (!is_string($fingerprint) || $fingerprint === '') {
+            $fingerprint = Cache::get(self::LATEST_KEY);
+        }
+
+        if (!is_string($fingerprint) || $fingerprint === '') {
+            return null;
+        }
+
+        return $this->hasSnapshot($fingerprint) ? $fingerprint : null;
+    }
+
+    protected function getConfiguredFingerprintKey(): string
+    {
+        $key = config('logic-map.fingerprint_key', 'logic_map.fingerprint');
+        return is_string($key) && $key !== '' ? $key : 'logic_map.fingerprint';
     }
 
     protected function getSnapshotKey(string $fingerprint): string

@@ -39,8 +39,25 @@
         let allEdgesData = [];
         let sgOriginalElements = null;
         let sgLastSeed = null;
+        let sgMode = false;
+        let sgBusy = false;
+        let sgRequestSerial = 0;
+        let sgActionCooldownUntil = 0;
+        let sgCooldownTimer = null;
+        const SG_ACTION_COOLDOWN_MS = 1200;
+        const SG_STALE_COOLDOWN_MS = 600;
         let crossModuleEdges = {};
+        let selectedSnapshot = null;
+        let heatmapEnabled = false;
+        let layoutBusy = false;
+        let pendingLayoutRequest = null;
+        let fitBusy = false;
         // hiddenModules removed — visibility toggle feature removed
+
+        const initialSnapshot = new URLSearchParams(window.location.search).get('snapshot');
+        if (initialSnapshot && initialSnapshot.trim() !== '') {
+            selectedSnapshot = initialSnapshot.trim();
+        }
 
         /* ────────────────────────────────────
            Cytoscape
@@ -75,6 +92,11 @@
                 { selector: 'node[risk="critical"]', style: { 'border-color': '#ef4444', 'border-width': 2 } },
                 { selector: 'node[risk="high"]', style: { 'border-color': '#f97316', 'border-width': 2 } },
                 { selector: 'node[risk="medium"]', style: { 'border-color': '#eab308', 'border-width': 1.5 } },
+                { selector: 'node.heatmap-on[heat_level = 0]', style: { 'background-color': '#dbeafe', 'border-color': '#93c5fd', 'color': '#1e293b' } },
+                { selector: 'node.heatmap-on[heat_level = 1]', style: { 'background-color': '#fef3c7', 'border-color': '#facc15', 'color': '#3f2a0d' } },
+                { selector: 'node.heatmap-on[heat_level = 2]', style: { 'background-color': '#fdba74', 'border-color': '#fb923c', 'color': '#3f1d06' } },
+                { selector: 'node.heatmap-on[heat_level = 3]', style: { 'background-color': '#f97316', 'border-color': '#ea580c', 'color': '#fff' } },
+                { selector: 'node.heatmap-on[heat_level = 4]', style: { 'background-color': '#ef4444', 'border-color': '#dc2626', 'color': '#fff' } },
                 { selector: 'node.highlighted', style: { 'border-width': 3, 'border-color': '#dd3585', 'z-index': 999 } },
                 { selector: 'node.neighbor', style: { 'border-width': 2, 'border-color': '#4a7ff5' } },
                 { selector: 'node.dimmed', style: { 'opacity': 0.15, 'events': 'no' } },
@@ -114,9 +136,385 @@
             return uid;
         }
 
+        function asNumber(value) {
+            const n = Number(value);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function getNodeMetrics(nodeLike) {
+            if (!nodeLike) return {};
+            if (typeof nodeLike.data === 'function') {
+                const m = nodeLike.data('metrics');
+                return (m && typeof m === 'object') ? m : {};
+            }
+
+            const m = nodeLike.metrics;
+            return (m && typeof m === 'object') ? m : {};
+        }
+
+        function computeHeatRaw(nodeLike) {
+            const m = getNodeMetrics(nodeLike);
+            const fanIn = asNumber(m.fan_in ?? m.in_degree);
+            const fanOut = asNumber(m.fan_out ?? m.out_degree);
+            const coupling = asNumber(m.coupling);
+            const depth = asNumber(m.depth);
+            const instability = asNumber(m.instability);
+
+            return fanIn * 1.1 + fanOut * 1.4 + coupling * 14 + depth * 1.8 + instability * 20;
+        }
+
+        function getPercentile(sorted, ratio) {
+            if (!sorted.length) return 0;
+            const clamped = Math.max(0, Math.min(1, ratio));
+            const idx = Math.floor((sorted.length - 1) * clamped);
+            return sorted[idx];
+        }
+
+        function getHeatmapNodes() {
+            return cy.nodes().filter(n => !n.data('_groupNode'));
+        }
+
+        function recalculateHeatmapData() {
+            const nodes = getHeatmapNodes();
+            if (!nodes.length) return;
+
+            const raws = [];
+            nodes.forEach(node => {
+                const raw = Number(computeHeatRaw(node).toFixed(2));
+                node.data('heat_raw', raw);
+                raws.push(raw);
+            });
+
+            const sorted = raws.slice().sort((a, b) => a - b);
+            const min = sorted[0];
+            const max = sorted[sorted.length - 1];
+
+            if (min === max) {
+                nodes.forEach(node => node.data('heat_level', 0));
+                return;
+            }
+
+            const p25 = getPercentile(sorted, 0.25);
+            const p50 = getPercentile(sorted, 0.5);
+            const p75 = getPercentile(sorted, 0.75);
+            const p90 = getPercentile(sorted, 0.9);
+
+            nodes.forEach(node => {
+                const raw = asNumber(node.data('heat_raw'));
+                let level = 0;
+                if (raw > p90) level = 4;
+                else if (raw > p75) level = 3;
+                else if (raw > p50) level = 2;
+                else if (raw > p25) level = 1;
+                node.data('heat_level', level);
+            });
+        }
+
+        function syncHeatmapUI() {
+            const btn = document.getElementById('heatmap-toggle');
+            if (btn) {
+                btn.classList.toggle('active', heatmapEnabled);
+                const label = btn.querySelector('.btn-lbl');
+                if (label) label.textContent = heatmapEnabled ? 'Heat: On' : 'Heat: Off';
+            }
+
+            const mobileLabel = document.getElementById('mobile-heat-label');
+            if (mobileLabel) {
+                mobileLabel.textContent = heatmapEnabled ? 'Heat: On' : 'Heat: Off';
+            }
+
+            const hint = document.getElementById('legend-heatmap-hint');
+            if (hint) {
+                hint.style.display = heatmapEnabled ? 'block' : 'none';
+            }
+        }
+
+        function applyHeatmapMode() {
+            recalculateHeatmapData();
+
+            const nodes = getHeatmapNodes();
+            nodes.removeClass('heatmap-on');
+            if (heatmapEnabled) {
+                nodes.addClass('heatmap-on');
+            }
+
+            syncHeatmapUI();
+        }
+
+        window.toggleHeatmap = function () {
+            heatmapEnabled = !heatmapEnabled;
+            applyHeatmapMode();
+        };
+
+        function withSnapshot(baseUrl, params = {}) {
+            const url = new URL(baseUrl, window.location.origin);
+            if (selectedSnapshot) {
+                url.searchParams.set('snapshot', selectedSnapshot);
+            }
+
+            Object.entries(params).forEach(([key, value]) => {
+                if (value === null || value === undefined || value === '') return;
+                url.searchParams.set(key, String(value));
+            });
+
+            return url.toString();
+        }
+
+        window.exportLogicMap = function (format) {
+            const baseUrl = format === 'csv'
+                ? window.logicMapConfig.exportCsvUrl
+                : window.logicMapConfig.exportJsonUrl;
+
+            if (format === 'json') {
+                fetch(withSnapshot(baseUrl))
+                    .then(r => r.json())
+                    .then(j => {
+                        if (!j?.ok || !j?.data) {
+                            throw new Error(j?.message || 'Export JSON failed');
+                        }
+
+                        const payload = JSON.stringify(j.data, null, 2);
+                        const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+                        const fp = (selectedSnapshot || 'current').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'current';
+                        const fileName = `logic-map-export-${fp}.json`;
+
+                        const link = document.createElement('a');
+                        const objectUrl = URL.createObjectURL(blob);
+                        link.href = objectUrl;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(objectUrl);
+                    })
+                    .catch(err => {
+                        console.error('[LogicMap] JSON export failed:', err);
+                    });
+                return;
+            }
+
+            window.location.href = withSnapshot(baseUrl);
+        };
+
+        window.setSnapshotFingerprint = function (fingerprint) {
+            const url = new URL(window.location.href);
+            const normalized = (fingerprint || '').trim();
+            if (normalized) {
+                url.searchParams.set('snapshot', normalized);
+            } else {
+                url.searchParams.delete('snapshot');
+            }
+
+            window.location.assign(url.toString());
+        };
+
+        function formatSnapshotLabel(item) {
+            const fp = item.fingerprint || '';
+            const short = fp.length > 18 ? `${fp.slice(0, 8)}…${fp.slice(-6)}` : fp;
+            const tags = [];
+            if (item.is_latest) tags.push('latest');
+            if (item.is_current) tags.push('current');
+
+            return tags.length ? `${short} (${tags.join(', ')})` : short;
+        }
+
+        function setSnapshotTriggerLabel(text) {
+            const label = document.getElementById('snapshot-trigger-label');
+            if (label) {
+                label.textContent = text || 'Current (Latest)';
+            }
+        }
+
+        function setActiveMobileSnapshotButton(value) {
+            const normalized = (value || '').trim();
+            const container = document.getElementById('mobile-snapshot-list');
+            if (!container) return;
+
+            const buttons = container.querySelectorAll('.mam-action[data-snapshot]');
+            let activeBtn = null;
+            buttons.forEach(btn => {
+                const isActive = (btn.dataset.snapshot || '') === normalized;
+                btn.classList.toggle('active', isActive);
+                if (isActive) activeBtn = btn;
+            });
+
+            if (!activeBtn) {
+                activeBtn = container.querySelector('.mam-action[data-snapshot=""]');
+                if (activeBtn) activeBtn.classList.add('active');
+            }
+        }
+
+        function setActiveSnapshotButton(menu, value) {
+            const normalized = (value || '').trim();
+            const buttons = menu.querySelectorAll('.seg-btn[data-snapshot]');
+            let activeBtn = null;
+
+            buttons.forEach(btn => {
+                const isActive = (btn.dataset.snapshot || '') === normalized;
+                btn.classList.toggle('active', isActive);
+                if (isActive) activeBtn = btn;
+            });
+
+            if (!activeBtn) {
+                activeBtn = menu.querySelector('.seg-btn[data-snapshot=""]');
+                if (activeBtn) activeBtn.classList.add('active');
+            }
+
+            setSnapshotTriggerLabel(activeBtn?.dataset.label || 'Current (Latest)');
+        }
+
+        function createSnapshotButton(value, label) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'seg-btn';
+            btn.dataset.snapshot = value;
+            btn.dataset.label = label;
+            btn.textContent = label;
+            return btn;
+        }
+
+        function createMobileSnapshotButton(value, label) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'mam-action';
+            btn.dataset.snapshot = value;
+            btn.dataset.label = label;
+            btn.textContent = label;
+            return btn;
+        }
+
+        function renderMobileSnapshotOptions(items) {
+            const container = document.getElementById('mobile-snapshot-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+            items.forEach(item => {
+                container.appendChild(createMobileSnapshotButton(item.value, item.label));
+            });
+            setActiveMobileSnapshotButton(selectedSnapshot || '');
+        }
+
+        function initSnapshotDropdown() {
+            const menu = document.getElementById('snapshot-menu');
+            if (!menu || !window.logicMapConfig.snapshotsUrl) return;
+
+            menu.innerHTML = '';
+            menu.appendChild(createSnapshotButton('', 'Current (Latest)'));
+            const snapshotItems = [{ value: '', label: 'Current (Latest)' }];
+            renderMobileSnapshotOptions(snapshotItems);
+            setActiveSnapshotButton(menu, selectedSnapshot || '');
+            setActiveMobileSnapshotButton(selectedSnapshot || '');
+
+            menu.addEventListener('click', function (e) {
+                const btn = e.target.closest('.seg-btn[data-snapshot]');
+                if (!btn) return;
+
+                const value = (btn.dataset.snapshot || '').trim();
+                const current = (selectedSnapshot || '').trim();
+                if (value === current) {
+                    document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
+                    return;
+                }
+
+                setActiveSnapshotButton(menu, value);
+                setActiveMobileSnapshotButton(value);
+                window.setSnapshotFingerprint(value);
+            });
+
+            const mobileList = document.getElementById('mobile-snapshot-list');
+            if (mobileList && mobileList.dataset.bound !== '1') {
+                mobileList.dataset.bound = '1';
+                mobileList.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.mam-action[data-snapshot]');
+                    if (!btn) return;
+
+                    const value = (btn.dataset.snapshot || '').trim();
+                    const current = (selectedSnapshot || '').trim();
+                    if (value === current) {
+                        document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
+                        return;
+                    }
+
+                    setActiveSnapshotButton(menu, value);
+                    setActiveMobileSnapshotButton(value);
+                    window.setSnapshotFingerprint(value);
+                });
+            }
+
+            fetch(window.logicMapConfig.snapshotsUrl)
+                .then(r => r.json())
+                .then(j => {
+                    if (!j.ok || !j.data || !Array.isArray(j.data.snapshots)) {
+                        return;
+                    }
+
+                    const known = new Set(['']);
+                    j.data.snapshots.forEach(item => {
+                        if (!item || typeof item.fingerprint !== 'string') return;
+                        const fp = item.fingerprint.trim();
+                        if (!fp || known.has(fp)) return;
+
+                        // Avoid duplicate UI entry for the same default "Current (Latest)" target.
+                        if (item.is_latest && item.is_current) return;
+
+                        known.add(fp);
+                        const label = formatSnapshotLabel(item);
+                        snapshotItems.push({ value: fp, label });
+                        menu.appendChild(createSnapshotButton(fp, label));
+                    });
+
+                    if (selectedSnapshot && known.has(selectedSnapshot)) {
+                        setActiveSnapshotButton(menu, selectedSnapshot);
+                        setActiveMobileSnapshotButton(selectedSnapshot);
+                    } else {
+                        selectedSnapshot = null;
+                        setActiveSnapshotButton(menu, '');
+                        setActiveMobileSnapshotButton('');
+                    }
+                    renderMobileSnapshotOptions(snapshotItems);
+                })
+                .catch(() => { });
+        }
+
         /* ────────────────────────────────────
            FIX: Hops selector — scoped, mousedown, direct call
         ──────────────────────────────────── */
+        function setActiveMobileHopsButton(hops) {
+            document.querySelectorAll('#mobile-actions-menu .mam-chip[data-mobile-hops]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mobileHops === String(hops));
+            });
+        }
+
+        function applyHopsSelection(hops, refreshHighlight = true) {
+            const normalized = String(hops || '1');
+            const grp = document.getElementById('hl-hops-grp');
+            if (grp) {
+                grp.querySelectorAll('.seg-btn').forEach(b => {
+                    b.classList.toggle('active', b.getAttribute('data-hops') === normalized);
+                });
+            }
+
+            // Keep cloned dropdown hops menu (mobile trigger version) in sync.
+            document.querySelectorAll('#hops-menu .seg-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-hops') === normalized);
+            });
+
+            const inp = document.getElementById('hl-hops');
+            if (inp) inp.value = normalized;
+
+            const triggerVal = document.getElementById('hops-trigger-val');
+            if (triggerVal) triggerVal.textContent = (normalized === '99' ? 'All' : normalized);
+
+            setActiveMobileHopsButton(normalized);
+
+            if (!refreshHighlight) return;
+            if (window._hlTimeout) clearTimeout(window._hlTimeout);
+            window._hlTimeout = setTimeout(() => {
+                const hl = cy.nodes('.highlighted').first();
+                if (hl.length) applyHighlight(hl);
+            }, 80);
+        }
+
         function initHopsSelector() {
             const grp = document.getElementById('hl-hops-grp');
             if (!grp) return;
@@ -126,29 +524,79 @@
                 fresh.addEventListener('mousedown', function (e) {
                     e.preventDefault(); e.stopPropagation();
                     if (this.classList.contains('active')) return;
-                    grp.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    const hops = this.getAttribute('data-hops');
-                    const inp = document.getElementById('hl-hops');
-                    if (inp) inp.value = hops;
-                    
-                    // Update trigger label
-                    const triggerVal = document.getElementById('hops-trigger-val');
-                    if (triggerVal) triggerVal.textContent = (hops === '99' ? 'All' : hops);
-                    
-                    if (window._hlTimeout) clearTimeout(window._hlTimeout);
-                    window._hlTimeout = setTimeout(() => {
-                        const hl = cy.nodes('.highlighted').first();
-                        if (hl.length) applyHighlight(hl);
-                    }, 80);
-                    
+                    applyHopsSelection(this.getAttribute('data-hops'), true);
+
                     // Close dropdown if in mobile/grouped mode
                     document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
                 });
             });
+
+            const current = document.getElementById('hl-hops')?.value || grp.querySelector('.seg-btn.active')?.getAttribute('data-hops') || '1';
+            applyHopsSelection(current, false);
         }
         initHopsSelector();
+
+        function initMobileActionsMenu() {
+            const menu = document.getElementById('mobile-actions-menu');
+            if (!menu || menu.dataset.bound === '1') return;
+            menu.dataset.bound = '1';
+            syncMobileLayoutButtons(currentLayout);
+            setActiveMobileHopsButton(document.getElementById('hl-hops')?.value || '1');
+
+            menu.addEventListener('click', function (e) {
+                const layoutBtn = e.target.closest('.mam-chip[data-mobile-layout]');
+                if (layoutBtn) {
+                    e.preventDefault();
+                    runLayout(layoutBtn.dataset.mobileLayout);
+                    return;
+                }
+
+                const hopsBtn = e.target.closest('.mam-chip[data-mobile-hops]');
+                if (hopsBtn) {
+                    e.preventDefault();
+                    applyHopsSelection(hopsBtn.dataset.mobileHops, true);
+                    return;
+                }
+
+                const actionBtn = e.target.closest('.mam-action[data-mobile-action]');
+                if (!actionBtn) return;
+                e.preventDefault();
+
+                switch (actionBtn.dataset.mobileAction) {
+                    case 'fit':
+                        window.fitView();
+                        break;
+                    case 'clear':
+                        window.clearHighlight();
+                        break;
+                    case 'heat':
+                        window.toggleHeatmap();
+                        break;
+                    case 'module':
+                        window.toggleModPanel();
+                        break;
+                    case 'theme':
+                        window.toggleThemePicker();
+                        break;
+                    case 'shortcuts': {
+                        const kb = document.getElementById('kb-help');
+                        if (kb) kb.style.display = 'flex';
+                        break;
+                    }
+                    case 'export-json':
+                        window.exportLogicMap('json');
+                        break;
+                    case 'export-csv':
+                        window.exportLogicMap('csv');
+                        break;
+                    default:
+                        break;
+                }
+
+                document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
+            });
+        }
+        initMobileActionsMenu();
 
         /* Shared highlight logic */
         function applyHighlight(node) {
@@ -195,7 +643,39 @@
             }
         }
 
-        function runLayout(name) {
+        function syncMobileLayoutButtons(layoutName) {
+            document.querySelectorAll('#mobile-actions-menu .mam-chip[data-mobile-layout]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mobileLayout === layoutName);
+            });
+        }
+
+        function setToolbarActionBusy(disabled) {
+            document.querySelectorAll('#layout-grp .seg-btn').forEach(btn => {
+                btn.disabled = disabled;
+            });
+            const fitBtn = document.getElementById('fit-btn');
+            if (fitBtn) {
+                fitBtn.disabled = disabled || fitBusy;
+            }
+        }
+
+        function runLayout(name, onDone = null) {
+            if (!name) return;
+            if (fitBusy) return;
+
+            // Ignore repeated click on current layout unless caller needs callback after relayout.
+            if (!layoutBusy && name === currentLayout && typeof onDone !== 'function') {
+                document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
+                return;
+            }
+
+            if (layoutBusy) {
+                pendingLayoutRequest = { name, onDone };
+                return;
+            }
+
+            layoutBusy = true;
+            setToolbarActionBusy(true);
             currentLayout = name;
             const buttons = document.querySelectorAll('#layout-grp .seg-btn');
             buttons.forEach(b => {
@@ -212,6 +692,7 @@
                     }
                 }
             });
+            syncMobileLayoutButtons(name);
 
             // Temporarily hide orphan nodes so dagre only arranges the connected graph.
             // They will be repositioned manually after layout finishes.
@@ -230,6 +711,18 @@
                     }
                 });
                 positionOrphanGroups();
+                layoutBusy = false;
+                setToolbarActionBusy(false);
+
+                if (typeof onDone === 'function') {
+                    onDone();
+                }
+
+                if (pendingLayoutRequest) {
+                    const next = pendingLayoutRequest;
+                    pendingLayoutRequest = null;
+                    runLayout(next.name, next.onDone);
+                }
             });
             layout.run();
             
@@ -422,7 +915,7 @@
             h += `</div></div></div><div class="flow-arr">↓</div>`;
             h += `<div class="flow-row"><span class="flow-ico">⚙</span><div><div class="flow-lbl">Action</div><div class="flow-val"><strong>${meta.action || d.name || d.label || '–'}</strong>`;
             if (meta.domain) h += ` ${meta.domain}`;
-            if (routeInfo) h += `<div class="uri-pill"><strong>${routeInfo.verb}</strong> ${routeInfo.uri}</div>`;
+            if (routeInfo) h += `<div class="uri-pill"><span class="uri-verb">${routeInfo.verb}</span> ${routeInfo.uri}</div>`;
             h += `</div></div></div><div class="flow-arr">↓</div>`;
             h += `<div class="flow-row"><span class="flow-ico">✓</span><div><div class="flow-lbl">Result</div><div class="flow-val">`;
             h += results?.length ? 'Triggers: ' + results.slice(0, 3).map(r => `<strong>${r.label}</strong>`).join(', ') + (results.length > 3 ? ` +${results.length - 3} more` : '') : (meta.result || '<span style="color:#8d97b4">Terminal node</span>');
@@ -443,6 +936,24 @@
             [['Fan In', m.fan_in ?? '–'], ['Fan Out', m.fan_out ?? '–'], ['Instability', m.instability != null ? m.instability.toFixed(2) : '–'], ['Coupling', m.coupling ?? '–'], ['Depth', m.depth ?? '∅'], ['In°', m.in_degree ?? '–'], ['Out°', m.out_degree ?? '–']].forEach(([l, v]) => { h += `<div class="mc"><div class="mv">${v}</div><div class="ml">${l}</div></div>`; });
             h += `</div></div>`;
 
+            const coverage = (meta.coverage && typeof meta.coverage === 'object') ? meta.coverage : null;
+            if (coverage) {
+                const coveragePct = Number.isFinite(Number(coverage.coverage_percent))
+                    ? `${Number(coverage.coverage_percent)}%`
+                    : 'Unknown';
+                const coverageLevel = String(coverage.coverage_level || 'unknown').toUpperCase();
+                const coverageScope = coverage.scope === 'class_fallback'
+                    ? 'Class fallback'
+                    : String(coverage.scope || 'class');
+                const coverageAssumed = coverage.assumed ? ' (assumed)' : '';
+
+                h += `<div class="ps"><div class="sl">Test Coverage</div><div class="mrow">`;
+                h += `<div class="mc"><div class="mv">${coveragePct}</div><div class="ml">Coverage</div></div>`;
+                h += `<div class="mc"><div class="mv">${coverageLevel}</div><div class="ml">Level</div></div>`;
+                h += `<div class="mc"><div class="mv">${coverageScope}</div><div class="ml">Scope${coverageAssumed}</div></div>`;
+                h += `</div></div>`;
+            }
+
             const inc = cy.edges(`[target="${d.id}"]`), out = cy.edges(`[source="${d.id}"]`);
             if (inc.length) {
                 h += `<div class="ps"><div class="sl">Incoming (${inc.length})</div><div class="conn-list">`;
@@ -455,20 +966,22 @@
                 h += `</div></div>`;
             }
 
-            // SubGraph action button at bottom of panel
-            // Pass node id via data attr — window.enterSubGraph handles cy lookup
-            h += `<div class="ps panel-actions">
-            <button class="panel-action-btn panel-action-sg" data-node-id="${d.id}" onclick="window.enterSubGraph(this.dataset.nodeId)" title="Explore connected subgraph (S)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13">
-                    <circle cx="12" cy="12" r="3"/>
-                    <circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/>
-                    <circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/>
-                    <line x1="5" y1="6" x2="10" y2="11"/><line x1="19" y1="6" x2="14" y2="11"/>
-                    <line x1="5" y1="18" x2="10" y2="13"/><line x1="19" y1="18" x2="14" y2="13"/>
-                </svg>
-                Explore SubGraph
-            </button>
-        </div>`;
+            if (!sgMode) {
+                // SubGraph action button at bottom of panel
+                // Pass node id via data attr — window.enterSubGraph handles cy lookup
+                h += `<div class="ps panel-actions">
+                <button class="panel-action-btn panel-action-sg" data-node-id="${d.id}" onclick="window.enterSubGraph(this.dataset.nodeId)" title="Explore connected subgraph (S)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13">
+                        <circle cx="12" cy="12" r="3"/>
+                        <circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/>
+                        <circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/>
+                        <line x1="5" y1="6" x2="10" y2="11"/><line x1="19" y1="6" x2="14" y2="11"/>
+                        <line x1="5" y1="18" x2="10" y2="13"/><line x1="19" y1="18" x2="14" y2="13"/>
+                    </svg>
+                    Explore SubGraph
+                </button>
+            </div>`;
+            }
 
             document.getElementById('pbody').innerHTML = h;
             document.getElementById('panel').classList.add('open');
@@ -491,7 +1004,23 @@
             openPanel(node.data());
         };
 
-        window.fitView = function () { cy.animate({ fit: { padding: 60 } }, { duration: 500 }); };
+        window.fitView = function () {
+            if (layoutBusy || fitBusy) return;
+
+            fitBusy = true;
+            setToolbarActionBusy(true);
+            cy.stop();
+            cy.animate(
+                { fit: { padding: 60 } },
+                {
+                    duration: 500,
+                    complete: () => {
+                        fitBusy = false;
+                        setToolbarActionBusy(layoutBusy);
+                    }
+                }
+            );
+        };
         window.clearHighlight = function () { closePanel(); cy.nodes().removeClass('highlighted neighbor dimmed module-focus'); cy.edges().removeClass('highlighted dimmed'); };
 
         /* ────────────────────────────────────
@@ -593,6 +1122,7 @@
                 if (e.altKey || (e.metaKey && e.key !== 'k') || (e.ctrlKey && e.key !== 'k')) return;
                 if (e.key.toLowerCase() === 'm') { e.preventDefault(); toggleModPanel(); return; }
                 if (e.key.toLowerCase() === 't') { e.preventDefault(); toggleThemePicker(); return; }
+                if (e.key.toLowerCase() === 'h') { e.preventDefault(); toggleHeatmap(); return; }
                 if (e.key.toLowerCase() === 'f') { e.preventDefault(); fitView(); return; }
                 if (e.key === '1') { e.preventDefault(); runLayout('dagre'); return; }
                 if (e.key === '2') { e.preventDefault(); runLayout('cose'); return; }
@@ -612,8 +1142,6 @@
         /* ────────────────────────────────────
            SubGraph Mode
         ──────────────────────────────────── */
-        let sgMode = false;
-
         /* ── SubGraph Mode ─────────────────────────────────────
            sgLastSeed: always stores a STRING node ID (not a cy collection)
            so it survives elements.remove() / restore cycles.
@@ -643,10 +1171,89 @@
             return val >= 99 ? 99 : Math.max(1, val);
         }
 
+        function isSubgraphLocked() {
+            return sgBusy || Date.now() < sgActionCooldownUntil;
+        }
+
+        function syncSubgraphControlsLockState() {
+            const locked = isSubgraphLocked();
+            const depthButtons = document.querySelectorAll('#sg-depth-grp .sgc-depth-btn');
+            depthButtons.forEach(btn => {
+                btn.disabled = locked;
+            });
+
+            const rerunBtn = document.querySelector('#sg-controls-bar .sgc-btn');
+            if (rerunBtn) {
+                rerunBtn.disabled = locked;
+                rerunBtn.classList.toggle('is-busy', sgBusy);
+            }
+        }
+
+        function startSubgraphActionCooldown(ms = SG_ACTION_COOLDOWN_MS) {
+            sgActionCooldownUntil = Date.now() + ms;
+            if (sgCooldownTimer) clearTimeout(sgCooldownTimer);
+            sgCooldownTimer = setTimeout(() => {
+                syncSubgraphControlsLockState();
+            }, ms + 20);
+            syncSubgraphControlsLockState();
+        }
+
+        function setSubgraphBusyState(isBusy) {
+            sgBusy = isBusy;
+            syncSubgraphControlsLockState();
+        }
+
+        function runSubgraphLayoutAfterLoad(onDone) {
+            const execute = () => runLayout(currentLayout, onDone);
+            if (!fitBusy) {
+                execute();
+                return;
+            }
+
+            const waiter = setInterval(() => {
+                if (!fitBusy) {
+                    clearInterval(waiter);
+                    execute();
+                }
+            }, 60);
+        }
+
         // Core fetch-and-render logic, always takes string seedId
         function _loadSubgraph(seedId) {
-            if (!seedId) return;
+            if (!seedId || isSubgraphLocked()) return;
+            const requestId = ++sgRequestSerial;
+            setSubgraphBusyState(true);
             const depth = _getDepth();
+            const isStaleRequest = () => requestId !== sgRequestSerial || !sgMode || sgLastSeed !== seedId;
+            const finalize = (focusSeedNode) => {
+                if (isStaleRequest()) {
+                    setSubgraphBusyState(false);
+                    startSubgraphActionCooldown(SG_STALE_COOLDOWN_MS);
+                    return;
+                }
+
+                separateOrphanNodes();
+                runSubgraphLayoutAfterLoad(() => {
+                    if (!isStaleRequest()) {
+                        focusSeedNode();
+                        applyHeatmapMode();
+                    }
+                    setSubgraphBusyState(false);
+                    startSubgraphActionCooldown(SG_ACTION_COOLDOWN_MS);
+                });
+            };
+            const focusSeedNode = () => {
+                const seedNode = cy.getElementById(seedId);
+                if (!seedNode.length) return;
+
+                applyHighlight(seedNode);
+                openPanel(seedNode.data());
+                cy.animate({
+                    fit: { padding: 50 },
+                    duration: 450,
+                    easing: 'ease-out-cubic'
+                });
+            };
 
             // Dim everything while loading
             cy.startBatch();
@@ -655,7 +1262,7 @@
 
             // depth 99 = "All": send large value to BE, local fallback uses 10 hops
             const apiDepth = depth >= 99 ? 10 : depth;
-            fetch(`${window.logicMapConfig.subgraphUrl}/${encodeURIComponent(seedId)}?depth=${apiDepth}`)
+            fetch(withSnapshot(`${window.logicMapConfig.subgraphUrl}/${encodeURIComponent(seedId)}`, { depth: apiDepth }))
                 .then(r => r.json())
                 .then(json => {
                     // Restore original graph
@@ -677,28 +1284,28 @@
                             }
                         });
 
-                        // Keep only BE-returned nodes + seed; strip orphans
+                        // Keep only BE-returned nodes + seed.
+                        // Do not force-remove orphan nodes here: a valid subgraph can be a single isolated seed.
                         const keepIds = new Set(json.data.nodes.map(n => n.id));
                         keepIds.add(seedId);
                         cy.nodes().forEach(n => {
                             if (n.data('_groupNode')) return;
-                            // Remove if not in subgraph OR if it's an orphan (no edges)
-                            if (!keepIds.has(n.id()) || n.data('_orphan')) n.remove();
+                            if (!keepIds.has(n.id())) n.remove();
                         });
                         // Remove dangling edges
                         cy.edges().forEach(e => {
                             if (!e.source().length || !e.target().length) e.remove();
                         });
                     } else {
-                        // Fallback: local BFS neighbourhood (no orphans)
+                        // Fallback: local BFS neighbourhood
                         const seed = cy.getElementById(seedId);
                         if (seed.length) {
                             let nb = seed;
                             for (let i = 0; i < depth; i++) nb = nb.union(nb.neighborhood());
-                            // Remove everything not in neighbourhood AND all orphan nodes
+                            // Keep seed + neighbourhood; isolated seed is still valid in subgraph mode
                             cy.nodes().forEach(n => {
                                 if (n.data('_groupNode')) return;
-                                if (!nb.has(n) || n.data('_orphan')) n.remove();
+                                if (!nb.has(n)) n.remove();
                             });
                             cy.edges().forEach(e => {
                                 if (!e.source().length || !e.target().length) e.remove();
@@ -706,52 +1313,37 @@
                         }
                     }
                     cy.endBatch();
-                    separateOrphanNodes();
-                    runLayout(currentLayout);
-
-                    // Centering & Focus
-                    setTimeout(() => {
-                        const seedNode = cy.getElementById(seedId);
-                        if (seedNode.length) {
-                            applyHighlight(seedNode);
-                            openPanel(seedNode.data());
-                            // Fit with animation to center the seed and visible nodes
-                            cy.animate({
-                                fit: { padding: 50 },
-                                duration: 500,
-                                easing: 'ease-out-cubic'
-                            });
-                        }
-                    }, 400);
+                    finalize(focusSeedNode);
                 })
                 .catch(() => {
+                    if (isStaleRequest()) {
+                        setSubgraphBusyState(false);
+                        startSubgraphActionCooldown(SG_STALE_COOLDOWN_MS);
+                        return;
+                    }
                     // Network error: restore + local BFS
                     cy.startBatch();
                     cy.elements().remove();
                     sgOriginalElements.forEach(el => cy.add(el));
                     const seed = cy.getElementById(seedId);
-                    if (seed.length) {
-                        let nb = seed;
-                        for (let i = 0; i < depth; i++) nb = nb.union(nb.neighborhood());
-                        cy.nodes().forEach(n => {
-                            if (n.data('_groupNode')) return;
-                            if (!nb.has(n) || n.data('_orphan')) n.remove();
-                        });
-                        cy.edges().forEach(e => {
-                            if (!e.source().length || !e.target().length) e.remove();
+                        if (seed.length) {
+                            let nb = seed;
+                            for (let i = 0; i < depth; i++) nb = nb.union(nb.neighborhood());
+                            cy.nodes().forEach(n => {
+                                if (n.data('_groupNode')) return;
+                                if (!nb.has(n)) n.remove();
+                            });
+                            cy.edges().forEach(e => {
+                                if (!e.source().length || !e.target().length) e.remove();
                         });
                     }
                     cy.endBatch();
-                    separateOrphanNodes();
-                    runLayout(currentLayout);
-                    setTimeout(() => {
-                        const seedNode = cy.getElementById(seedId);
-                        if (seedNode.length) { applyHighlight(seedNode); openPanel(seedNode.data()); }
-                    }, 400);
+                    finalize(focusSeedNode);
                 });
         }
 
         window.enterSubGraph = function enterSubGraph(seedNodes) {
+            if (isSubgraphLocked()) return;
             // Extract string ID immediately — cy collections become invalid after remove()
             let seedId;
             if (typeof seedNodes === 'string') {
@@ -777,7 +1369,7 @@
         }
 
         window.rerunSubGraph = function () {
-            if (!sgMode || !sgLastSeed) return;
+            if (!sgMode || !sgLastSeed || isSubgraphLocked()) return;
             // sgLastSeed is always a string ID here
             _loadSubgraph(sgLastSeed);
         };
@@ -789,12 +1381,13 @@
             if (!grp || !inp) return;
             grp.querySelectorAll('.sgc-depth-btn').forEach(btn => {
                 btn.addEventListener('click', function () {
+                    if (isSubgraphLocked()) return;
                     if (this.classList.contains('active')) return;
                     grp.querySelectorAll('.sgc-depth-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     inp.value = this.dataset.depth;
                     // Auto re-run if already in subgraph mode
-                    if (sgMode && sgLastSeed) _loadSubgraph(sgLastSeed);
+                    if (sgMode && sgLastSeed && !isSubgraphLocked()) _loadSubgraph(sgLastSeed);
                 });
             });
         }
@@ -802,6 +1395,13 @@
 
         window.exitSubGraph = function () {
             if (!sgMode) return;
+            sgRequestSerial += 1; // invalidate in-flight subgraph responses
+            sgActionCooldownUntil = 0;
+            if (sgCooldownTimer) {
+                clearTimeout(sgCooldownTimer);
+                sgCooldownTimer = null;
+            }
+            setSubgraphBusyState(false);
             sgMode = false;
             sgLastSeed = null;
             _sgHideUI();
@@ -813,14 +1413,13 @@
                 cy.endBatch();
                 sgOriginalElements = null;
                 separateOrphanNodes();
-                runLayout(currentLayout);
-                // Return view to full fit
-                setTimeout(() => {
+                runLayout(currentLayout, () => {
                     cy.animate({
                         fit: { padding: 40 },
                         duration: 400
                     });
-                }, 100);
+                });
+                applyHeatmapMode();
             }
         };
 
@@ -1103,6 +1702,8 @@
            Load data
         ──────────────────────────────────── */
         const ldMsg = document.getElementById('ld-msg');
+        initSnapshotDropdown();
+        syncHeatmapUI();
 
         /* ────────────────────────────────────
            Health Panel
@@ -1110,7 +1711,7 @@
         let _healthData = null;
         let _violationsData = null;
 
-        fetch(window.logicMapConfig.healthUrl).then(r => r.json()).then(j => {
+        fetch(withSnapshot(window.logicMapConfig.healthUrl)).then(r => r.json()).then(j => {
             if (!j.ok) return;
             _healthData = j.data;
             const d = j.data;
@@ -1121,7 +1722,7 @@
         }).catch(() => { });
 
         if (window.logicMapConfig.violationsUrl) {
-            fetch(window.logicMapConfig.violationsUrl).then(r => r.json()).then(j => {
+            fetch(withSnapshot(window.logicMapConfig.violationsUrl)).then(r => r.json()).then(j => {
                 if (j.ok) { _violationsData = j.data; }
             }).catch(() => { });
         }
@@ -1164,6 +1765,7 @@
                 circular_dependency: 'Circular Dependency',
                 fat_controller: 'Fat Controller',
                 orphan: 'Orphan Node',
+                dead_code: 'Dead Code',
                 high_instability: 'High Instability',
                 high_coupling: 'High Coupling',
             }, d.labels || {});
@@ -1172,6 +1774,7 @@
                 circular_dependency: 'Recursive dependency chain found (A → B → A). Fix by extracting shared logic to a lower-level service or interface.',
                 fat_controller: 'Controller exceeds dependency threshold. Refactor by delegating business logic to Services or Actions.',
                 orphan: 'Module is not called by or connected to any other parts. May be dead code or incomplete integration.',
+                dead_code: 'Node is unreachable from configured route entrypoints (depth = null). Candidate for cleanup or wiring.',
                 high_instability: 'Fragile component that depends on many changing parts but is not depended upon by others.',
                 high_coupling: 'Tightly coupled module with high connectivity. Hard to test and isolate.',
             }, d.descriptions || {});
@@ -1180,7 +1783,10 @@
             const pct = Math.max(0, Math.min(100, d.score));
             const r = 36, circ = 2 * Math.PI * r;
             const dash = (pct / 100) * circ;
-            const gradeColors = Object.assign({ A: '#22c55e', B: '#22c55e', C: '#eab308', D: '#f97316', F: '#ef4444' }, d.colors?.grades || {});
+            const gradeColors = Object.assign(
+                { S: '#16a34a', A: '#22c55e', B: '#84cc16', C: '#eab308', D: '#f97316', F: '#ef4444' },
+                d.colors?.grades || {}
+            );
             const gc = gradeColors[d.grade] || '#6b7280';
 
             let html = `
@@ -1222,6 +1828,48 @@
             </div>`;
             }
 
+            if (d.coverage_correlation && d.coverage_correlation.enabled) {
+                const c = d.coverage_correlation;
+                const avgKnown = Number.isFinite(Number(c.avg_known_coverage_percent))
+                    ? `${Number(c.avg_known_coverage_percent).toFixed(1)}%`
+                    : 'n/a';
+                const offenders = Array.isArray(c.top_offenders) ? c.top_offenders : [];
+                const lowRate = Number.isFinite(Number(c.high_risk_low_coverage_rate))
+                    ? `${Number(c.high_risk_low_coverage_rate).toFixed(1)}%`
+                    : '0%';
+
+                html += `<div class="hp-section">
+                <div class="hp-section-title">Coverage Correlation</div>
+                <div class="hp-stats-grid">
+                    <div class="hp-stat"><div class="hp-sv">${c.eligible_nodes ?? 0}</div><div class="hp-sl">Eligible</div></div>
+                    <div class="hp-stat"><div class="hp-sv">${avgKnown}</div><div class="hp-sl">Avg Known</div></div>
+                    <div class="hp-stat"><div class="hp-sv">${c.high_risk_nodes ?? 0}</div><div class="hp-sl">High Risk</div></div>
+                    <div class="hp-stat"><div class="hp-sv">${c.high_risk_low_coverage ?? 0}</div><div class="hp-sl">High Risk + Low Cov</div></div>
+                </div>
+                <div class="hp-cov-meta">
+                    <span>Low coverage threshold: ${(Number(c.low_threshold ?? 0.5) * 100).toFixed(0)}%</span>
+                    <span>High-risk low-coverage rate: ${lowRate}</span>
+                    <span>Unknown coverage nodes: ${c.unknown_coverage_nodes ?? 0}</span>
+                </div>`;
+
+                if (offenders.length) {
+                    html += `<div class="hp-cov-list">`;
+                    offenders.forEach(item => {
+                        const lvl = String(item.coverage_level || 'unknown').toLowerCase();
+                        html += `<div class="hp-cov-item">
+                        <div class="hp-cov-main">
+                            <span class="hp-cov-name">${item.name || item.node_id}</span>
+                            <span class="hp-cov-pill lv-${lvl}">${item.coverage_percent}%</span>
+                        </div>
+                        <div class="hp-cov-sub">${item.kind || 'unknown'} · ${item.risk || 'n/a'} · ${item.node_id || ''}</div>
+                    </div>`;
+                    });
+                    html += `</div>`;
+                }
+
+                html += `</div>`;
+            }
+
             // ── Scoring Guide (shown first) ──
             html += `<div class="hp-section hp-collapsible hp-collapsed" id="hps-guide">
             <div class="hp-section-title hp-toggle" onclick="hpToggle('hps-guide')">
@@ -1233,7 +1881,7 @@
                     <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.critical.bd}">Critical</span><span>−${d.weights.critical || 25} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.critical || 'Circular deps, breaking issues'}</span></div>
                     <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.high.bd}">High</span><span>−${d.weights.high || 10} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.high || 'Fat controllers, structural debt'}</span></div>
                     <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.medium.bd}">Medium</span><span>−${d.weights.medium || 5} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.medium || 'High instability / coupling'}</span></div>
-                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.low.bd}">Low</span><span>−${d.weights.low || 1} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.low || 'Orphan nodes, minor issues'}</span></div>
+                    <div class="hp-guide-row"><span class="hp-guide-sev" style="color:${SEVER_COLORS.low.bd}">Low</span><span>−${d.weights.low || 1} pts</span><span class="hp-guide-desc">${d.severity_descriptions?.low || 'Orphan / dead-code signals, minor issues'}</span></div>
                 </div>
                 <div class="hp-grades">
                     ${Object.entries(d.grade_scales || {90:'A',80:'B',70:'C',60:'D',0:'F'})
@@ -1330,7 +1978,7 @@
             document.getElementById('hp-body').innerHTML = html;
         }
 
-        fetch(window.logicMapConfig.metaUrl).then(r => r.json()).then(j => {
+        fetch(withSnapshot(window.logicMapConfig.metaUrl)).then(r => r.json()).then(j => {
             if (j.ok) { 
                 document.getElementById('s-nodes').textContent = j.data.node_count; 
                 document.getElementById('s-edges').textContent = j.data.edge_count; 
@@ -1340,7 +1988,7 @@
         }).catch(() => { });
 
         ldMsg.textContent = 'Loading graph…';
-        fetch(window.logicMapConfig.overviewUrl).then(r => r.json()).then(json => {
+        fetch(withSnapshot(window.logicMapConfig.overviewUrl)).then(r => r.json()).then(json => {
             if (!json.ok) { ldMsg.textContent = 'Error: ' + json.message; return; }
             allNodesData = json.data.nodes || [];
             allEdgesData = json.data.edges || [];
@@ -1365,6 +2013,7 @@
 
             separateOrphanNodes();
             buildModuleExplorer(filteredNodes, allEdgesData);
+            applyHeatmapMode();
 
             const comps = findDisconnectedComponents(filteredNodes, allEdgesData);
             if (comps.length > 1 && filteredNodes.length > 3) showWarning(`⚠ ${comps.length} disconnected components`, 'rgba(249,115,22,.1)', '#f97316', '#f97316');
@@ -1377,7 +2026,9 @@
 
             ldMsg.textContent = 'Rendering layout…';
             setTimeout(() => {
-                runLayout('dagre');
+                // Force first render layout; without callback, runLayout short-circuits
+                // when currentLayout is already "dagre", causing all nodes to overlap at origin.
+                runLayout('dagre', () => { });
                 const l = document.getElementById('loading');
                 l.style.opacity = '0'; setTimeout(() => l.style.display = 'none', 400);
             }, 100);

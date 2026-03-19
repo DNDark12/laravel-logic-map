@@ -203,6 +203,60 @@ class MetricsCalculatorTest extends TestCase
         $this->assertNull($node->metrics['depth']);
     }
 
+    /** @test */
+    public function it_flags_hub_utility_nodes_in_metadata()
+    {
+        $this->app['config']->set('logic-map.analysis.ui_thresholds.hub_utility_fan_in', 4);
+
+        $graph = new Graph();
+        $graph->addNode(new Node('hub', NodeKind::SERVICE, 'HubService'));
+        $graph->addNode(new Node('a', NodeKind::SERVICE, 'A'));
+        $graph->addNode(new Node('b', NodeKind::SERVICE, 'B'));
+        $graph->addNode(new Node('c', NodeKind::SERVICE, 'C'));
+        $graph->addNode(new Node('d', NodeKind::SERVICE, 'D'));
+        $graph->addNode(new Node('e', NodeKind::SERVICE, 'E'));
+
+        $graph->addEdge(new Edge('a', 'hub', EdgeType::CALL));
+        $graph->addEdge(new Edge('b', 'hub', EdgeType::CALL));
+        $graph->addEdge(new Edge('c', 'hub', EdgeType::CALL));
+        $graph->addEdge(new Edge('d', 'hub', EdgeType::CALL));
+        $graph->addEdge(new Edge('e', 'hub', EdgeType::CALL));
+
+        $this->calculator->calculate($graph);
+
+        $hub = $graph->getNode('hub');
+        $this->assertTrue($hub->metadata['isHubUtility'] ?? false);
+        $this->assertTrue($hub->metadata['is_hub_utility'] ?? false);
+    }
+
+    /** @test */
+    public function it_does_not_flag_hub_utility_when_node_has_outgoing_calls_or_is_route()
+    {
+        $this->app['config']->set('logic-map.analysis.ui_thresholds.hub_utility_fan_in', 2);
+
+        $graph = new Graph();
+        $graph->addNode(new Node('hub', NodeKind::SERVICE, 'HubService'));
+        $graph->addNode(new Node('route', NodeKind::ROUTE, 'GET /health'));
+        $graph->addNode(new Node('a', NodeKind::SERVICE, 'A'));
+        $graph->addNode(new Node('b', NodeKind::SERVICE, 'B'));
+        $graph->addNode(new Node('c', NodeKind::SERVICE, 'C'));
+        $graph->addNode(new Node('target', NodeKind::SERVICE, 'Target'));
+
+        $graph->addEdge(new Edge('a', 'hub', EdgeType::CALL));
+        $graph->addEdge(new Edge('b', 'hub', EdgeType::CALL));
+        $graph->addEdge(new Edge('c', 'hub', EdgeType::CALL));
+        $graph->addEdge(new Edge('hub', 'target', EdgeType::CALL)); // has outgoing
+
+        $graph->addEdge(new Edge('a', 'route', EdgeType::CALL));
+        $graph->addEdge(new Edge('b', 'route', EdgeType::CALL));
+        $graph->addEdge(new Edge('c', 'route', EdgeType::CALL)); // high fan_in but kind=route
+
+        $this->calculator->calculate($graph);
+
+        $this->assertFalse($graph->getNode('hub')->metadata['isHubUtility'] ?? true);
+        $this->assertFalse($graph->getNode('route')->metadata['isHubUtility'] ?? true);
+    }
+
     protected function buildSimpleGraph(): Graph
     {
         $graph = new Graph();

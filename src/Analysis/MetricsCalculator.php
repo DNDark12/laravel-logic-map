@@ -3,6 +3,7 @@
 namespace dndark\LogicMap\Analysis;
 
 use dndark\LogicMap\Domain\Edge;
+use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 
 class MetricsCalculator
@@ -44,6 +45,15 @@ class MetricsCalculator
                 'coupling' => $fanIn + $fanOut,
                 'depth' => $depths[$node->id] ?? null,
             ];
+
+            // Hub utility: many callers, no outgoing calls, and not an entry route.
+            $hubThreshold = $this->getHubUtilityFanInThreshold();
+            $isHubUtility = $node->kind !== NodeKind::ROUTE
+                && $fanIn > $hubThreshold
+                && $fanOut === 0;
+
+            $node->metadata['isHubUtility'] = $isHubUtility;
+            $node->metadata['is_hub_utility'] = $isHubUtility;
         }
     }
 
@@ -119,5 +129,10 @@ class MetricsCalculator
             'logic-map.analysis.depth.traversal_edge_types',
             ['handles', 'calls', 'dispatches', 'queries', 'resolves']
         );
+    }
+
+    protected function getHubUtilityFanInThreshold(): int
+    {
+        return (int) config('logic-map.analysis.ui_thresholds.hub_utility_fan_in', 5);
     }
 }

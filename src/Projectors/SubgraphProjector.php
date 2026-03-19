@@ -25,7 +25,9 @@ class SubgraphProjector implements GraphProjector
 
         $limit = (int) ($filters['limit'] ?? config('logic-map.subgraph_node_limit', 50));
         $depth = (int) ($filters['depth'] ?? 1);
-        $minConfidenceWeight = $this->getConfidenceWeight($filters['min_confidence'] ?? 'low');
+        $minConfidenceWeight = $this->getConfidenceWeight(
+            $filters['min_confidence'] ?? config('logic-map.filters.min_confidence', 'low')
+        );
         $excludeKinds = $filters['exclude_kinds'] ?? config('logic-map.filters.excluded_kinds', []);
 
         $neighborhoodNodes = [$id => $nodes[$id]];

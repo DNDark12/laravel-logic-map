@@ -14,6 +14,7 @@
             subgraphUrl:    '{{ url("logic-map/subgraph") }}',
             healthUrl:      '{{ route("logic-map.health") }}',
             metaUrl:        '{{ route("logic-map.meta") }}',
+            snapshotsUrl:   '{{ route("logic-map.snapshots") }}',
             violationsUrl:  '{{ route("logic-map.violations") }}',
             exportJsonUrl:  '{{ route("logic-map.export.json") }}',
             exportCsvUrl:   '{{ route("logic-map.export.csv") }}'
@@ -60,6 +61,20 @@
     <div class="search-wrap">
         <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="si" type="text" placeholder="Search… (⌘K)">
+    </div>
+
+    <div class="tb-sep"></div>
+
+    <!-- [3.5] Snapshot selector -->
+    <div class="tb-snapshot dropdown-grp" id="snapshot-dropdown">
+        <label class="tb-label-sm" for="snapshot-trigger">Snapshot</label>
+        <button id="snapshot-trigger" class="tb-btn" onclick="toggleDropdown(event, 'snapshot-dropdown')" title="Select snapshot for time-travel view">
+            <span class="btn-lbl" id="snapshot-trigger-label">Current (Latest)</span>
+            <svg class="exp-arr" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        </button>
+        <div class="seg-group dropdown-menu snapshot-menu" id="snapshot-menu">
+            <button class="seg-btn active" data-snapshot="" data-label="Current (Latest)">Current (Latest)</button>
+        </div>
     </div>
 
     <div class="tb-sep"></div>
@@ -115,13 +130,17 @@
     <div class="tb-sep"></div>
 
     <!-- [5] Fit / Clear -->
-    <button class="tb-btn" onclick="fitView()" title="Fit (F)">
+    <button id="fit-btn" class="tb-btn" onclick="fitView()" title="Fit (F)">
         <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
         <span class="btn-lbl">Fit</span>
     </button>
-    <button class="tb-btn" onclick="clearHighlight()" title="Clear selection">
+    <button id="clear-btn" class="tb-btn" onclick="clearHighlight()" title="Clear selection">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
         <span class="btn-lbl">Clear</span>
+    </button>
+    <button class="tb-btn" id="heatmap-toggle" onclick="toggleHeatmap()" title="Toggle complexity heatmap (H)">
+        <svg viewBox="0 0 24 24"><path d="M12 3v10"/><path d="M8 8a4 4 0 1 1 8 0v6a6 6 0 1 1-8 0z"/></svg>
+        <span class="btn-lbl">Heat: Off</span>
     </button>
     <input type="hidden" id="hl-hops" value="1">
 
@@ -160,11 +179,11 @@
             <svg class="exp-arr" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         </button>
         <div class="seg-group dropdown-menu" id="exp-menu">
-            <button class="seg-btn" onclick="window.location.href=window.logicMapConfig.exportJsonUrl" title="Export as JSON">
+            <button class="seg-btn" onclick="exportLogicMap('json')" title="Export as JSON">
                 <span class="exp-ico">JSON</span>
                 <span class="btn-lbl">Full Logic Analysis</span>
             </button>
-            <button class="seg-btn" onclick="window.location.href=window.logicMapConfig.exportCsvUrl" title="Export as CSV">
+            <button class="seg-btn" onclick="exportLogicMap('csv')" title="Export as CSV">
                 <span class="exp-ico">CSV</span>
                 <span class="btn-lbl">Node Metrics Only</span>
             </button>
@@ -182,6 +201,59 @@
             <line x1="7" y1="16" x2="17" y2="16"/>
         </svg>
     </button>
+
+    <!-- [12] Mobile actions overflow -->
+    <div class="dropdown-grp tb-more" id="mobile-actions-dropdown">
+        <button class="tb-btn dropdown-trigger" id="mobile-actions-trigger" onclick="toggleDropdown(event, 'mobile-actions-dropdown')" title="More actions">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+            </svg>
+            <span class="btn-lbl">Actions</span>
+            <svg class="exp-arr" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        </button>
+        <div class="dropdown-menu mobile-actions-menu" id="mobile-actions-menu">
+            <div class="mam-sec">
+                <div class="mam-title">Snapshot</div>
+                <div class="mam-list" id="mobile-snapshot-list">
+                    <button class="mam-action active" data-snapshot="" data-label="Current (Latest)">Current (Latest)</button>
+                </div>
+            </div>
+
+            <div class="mam-sec">
+                <div class="mam-title">Layout</div>
+                <div class="mam-row">
+                    <button class="mam-chip active" data-mobile-layout="dagre">Flow</button>
+                    <button class="mam-chip" data-mobile-layout="cose">Force</button>
+                    <button class="mam-chip" data-mobile-layout="lr">LR</button>
+                    <button class="mam-chip" data-mobile-layout="compact">Compact</button>
+                </div>
+            </div>
+
+            <div class="mam-sec">
+                <div class="mam-title">Hops</div>
+                <div class="mam-row">
+                    <button class="mam-chip active" data-mobile-hops="1">1</button>
+                    <button class="mam-chip" data-mobile-hops="2">2</button>
+                    <button class="mam-chip" data-mobile-hops="3">3</button>
+                    <button class="mam-chip" data-mobile-hops="99">All</button>
+                </div>
+            </div>
+
+            <div class="mam-sec mam-grid">
+                <button class="mam-action" data-mobile-action="fit">Fit</button>
+                <button class="mam-action" data-mobile-action="clear">Clear</button>
+                <button class="mam-action" data-mobile-action="heat" id="mobile-heat-toggle"><span id="mobile-heat-label">Heat: Off</span></button>
+                <button class="mam-action" data-mobile-action="module">Module</button>
+                <button class="mam-action" data-mobile-action="theme">Theme</button>
+                <button class="mam-action" data-mobile-action="shortcuts">Shortcuts</button>
+                <button class="mam-action" data-mobile-action="export-json">Export JSON</button>
+                <button class="mam-action" data-mobile-action="export-csv">Export CSV</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Hidden stat sinks for JS compat -->
     <span id="s-nodes" style="display:none">–</span>
@@ -295,6 +367,13 @@
         <div class="li"><div class="ld" style="background:#22c55e"></div>Route → Controller</div>
         <div class="li"><div class="ld" style="background:#3b82f6"></div>Method Call</div>
         <div class="li"><div class="ld" style="background:#f59e0b"></div>Use / Import</div>
+        <div id="legend-heatmap-hint">
+            <div class="lt" style="margin-top:6px">Complexity Heatmap</div>
+            <div class="li"><div class="ld" style="background:#93c5fd"></div>Cool</div>
+            <div class="li"><div class="ld" style="background:#facc15"></div>Warm</div>
+            <div class="li"><div class="ld" style="background:#f97316"></div>Hot</div>
+            <div class="li"><div class="ld" style="background:#ef4444"></div>Critical</div>
+        </div>
     </div>
 </div>
 
@@ -335,6 +414,7 @@
             <kbd>F</kbd><span>Fit graph to view</span>
             <kbd>S</kbd><span>SubGraph — or click "Explore SubGraph" in panel</span>
             <kbd>M</kbd><span>Toggle Module Explorer</span>
+            <kbd>H</kbd><span>Toggle complexity heatmap</span>
             <kbd>T</kbd><span>Theme picker</span>
             <kbd>⌘K</kbd><span>Focus search</span>
             <kbd>ESC</kbd><span>Close panel / Exit SubGraph</span>

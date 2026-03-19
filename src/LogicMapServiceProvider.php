@@ -6,11 +6,13 @@ use dndark\LogicMap\Analysis\ArchitectureAnalyzer;
 use dndark\LogicMap\Analysis\AstParser;
 use dndark\LogicMap\Analysis\MetricsCalculator;
 use dndark\LogicMap\Analysis\RiskCalculator;
+use dndark\LogicMap\Analysis\Runtime\CoverageMetadataCollector;
 use dndark\LogicMap\Contracts\GraphExtractor;
 use dndark\LogicMap\Contracts\GraphProjector;
 use dndark\LogicMap\Contracts\GraphRepository;
 use dndark\LogicMap\Projectors\MetaProjector;
 use dndark\LogicMap\Projectors\OverviewProjector;
+use dndark\LogicMap\Projectors\GraphDiffProjector;
 use dndark\LogicMap\Projectors\SearchProjector;
 use dndark\LogicMap\Projectors\SubgraphProjector;
 use dndark\LogicMap\Repositories\CacheGraphRepository;
@@ -46,11 +48,13 @@ class LogicMapServiceProvider extends ServiceProvider
         $this->app->singleton(SubgraphProjector::class);
         $this->app->singleton(SearchProjector::class);
         $this->app->singleton(MetaProjector::class);
+        $this->app->singleton(GraphDiffProjector::class);
 
         // Analysis services (Sprint 4)
         $this->app->singleton(MetricsCalculator::class);
         $this->app->singleton(ArchitectureAnalyzer::class);
         $this->app->singleton(RiskCalculator::class);
+        $this->app->singleton(CoverageMetadataCollector::class);
 
         // Application services
         $this->app->singleton(BuildLogicMapService::class);

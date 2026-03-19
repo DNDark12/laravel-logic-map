@@ -15,70 +15,91 @@
 
 ---
 
-**Laravel Logic Map** leverages deterministic AST analysis via `nikic/php-parser` combined with Laravel runtime metadata to construct an interactive, multi-layered map of your application's logic. Unlike simple dependency graphs, Logic Map visualizes the **functional flow** from Entry Point to Data Persistence.
+Laravel Logic Map combines deterministic AST analysis (`nikic/php-parser`) with Laravel runtime metadata to build an interactive map of logic flow:
 
-## 🚀 Key Features
+`Route -> Controller -> Service -> Job/Event -> Persistence`
 
-*   **🔍 Holistic Workflow Graph** — Traverse the full execution path: `Route` → `Controller` → `Service` → `Job` → `Model`.
-*   **📊 Architecture Metrics** — 7 built-in metrics (In/Out Degree, Fan In/Out, Instability, Coupling, Depth) to detect logic bloat.
-*   **🏥 Visual Health Panel** — Real-time health score calculation with grade distribution (A-F) and risk assessment.
-*   **🕵️ 5 Specialized Analyzers** — Detect Fat Controllers, Circular Dependencies, Orphan Nodes, High Instability, and Over-coupling.
-*   **🧼 Orphan Grouping** — Automatically isolates nodes without connections to prevent graph clutter.
-*   **� Visual Health Panel** — Real-time health score calculation (A-F), risk assessment, and **Explainable Violation Chains**.
-*   **�🌊 Dynamic SubGraph** — Drill down into specific node neighborhoods with adjustable **Depth Traversal (1, 2, 3, All)**.
-*   **⌨️ Power-User Shortcuts** — Switch layouts (1-4), toggle themes (T), search (Ctrl+K), and explore modules (M) in milliseconds.
-*   **💾 CI/CD Friendly** — Export full graph details to **JSON** or node metrics to **CSV** for automated audits.
-*   **🎨 Fully Customizable UI** — Publish and override Blade views, CSS, and JS to match your internal design standards.
+## Latest Release
 
----
+- Target release tag for this sprint: `v1.1.0`
+- Scope: Sprint 5 completion (UI parity, snapshot time-travel, graph diff, heatmap, dead-code and coverage correlation support, responsive UX polish)
 
-## 🛠 Installation
+## 📂 Architecture
+
+Laravel Logic Map consists of two high-performance pipelines:
+
+*   **Build Pipeline**: Scans files using a custom AST parser, calculates structural metrics, and runs the health analyzer. Results are cached as a binary snapshot (Fingerprint indexed).
+*   **Query Pipeline**: A projection-based API layer that serves graph data and analysis reports to the Cytoscape.js frontend with zero-runtime impact on your main application.
+
+## Key Features
+
+- End-to-end workflow graph with interactive Cytoscape viewer
+- Metrics and risk insights (in/out degree, fan in/out, instability, coupling, depth)
+- Health panel with score/grade and explainable violations
+- Subgraph exploration with depth controls and zero-reload exit
+- Snapshot time-travel and graph diff (`/snapshots`, `/diff`)
+- Complexity heatmap toggle
+- Export graph/analysis data to JSON and node metrics to CSV
+- Publishable views/assets for team-level UI customization
+
+## Installation
 
 ```bash
 composer require dndark/laravel-logic-map --dev
 ```
 
-### Publishing Resources
+### Publish Resources
 
 ```bash
-# Publish base configuration
 php artisan vendor:publish --tag=logic-map-config
-
-# RECOMMENDED: Publish ALL resources (Blade, CSS, JS) for full customization
 php artisan vendor:publish --tag=logic-map-full
 ```
 
----
+## Quick Start
 
-## ⚡ Quick Start
+1. Build snapshot:
 
-1.  **Build the Graph:** Scan your project to create a logic snapshot.
-    ```bash
-    php artisan logic-map:build
-    ```
+```bash
+php artisan logic-map:build --force
+```
 
-2.  **Explore:** Visit your local dashboard to visualize the findings.
-    Visit: `http://your-app.test/logic-map`
+2. Open UI:
 
----
+`http://your-app.test/logic-map`
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action |
-| :--- | :--- |
-| `1` - `4` | **Layouts**: Switch between Flow, Force, Left-to-Right, and Tree. |
-| `S` | **SubGraph**: Isolate neighbors of the selected node. |
-| `F` | **Fit**: Center and fit the graph to viewport. |
-| `T` | **Theme**: Toggle between dark and light modes. |
-| `M` | **Modules**: Open/Close the Module Explorer. |
-| `Ctrl + K` | **Search**: Instantly focus the node search. |
-| `Esc` | **Clear**: Close panels and reset selection. |
+| Key | Action |
+| --- | --- |
+| `1`-`4` | Switch Layouts (Dagre, Force, LR, Compact) |
+| `F` | Fit graph to view |
+| `S` | SubGraph mode (on selected node) |
+| `H` | Toggle Complexity Heatmap |
+| `M` | Toggle Module Explorer |
+| `T` | Cycle Themes |
+| `⌘K` / `/` | Focus search |
+| `Esc` | Close panel / Exit SubGraph |
+| `?` | Show shortcuts modal |
 
----
+## API Endpoints
 
-## ⚙️ Configuration
+| Endpoint | Description |
+| --- | --- |
+| `GET /logic-map` | Viewer shell |
+| `GET /logic-map/overview` | Overview projection |
+| `GET /logic-map/subgraph/{id}` | Node neighborhood |
+| `GET /logic-map/search?q=` | Node search |
+| `GET /logic-map/meta` | Meta/statistics |
+| `GET /logic-map/snapshots` | Snapshot list |
+| `GET /logic-map/diff` | Snapshot diff |
+| `GET /logic-map/health` | Health score/grade |
+| `GET /logic-map/violations` | Violation list/summary |
+| `GET /logic-map/export/json` | JSON export |
+| `GET /logic-map/export/csv` | CSV export |
 
-Control scanning depth and analysis thresholds via `config/logic-map.php`:
+## Configuration
+
+Tune analysis and thresholds in `config/logic-map.php`:
 
 ```php
 'analysis' => [
@@ -91,21 +112,10 @@ Control scanning depth and analysis thresholds via `config/logic-map.php`:
         'fat_controller'      => true,
         'circular_dependency' => true,
         'orphan'              => true,
+        'dead_code'           => true,
     ],
 ],
 ```
 
----
-
-## 📂 Architecture
-
-Laravel Logic Map consists of two high-performance pipelines:
-
-*   **Build Pipeline**: Scans files using a custom AST parser, calculates structural metrics, and runs the health analyzer. Results are cached as a binary snapshot.
-*   **Query Pipeline**: A projection-based API layer that serves graph data to the Cytoscape.js frontend with zero-runtime impact on your main application.
-
----
-
-## 📄 License
-
-The MIT License (MIT). Please see [License File](LICENSE) for more information.
+## License
+The MIT License (MIT). Please see [License](LICENSE) for more information.
