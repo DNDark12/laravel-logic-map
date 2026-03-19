@@ -14,6 +14,11 @@ abstract class TestCase extends Orchestra
         ];
     }
 
+    protected function getEnvironmentSetUp($app)
+    {
+        $app['config']->set('app.key', 'base64:u8V8Y8y8Y8y8Y8y8Y8y8Y8y8Y8y8Y8y8Y8y8Y8y8Y8y=');
+    }
+
     protected function defineEnvironment($app)
     {
         // Setup default config if needed

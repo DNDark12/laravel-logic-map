@@ -16,8 +16,12 @@ use dndark\LogicMap\Projectors\GraphDiffProjector;
 use dndark\LogicMap\Projectors\SearchProjector;
 use dndark\LogicMap\Projectors\SubgraphProjector;
 use dndark\LogicMap\Repositories\CacheGraphRepository;
+use dndark\LogicMap\Services\AnalysisReadService;
 use dndark\LogicMap\Services\BuildLogicMapService;
+use dndark\LogicMap\Services\ExportReadService;
+use dndark\LogicMap\Services\GraphReadService;
 use dndark\LogicMap\Services\QueryLogicMapService;
+use dndark\LogicMap\Services\SnapshotResolver;
 use dndark\LogicMap\Support\FileDiscovery;
 use dndark\LogicMap\Support\Fingerprint;
 use Illuminate\Support\Facades\View;
@@ -58,6 +62,10 @@ class LogicMapServiceProvider extends ServiceProvider
 
         // Application services
         $this->app->singleton(BuildLogicMapService::class);
+        $this->app->singleton(SnapshotResolver::class);
+        $this->app->singleton(GraphReadService::class);
+        $this->app->singleton(AnalysisReadService::class);
+        $this->app->singleton(ExportReadService::class);
         $this->app->singleton(QueryLogicMapService::class);
     }
 

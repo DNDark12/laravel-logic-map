@@ -227,6 +227,16 @@ return [
     ],
 
     /*
+     * Query-time snapshot resolution policy
+     */
+    'query' => [
+        'resolver' => [
+            'fallback_on_missing_pointer' => true,
+            'fallback_on_corrupted_pointer' => true,
+        ],
+    ],
+
+    /*
      * Export Settings
      */
     'export' => [

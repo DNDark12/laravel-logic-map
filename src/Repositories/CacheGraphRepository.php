@@ -164,18 +164,32 @@ class CacheGraphRepository implements GraphRepository
         return array_values(array_unique($valid));
     }
 
-    public function getLatestFingerprint(): ?string
+    public function getActiveFingerprint(): ?string
     {
         $fingerprint = Cache::get($this->getConfiguredFingerprintKey());
-        if (!is_string($fingerprint) || $fingerprint === '') {
-            $fingerprint = Cache::get(self::LATEST_KEY);
-        }
 
         if (!is_string($fingerprint) || $fingerprint === '') {
             return null;
         }
 
-        return $this->hasSnapshot($fingerprint) ? $fingerprint : null;
+        return $fingerprint;
+    }
+
+    public function getLatestFingerprint(): ?string
+    {
+        $fingerprint = Cache::get(self::LATEST_KEY);
+        if (is_string($fingerprint) && $fingerprint !== '' && $this->hasSnapshot($fingerprint)) {
+            return $fingerprint;
+        }
+
+        $registry = $this->listFingerprints();
+        if ($registry === []) {
+            return null;
+        }
+
+        $latest = end($registry);
+
+        return is_string($latest) && $latest !== '' ? $latest : null;
     }
 
     protected function getConfiguredFingerprintKey(): string

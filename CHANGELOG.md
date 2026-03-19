@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.4] - 2026-03-19
+
+### Added
+- Query-time snapshot resolution with fallback policies (missing/corrupted pointers).
+- Detailed `_resolution` meta-data in JSON responses.
+- Explicit `active_fingerprint` and `current_fingerprint` in snapshot lists.
+- New export endpoints: `/export/graph`, `/export/analysis`, `/export/bundle`.
+
+### Fixed
+- Resolve CI test failures by introducing package-level `TestCase` (isolated testing).
+- Fixed intermittent 404s on subgraph routes by implementing URL-encoding for node IDs.
+- Corrected health grade color mapping in configuration.
+
 ## [1.1.0] - 2026-03-19
 
 ### Added

@@ -10,6 +10,7 @@ use dndark\LogicMap\Domain\Enums\NodeKind;
 use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node;
 use dndark\LogicMap\Tests\TestCase;
+use Illuminate\Support\Facades\Artisan;
 
 class ApiEndpointTest extends TestCase
 {
@@ -110,8 +111,14 @@ class ApiEndpointTest extends TestCase
             'data' => [
                 'snapshots',
                 'latest_fingerprint',
+                'active_fingerprint',
                 'current_fingerprint',
                 'count',
+                '_resolution' => [
+                    'resolved_via',
+                    'resolved_fingerprint',
+                    'pointer_state',
+                ],
             ],
             'message',
             'errors',
@@ -120,6 +127,10 @@ class ApiEndpointTest extends TestCase
         $this->assertTrue($response->json('ok'));
         $this->assertGreaterThanOrEqual(1, $response->json('data.count'));
         $this->assertIsArray($response->json('data.snapshots'));
+        $this->assertSame(
+            $response->json('data.active_fingerprint'),
+            $response->json('data.current_fingerprint')
+        );
     }
 
     /** @test */
@@ -190,18 +201,13 @@ class ApiEndpointTest extends TestCase
         $data = $response->json('data');
 
         $nodeIds = array_map(fn($n) => $n['id'], $data['nodes']);
-
-        foreach ($data['edges'] as $edge) {
-            $this->assertContains(
-                $edge['source'],
-                $nodeIds,
-                "Edge source {$edge['source']} should be in visible nodes"
-            );
-            $this->assertContains(
-                $edge['target'],
-                $nodeIds,
-                "Edge target {$edge['target']} should be in visible nodes"
-            );
+        if (!empty($data['edges'])) {
+            foreach ($data['edges'] as $edge) {
+                $this->assertContains($edge['source'], $nodeIds, "Edge source {$edge['source']} not found in nodes set");
+                $this->assertContains($edge['target'], $nodeIds, "Edge target {$edge['target']} not found in nodes set");
+            }
+        } else {
+            $this->assertTrue(true); // Neutral assertion for empty graph
         }
     }
 

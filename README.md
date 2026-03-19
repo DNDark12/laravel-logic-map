@@ -21,15 +21,15 @@ Laravel Logic Map combines deterministic AST analysis (`nikic/php-parser`) with 
 
 ## Latest Release
 
-- Target release tag for this sprint: `v1.1.0`
-- Scope: Sprint 5 completion (UI parity, snapshot time-travel, graph diff, heatmap, dead-code and coverage correlation support, responsive UX polish)
+- Current release tag: `v1.1.4`
+- Scope: Sprint 5 Final (Resolution engine, export bundle, CI isolation, and reliability fixes)
 
 ## 📂 Architecture
 
 Laravel Logic Map consists of two high-performance pipelines:
 
 *   **Build Pipeline**: Scans files using a custom AST parser, calculates structural metrics, and runs the health analyzer. Results are cached as a binary snapshot (Fingerprint indexed).
-*   **Query Pipeline**: A projection-based API layer that serves graph data and analysis reports to the Cytoscape.js frontend with zero-runtime impact on your main application.
+*   **Query Pipeline**: A projection-based API layer that serves cached graph data and analysis reports to the Cytoscape.js frontend with no rebuild and no AST parse on the request path.
 
 ## Key Features
 
@@ -39,7 +39,7 @@ Laravel Logic Map consists of two high-performance pipelines:
 - Subgraph exploration with depth controls and zero-reload exit
 - Snapshot time-travel and graph diff (`/snapshots`, `/diff`)
 - Complexity heatmap toggle
-- Export graph/analysis data to JSON and node metrics to CSV
+- Export canonical graph, derived analysis, bundle JSON, and node metrics CSV
 - Publishable views/assets for team-level UI customization
 
 ## Installation
@@ -90,12 +90,56 @@ php artisan logic-map:build --force
 | `GET /logic-map/subgraph/{id}` | Node neighborhood |
 | `GET /logic-map/search?q=` | Node search |
 | `GET /logic-map/meta` | Meta/statistics |
-| `GET /logic-map/snapshots` | Snapshot list |
+| `GET /logic-map/snapshots` | Snapshot list with `latest_fingerprint`, `active_fingerprint`, `current_fingerprint` and per-item `is_latest`, `is_current`, `is_active` |
 | `GET /logic-map/diff` | Snapshot diff |
 | `GET /logic-map/health` | Health score/grade |
 | `GET /logic-map/violations` | Violation list/summary |
-| `GET /logic-map/export/json` | JSON export |
+| `GET /logic-map/export/graph` | Canonical graph export (`graph`) |
+| `GET /logic-map/export/analysis` | Derived analysis export (`analysis`) |
+| `GET /logic-map/export/bundle` | Graph + analysis bundle export |
+| `GET /logic-map/export/json` | Alias of bundle export |
 | `GET /logic-map/export/csv` | CSV export |
+
+All JSON endpoints use the envelope:
+
+```json
+{
+  "ok": true,
+  "data": {},
+  "message": null,
+  "errors": null
+}
+```
+
+Error responses use typed `errors` entries:
+
+```json
+{
+  "ok": false,
+  "data": {
+    "_resolution": {
+      "resolved_via": "active_pointer",
+      "resolved_fingerprint": null,
+      "pointer_state": "missing"
+    }
+  },
+  "message": "No snapshot found. Run `php artisan logic-map:build` first.",
+  "errors": [
+    {
+      "type": "snapshot_not_found",
+      "detail": "No snapshot found. Run `php artisan logic-map:build` first."
+    }
+  ]
+}
+```
+
+Successful JSON reads include `data._resolution` so consumers can see whether the response came from:
+
+- `requested_snapshot`
+- `active_pointer`
+- `latest_snapshot_fallback`
+
+`current_fingerprint` now follows the active snapshot pointer semantics and is always equal to `active_fingerprint`.
 
 ## Configuration
 

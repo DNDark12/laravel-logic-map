@@ -2,6 +2,7 @@
 
 namespace dndark\LogicMap\Http\Controllers;
 
+use dndark\LogicMap\Domain\QueryResult;
 use dndark\LogicMap\Services\QueryLogicMapService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class LogicMapController extends Controller
     public function overview(Request $request): JsonResponse
     {
         $snapshot = $this->readSnapshot($request);
-        $result = $this->queryService->getOverview($request->except('snapshot'), $snapshot);
+        $result = $this->queryService->overview($request->except('snapshot'), $snapshot);
 
         return $this->respond($result);
     }
@@ -31,7 +32,7 @@ class LogicMapController extends Controller
     public function subgraph(Request $request, string $id): JsonResponse
     {
         $snapshot = $this->readSnapshot($request);
-        $result = $this->queryService->getSubgraph($id, $request->except('snapshot'), $snapshot);
+        $result = $this->queryService->subgraph($id, $request->except('snapshot'), $snapshot);
 
         return $this->respond($result);
     }
@@ -48,14 +49,14 @@ class LogicMapController extends Controller
     public function meta(Request $request): JsonResponse
     {
         $snapshot = $this->readSnapshot($request);
-        $result = $this->queryService->getMeta($snapshot);
+        $result = $this->queryService->meta($snapshot);
 
         return $this->respond($result);
     }
 
     public function diff(Request $request): JsonResponse
     {
-        $result = $this->queryService->getDiff(
+        $result = $this->queryService->diff(
             $request->query('from'),
             $request->query('to')
         );
@@ -66,7 +67,7 @@ class LogicMapController extends Controller
     public function violations(Request $request): JsonResponse
     {
         $snapshot = $this->readSnapshot($request);
-        $result = $this->queryService->getViolations($request->except('snapshot'), $snapshot);
+        $result = $this->queryService->violations($request->except('snapshot'), $snapshot);
 
         return $this->respond($result);
     }
@@ -74,7 +75,31 @@ class LogicMapController extends Controller
     public function health(Request $request): JsonResponse
     {
         $snapshot = $this->readSnapshot($request);
-        $result = $this->queryService->getHealth($snapshot);
+        $result = $this->queryService->health($snapshot);
+
+        return $this->respond($result);
+    }
+
+    public function exportGraph(Request $request): JsonResponse
+    {
+        $snapshot = $this->readSnapshot($request);
+        $result = $this->queryService->exportGraph($snapshot);
+
+        return $this->respond($result);
+    }
+
+    public function exportAnalysis(Request $request): JsonResponse
+    {
+        $snapshot = $this->readSnapshot($request);
+        $result = $this->queryService->exportAnalysis($snapshot);
+
+        return $this->respond($result);
+    }
+
+    public function exportBundle(Request $request): JsonResponse
+    {
+        $snapshot = $this->readSnapshot($request);
+        $result = $this->queryService->exportBundle($snapshot);
 
         return $this->respond($result);
     }
@@ -82,7 +107,7 @@ class LogicMapController extends Controller
     public function exportJson(Request $request): JsonResponse
     {
         $snapshot = $this->readSnapshot($request);
-        $result = $this->queryService->exportJson($snapshot);
+        $result = $this->queryService->exportBundle($snapshot);
 
         return $this->respond($result);
     }
@@ -92,43 +117,27 @@ class LogicMapController extends Controller
         $snapshot = $this->readSnapshot($request);
         $result = $this->queryService->exportCsv($snapshot);
 
-        if ($result['ok'] === false) {
-            return response()->json([
-                'ok' => false,
-                'data' => null,
-                'message' => $result['message'] ?? null,
-                'errors' => null,
-            ], $result['code'] ?? 400);
+        if (!$result->ok) {
+            return $this->respond($result);
         }
 
-        return response($result['data'], 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . ($result['filename'] ?? 'logic-map-export.csv') . '"',
+        return response($result->data, $result->httpStatus, [
+            'Content-Type' => $result->meta['content_type'] ?? 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . ($result->meta['filename'] ?? 'logic-map-export.csv') . '"',
         ]);
     }
 
     /**
      * Convert service response to JSON with proper HTTP status.
      */
-    protected function respond(array $result): JsonResponse
+    protected function respond(QueryResult $result): JsonResponse
     {
-        $statusCode = 200;
-
-        if ($result['ok'] === false) {
-            $statusCode = $result['code'] ?? 400;
-        }
-
-        return response()->json([
-            'ok' => $result['ok'],
-            'data' => $result['data'],
-            'message' => $result['message'] ?? null,
-            'errors' => null,
-        ], $statusCode);
+        return response()->json($result->toArray(), $result->httpStatus);
     }
 
     public function snapshots(Request $request): JsonResponse
     {
-        $result = $this->queryService->getSnapshots();
+        $result = $this->queryService->snapshots();
 
         return $this->respond($result);
     }

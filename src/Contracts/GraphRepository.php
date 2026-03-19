@@ -66,7 +66,12 @@ interface GraphRepository
     public function listFingerprints(): array;
 
     /**
-     * Get latest available fingerprint pointer.
+     * Get the active snapshot pointer without validating the target snapshot.
+     */
+    public function getActiveFingerprint(): ?string;
+
+    /**
+     * Get latest available valid fingerprint.
      */
     public function getLatestFingerprint(): ?string;
 }

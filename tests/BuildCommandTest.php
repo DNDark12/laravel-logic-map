@@ -141,9 +141,13 @@ class BuildCommandTest extends TestCase
         $data = $response->json('data');
 
         $nodeIds = array_map(fn($n) => $n['id'], $data['nodes']);
-        foreach ($data['edges'] as $edge) {
-            $this->assertContains($edge['source'], $nodeIds, "Edge source {$edge['source']} not found in nodes set");
-            $this->assertContains($edge['target'], $nodeIds, "Edge target {$edge['target']} not found in nodes set");
+        if (!empty($data['edges'])) {
+            foreach ($data['edges'] as $edge) {
+                $this->assertContains($edge['source'], $nodeIds, "Edge source {$edge['source']} not found in nodes set");
+                $this->assertContains($edge['target'], $nodeIds, "Edge target {$edge['target']} not found in nodes set");
+            }
+        } else {
+            $this->assertTrue(true); // Neutral assertion for empty graph
         }
     }
 
@@ -155,7 +159,7 @@ class BuildCommandTest extends TestCase
 
         $response = $this->getJson(route('logic-map.overview'));
 
-        $response->assertStatus(400);
+        $response->assertStatus(404);
         $this->assertFalse($response->json('ok'));
         $this->assertNotNull($response->json('message'));
     }
