@@ -41,6 +41,11 @@ class TraceProjector
         // Walk in the requested direction
         $steps = $this->walker->walk($graph, $targetNode->id, $direction, $maxDepth);
 
+        $visited = [];
+        foreach ($steps as $step) {
+            $visited[$step->node->id] = true;
+        }
+
         // Determine if truncated (any step at exactly max_depth means we stopped there)
         $truncated = false;
         foreach ($steps as $step) {
@@ -56,7 +61,17 @@ class TraceProjector
                         $graph->getEdgesTo($step->node->id),
                     ),
                 };
-                if (!empty($neighborEdges)) {
+                
+                $hasUnvisited = false;
+                foreach ($neighborEdges as $edge) {
+                    $neighborId = ($edge->source === $step->node->id) ? $edge->target : $edge->source;
+                    if (!isset($visited[$neighborId])) {
+                        $hasUnvisited = true;
+                        break;
+                    }
+                }
+
+                if ($hasUnvisited) {
                     $truncated = true;
                     break;
                 }
@@ -160,20 +175,24 @@ class TraceProjector
             $nodeId = $step->node->id;
 
             if ($direction === 'backward' || $direction === 'upstream') {
-                $count = count($graph->getEdgesTo($nodeId));
-                $key   = 'incoming_count';
+                $edges = $graph->getEdgesTo($nodeId);
+                $count = count($edges);
+                $branches = array_map(fn($e) => $e->source, $edges);
             } else {
-                $count = count($graph->getEdgesFrom($nodeId));
-                $key   = 'outgoing_count';
+                $edges = $graph->getEdgesFrom($nodeId);
+                $count = count($edges);
+                $branches = array_map(fn($e) => $e->target, $edges);
             }
 
             if ($count > 1) {
-                $branchPoints[] = [
-                    'node_id' => $nodeId,
-                    'kind'    => $step->node->kind->value,
-                    $key      => $count,
-                    'depth'   => $step->depth,
-                ];
+                $branchPoints[] = (new \dndark\LogicMap\Domain\Trace\BranchPoint(
+                    node_id: $nodeId,
+                    name: $step->node->metadata['shortLabel'] ?? $step->node->name ?? $nodeId,
+                    kind: $step->node->kind->value,
+                    outgoing_count: $count,
+                    branches: array_values($branches),
+                    why_included: "Fan-out of $count paths at depth {$step->depth}"
+                ))->toArray();
             }
         }
 

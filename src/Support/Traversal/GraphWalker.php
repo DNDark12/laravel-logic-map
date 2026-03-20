@@ -41,22 +41,6 @@ class GraphWalker
         $this->enqueue($queue, $graph, $startId, $direction, 0, null, false, $visited);
 
         while (!empty($queue)) {
-            // Sort queue for deterministic ordering at each step
-            usort($queue, function (array $a, array $b): int {
-                // depth first
-                if ($a[1] !== $b[1]) {
-                    return $a[1] <=> $b[1];
-                }
-                // edge priority second (null edge = 0 priority)
-                $aPrio = $a[2] !== null ? TraversalPolicy::edgePriority($a[2]->type->value) : 0;
-                $bPrio = $b[2] !== null ? TraversalPolicy::edgePriority($b[2]->type->value) : 0;
-                if ($aPrio !== $bPrio) {
-                    return $aPrio <=> $bPrio;
-                }
-                // lexical node ID third
-                return $a[0] <=> $b[0];
-            });
-
             [$nodeId, $depth, $incomingEdge, $asyncBoundary] = array_shift($queue);
 
             $node = $graph->getNode($nodeId);
@@ -93,6 +77,20 @@ class GraphWalker
         array  &$visited,
     ): void {
         $edges = $this->getNeighborEdges($graph, $nodeId, $direction);
+
+        // Sort edges deterministically BEFORE enqueueing
+        usort($edges, function(Edge $a, Edge $b) use ($direction) {
+            $aPrio = TraversalPolicy::edgePriority($a->type->value);
+            $bPrio = TraversalPolicy::edgePriority($b->type->value);
+            
+            if ($aPrio !== $bPrio) {
+                return $aPrio <=> $bPrio;
+            }
+            
+            $targetA = $direction === 'upstream' ? $a->source : $a->target;
+            $targetB = $direction === 'upstream' ? $b->source : $b->target;
+            return $targetA <=> $targetB;
+        });
 
         foreach ($edges as $edge) {
             $neighborId = $direction === 'upstream' ? $edge->source : $edge->target;

@@ -22,8 +22,8 @@
             exportBundleUrl:'{{ route("logic-map.export.bundle") }}',
             exportJsonUrl:  '{{ route("logic-map.export.json") }}',
             exportCsvUrl:   '{{ route("logic-map.export.csv") }}',
-            impactBaseUrl:  '{{ url("logic-map/impact") }}',
-            traceBaseUrl:   '{{ url("logic-map/trace") }}'
+            impactBaseUrl:  '{{ url("logic-map/reports/impact") }}',
+            traceBaseUrl:   '{{ url("logic-map/reports/trace") }}'
         };
     </script>
 </head>

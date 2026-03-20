@@ -223,11 +223,32 @@ class ImpactProjector
         AnalysisReport $report,
         string         $direction,
     ): array {
+        // Map all projected items by node ID for fast lookup
+        $itemMap = [];
+        foreach ($allItems as $item) {
+            $itemMap[$item['node_id']] = $item;
+        }
+
+        // Add target node to the map if not already present
+        if (!isset($itemMap[$targetNode->id])) {
+            $riskInfo = $report->getNodeRisk($targetNode->id);
+            $itemMap[$targetNode->id] = [
+                'node_id'        => $targetNode->id,
+                'kind'           => $targetNode->kind->value,
+                'name'           => $targetNode->metadata['shortLabel'] ?? $targetNode->name ?? $targetNode->id,
+                'module'         => $targetNode->metadata['module'] ?? ModuleExtractor::moduleOf($targetNode->id),
+                'risk'           => $riskInfo['risk'] ?? 'none',
+                'risk_score'     => $riskInfo['score'] ?? 0,
+                'coverage_level' => $targetNode->metadata['coverage_level'] ?? null,
+                'depth'          => 0,
+            ];
+        }
+
         // must_review: target + critical-touch IDs + direct 1-hop neighbors
-        $mustReviewIds = [$targetNode->id => true];
+        $mustReviewIds = [$targetNode->id => 'Target Entrypoint'];
 
         foreach ($criticalTouches as $ct) {
-            $mustReviewIds[$ct['node_id']] = true;
+            $mustReviewIds[$ct['node_id']] = 'Critical Impact Area';
         }
 
         // Direct 1-hop neighbors in chosen direction
@@ -236,37 +257,69 @@ class ImpactProjector
             fn(WalkStep $s) => $s->depth === 1
         );
         foreach ($directSteps as $step) {
-            $mustReviewIds[$step->node->id] = true;
+            if (!isset($mustReviewIds[$step->node->id])) {
+                $mustReviewIds[$step->node->id] = 'Direct Immediate Neighbor';
+            }
         }
 
         // should_review: remaining impacted nodes not in must_review
-        $shouldReview = [];
+        $shouldReviewIds = [];
         foreach ($allItems as $item) {
             if (!isset($mustReviewIds[$item['node_id']])) {
-                $shouldReview[] = $item['node_id'];
+                $shouldReviewIds[$item['node_id']] = 'Within Blast Radius';
             }
         }
 
         // test_focus: high-risk low/unknown coverage, ordered by risk desc then coverage
-        $testFocus = [];
+        $testFocusIds = [];
         foreach ($allItems as $item) {
             if (TraversalPolicy::isHighRisk($item['risk'] ?? null) &&
                 TraversalPolicy::isLowCoverage($item['coverage_level'] ?? null)) {
-                $testFocus[] = $item;
+                $testFocusIds[] = $item;
             }
         }
 
-        usort($testFocus, function (array $a, array $b): int {
+        usort($testFocusIds, function (array $a, array $b): int {
             $riskOrder = ['critical' => 0, 'high' => 1, 'medium' => 2, 'low' => 3, 'none' => 4];
             $rA = $riskOrder[$a['risk'] ?? 'none'] ?? 4;
             $rB = $riskOrder[$b['risk'] ?? 'none'] ?? 4;
             return $rA !== $rB ? $rA <=> $rB : $a['node_id'] <=> $b['node_id'];
         });
 
+        $mapToRow = function (string $nodeId, string $why) use ($itemMap): array {
+            $item = $itemMap[$nodeId];
+            return (new \dndark\LogicMap\Domain\Impact\ReviewScopeRow(
+                node_id: $item['node_id'],
+                kind: $item['kind'],
+                name: $item['name'],
+                module: $item['module'] ?? 'unknown',
+                risk: $item['risk'] ?? 'none',
+                risk_score: $item['risk_score'] ?? 0,
+                coverage_level: $item['coverage_level'] ?? 'unknown',
+                depth: $item['depth'] ?? null,
+                why_included: $why,
+            ))->toArray();
+        };
+
+        $mustReview = [];
+        foreach ($mustReviewIds as $id => $why) {
+            $mustReview[] = $mapToRow($id, $why);
+        }
+
+        $shouldReview = [];
+        foreach ($shouldReviewIds as $id => $why) {
+            $shouldReview[] = $mapToRow($id, $why);
+        }
+
+        $testFocus = [];
+        foreach ($testFocusIds as $item) {
+            $testFocus[] = $mapToRow($item['node_id'], 'High Risk & Low Coverage Code');
+        }
+
         return [
-            'must_review'   => array_keys($mustReviewIds),
-            'should_review' => array_values($shouldReview),
-            'test_focus'    => array_column($testFocus, 'node_id'),
+            'must_review'   => $mustReview,
+            'should_review' => $shouldReview,
+            'test_focus'    => $testFocus,
         ];
     }
 }

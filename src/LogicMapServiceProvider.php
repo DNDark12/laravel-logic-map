@@ -107,6 +107,8 @@ class LogicMapServiceProvider extends ServiceProvider
                 Commands\BuildLogicMapCommand::class,
                 Commands\ClearLogicMapCacheCommand::class,
                 Commands\AnalyzeLogicMapCommand::class,
+                Commands\ExportDocsCommand::class,
+                Commands\ExportNoteCommand::class,
             ]);
         }
 
@@ -116,13 +118,18 @@ class LogicMapServiceProvider extends ServiceProvider
         // Share resource paths with views (Allow local override in resources/views/logic-map)
         View::composer('logic-map::*', function ($view) {
             $customCss = resource_path('views/logic-map/logic-map.css');
-            $customJs = resource_path('views/logic-map/logic-map.js');
+            $customJs  = resource_path('views/logic-map/logic-map.js');
 
-            $cssPath = file_exists($customCss) ? $customCss : __DIR__ . '/../resources/dist/logic-map.css';
-            $jsPath = file_exists($customJs) ? $customJs : __DIR__ . '/../resources/dist/logic-map.js';
+            $cssPath = file_exists($customCss) ? $customCss : __DIR__ . '/../resources/dist/css/logic-map.css';
+            $jsPath  = file_exists($customJs)  ? $customJs  : __DIR__ . '/../resources/dist/js/logic-map.js';
 
-            $view->with('logicMapCss', file_get_contents($cssPath));
-            $view->with('logicMapJs', file_get_contents($jsPath));
+            $reportCssPath = __DIR__ . '/../resources/dist/css/report-page.css';
+            $reportJsPath  = __DIR__ . '/../resources/dist/js/report-page.js';
+
+            $view->with('logicMapCss',  file_get_contents($cssPath));
+            $view->with('logicMapJs',   file_get_contents($jsPath));
+            $view->with('reportPageCss', file_exists($reportCssPath) ? file_get_contents($reportCssPath) : '');
+            $view->with('reportPageJs',  file_exists($reportJsPath)  ? file_get_contents($reportJsPath)  : '');
         });
     }
 }

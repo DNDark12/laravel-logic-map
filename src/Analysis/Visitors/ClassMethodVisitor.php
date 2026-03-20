@@ -535,6 +535,15 @@ class ClassMethodVisitor extends NodeVisitorAbstract
         if (str_ends_with($className, 'Event')) return NodeKind::EVENT;
         if (str_ends_with($className, 'Listener')) return NodeKind::LISTENER;
         if (str_ends_with($className, 'Command')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Analyzer')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Projector')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Resolver')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Builder')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Parser')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Extractor')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Visitor')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Writer')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Calculator')) return NodeKind::COMPONENT;
 
         // Check namespace patterns
         if (str_contains($className, '\\Controllers\\')) return NodeKind::CONTROLLER;
@@ -544,7 +553,9 @@ class ClassMethodVisitor extends NodeVisitorAbstract
         if (str_contains($className, '\\Events\\')) return NodeKind::EVENT;
         if (str_contains($className, '\\Listeners\\')) return NodeKind::LISTENER;
         if (str_contains($className, '\\Models\\')) return NodeKind::MODEL;
+        if (str_contains($className, '\\Analysis\\')) return NodeKind::COMPONENT;
         if (str_contains($className, '\\Projectors\\')) return NodeKind::COMPONENT;
+        if (str_contains($className, '\\Support\\')) return NodeKind::COMPONENT;
 
         return NodeKind::UNKNOWN;
     }

@@ -3157,3 +3157,108 @@ a.panel-action-btn {
         transform: translateX(-50%) translateY(0);
     }
 }
+
+/* ══════════════════════════════════════
+   CI PREVIEW CARDS (Graph Panel)
+══════════════════════════════════════ */
+.ci-preview-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.ci-card-loading,
+.ci-card-empty {
+    color: var(--tx2);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.ci-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.ci-card-type {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--tx2);
+}
+
+.ci-card-risk {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 99px;
+}
+
+.ci-risk-critical { background: rgba(239,68,68,.15); color: #ef4444; }
+.ci-risk-high     { background: rgba(249,115,22,.14); color: #f97316; }
+.ci-risk-medium   { background: rgba(234,179,8,.13); color: #ca8a04; }
+.ci-risk-low      { background: rgba(34,197,94,.12); color: #16a34a; }
+.ci-risk-healthy  { background: rgba(74,127,245,.12); color: #4a7ff5; }
+.ci-risk-unknown  { background: var(--bg-hover); color: var(--tx2); }
+
+.ci-card-stat {
+    color: var(--tx2);
+    font-size: 11px;
+    margin-bottom: 5px;
+}
+
+.ci-card-stat strong {
+    color: var(--tx);
+    font-weight: 700;
+}
+
+.ci-card-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--tx2);
+    margin-bottom: 4px;
+    margin-top: 6px;
+}
+
+.ci-preview-row {
+    color: var(--tx);
+    font-size: 11px;
+    padding: 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ci-card-summary {
+    color: var(--tx);
+    font-size: 11.5px;
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+
+.ci-card-stats {
+    display: flex;
+    gap: 10px;
+    color: var(--tx2);
+    font-size: 10.5px;
+    margin-bottom: 6px;
+}
+
+.ci-card-cta {
+    display: block;
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity .15s;
+}
+
+.ci-card-cta:hover { opacity: .75; }

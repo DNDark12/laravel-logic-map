@@ -17,6 +17,7 @@ class WorkflowTraceReport
         public readonly array $branchPoints,
         public readonly array $entrypoints,
         public readonly array $persistenceTouchpoints,
+        public readonly string $humanSummary = '',
     ) {
     }
 
@@ -29,6 +30,7 @@ class WorkflowTraceReport
             'branch_points'           => $this->branchPoints,
             'entrypoints'             => $this->entrypoints,
             'persistence_touchpoints' => $this->persistenceTouchpoints,
+            'human_summary'           => $this->humanSummary,
         ];
     }
 }

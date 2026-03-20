@@ -244,4 +244,41 @@ return [
         'csv_delimiter' => ',',
         'include_metrics' => true,
     ],
+
+    /*
+     * Change Intelligence: Reports, Markdown artifacts, Browser Save
+     */
+    'change_intelligence' => [
+        'viewer_preview_enabled'  => true,
+        'report_pages_enabled'    => true,
+        'markdown' => [
+            'enabled'               => true,
+            'save_to_project_docs'  => env('LOGIC_MAP_SAVE_TO_DOCS', false),
+            'base_path'             => base_path('docs/logic-map'),
+            'include_json_appendix' => true,
+        ],
+    ],
+
+    /*
+     * Documentation Export Settings (logic-map:export-docs)
+     */
+    'doc_export' => [
+        /*
+         * Minimum number of segments a workflow must have to generate a dossier.
+         * Filters out trivial 0-1 step routes (CRUD read-only, etc.)
+         */
+        'workflow_min_segments' => 2,
+
+        /*
+         * Maximum number of workflow dossiers to export.
+         * Workflows are sorted by risk desc → segments desc → slug asc before capping.
+         */
+        'max_workflows' => 50,
+
+        /*
+         * If node_count exceeds this threshold, the node catalog is written to nodes.md
+         * instead of being inlined into llms.txt.
+         */
+        'inline_catalog_max_nodes' => 200,
+    ],
 ];

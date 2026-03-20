@@ -148,6 +148,9 @@
                         'z-index': 999, 'line-style': 'dashed', 'line-dash-pattern': [8, 4], 'line-dash-offset': 0
                     }
                 },
+                { selector: 'edge.highlighted[type="route_to_controller"]', style: { 'line-color': tokens.edge.route, 'target-arrow-color': tokens.edge.route } },
+                { selector: 'edge.highlighted[type="call"]', style: { 'line-color': tokens.edge.call, 'target-arrow-color': tokens.edge.call } },
+                { selector: 'edge.highlighted[type="use"]', style: { 'line-color': tokens.edge.use, 'target-arrow-color': tokens.edge.use } },
                 { selector: 'edge.dimmed', style: { 'opacity': 0.08, 'events': 'no' } },
             ];
 
@@ -1281,29 +1284,79 @@
                 </div>`;
             }
 
-            // ── Change Intelligence actions (always visible) ──
+            // ── Change Intelligence Preview Cards (lazy-loaded) ──
             if (window.logicMapConfig.impactBaseUrl && window.logicMapConfig.traceBaseUrl) {
                 const encodedId = encodeURIComponent(d.id);
                 const snap = selectedSnapshot ? `?snapshot=${encodeURIComponent(selectedSnapshot)}` : '';
-                const impactUrl = `${window.logicMapConfig.impactBaseUrl}/${encodedId}${snap}`;
-                const traceUrl  = `${window.logicMapConfig.traceBaseUrl}/${encodedId}${snap}`;
+                const impactApiUrl = `/logic-map/impact/${encodedId}${snap}`;
+                const traceApiUrl  = `/logic-map/trace/${encodedId}${snap}`;
+                const impactPageUrl = `${window.logicMapConfig.impactBaseUrl}/${encodedId}${snap}`;
+                const tracePageUrl  = `${window.logicMapConfig.traceBaseUrl}/${encodedId}${snap}`;
+
                 h += `<div class="ps panel-ci-actions">
                 <div class="sl" style="margin-bottom:8px">Change Intelligence</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    <a class="panel-action-btn panel-action-impact" href="${impactUrl}" target="_blank" rel="noopener" title="View blast-radius impact analysis for this node">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13">
-                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                        </svg>
-                        Impact Analysis
-                    </a>
-                    <a class="panel-action-btn panel-action-trace" href="${traceUrl}" target="_blank" rel="noopener" title="Trace workflow path for this node">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13">
-                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                        </svg>
-                        Workflow Trace
-                    </a>
+                <div id="ci-preview-cards" style="display:flex;flex-direction:column;gap:8px">
+                    <div id="ci-impact-card" class="ci-preview-card">
+                        <div class="ci-card-loading">Loading impact preview…</div>
+                    </div>
+                    <div id="ci-trace-card" class="ci-preview-card">
+                        <div class="ci-card-loading">Loading trace preview…</div>
+                    </div>
                 </div>
                 </div>`;
+
+                // Fetch impact and trace summaries asynchronously after panel render
+                function loadCiPreview(apiUrl, cardId, pageUrl, type) {
+                    fetch(apiUrl)
+                        .then(r => r.json())
+                        .then(res => {
+                            const card = document.getElementById(cardId);
+                            if (!card) return;
+                            if (!res.ok) {
+                                card.innerHTML = `<div class="ci-card-empty">${type === 'impact' ? 'No impact data available.' : 'No trace data available.'}</div>`;
+                                return;
+                            }
+                            const d = res.data;
+                            if (type === 'impact') {
+                                const risk    = (d.summary?.risk_bucket ?? '—').toUpperCase();
+                                const blast   = d.summary?.blast_radius_score ?? '—';
+                                const must    = d.review_scope?.must_review?.slice(0, 2) ?? [];
+                                const mustHtml = must.map(r => `<div class="ci-preview-row">→ ${r.name ?? r.node_id}</div>`).join('');
+                                card.innerHTML = `
+                                    <div class="ci-card-header">
+                                        <span class="ci-card-type">Impact</span>
+                                        <span class="ci-card-risk ci-risk-${(d.summary?.risk_bucket ?? 'unknown').toLowerCase()}">${risk} Risk</span>
+                                    </div>
+                                    <div class="ci-card-stat">Blast radius <strong>${blast}</strong></div>
+                                    ${mustHtml ? `<div class="ci-card-label">Must Review</div>${mustHtml}` : '<div class="ci-card-empty">No critical review items.</div>'}
+                                    <a class="ci-card-cta" href="${pageUrl}" target="_blank" rel="noopener">Open Full Impact Report →</a>`;
+                            } else {
+                                const segs   = d.segments?.length ?? 0;
+                                const branches = d.branch_points?.length ?? 0;
+                                const async  = (d.segments ?? []).filter(s => (s.edge_type ?? '').toLowerCase().includes('dispatch')).length;
+                                const summaryLine = d.human_summary ? d.human_summary.substring(0, 120) + (d.human_summary.length > 120 ? '…' : '') : 'Workflow trace ready.';
+                                card.innerHTML = `
+                                    <div class="ci-card-header">
+                                        <span class="ci-card-type">Trace</span>
+                                    </div>
+                                    <div class="ci-card-summary">${summaryLine}</div>
+                                    <div class="ci-card-stats">
+                                        <span>${segs} steps</span><span>${branches} decisions</span><span>${async} async</span>
+                                    </div>
+                                    <a class="ci-card-cta" href="${pageUrl}" target="_blank" rel="noopener">Open Full Trace Report →</a>`;
+                            }
+                        })
+                        .catch(() => {
+                            const card = document.getElementById(cardId);
+                            if (card) card.innerHTML = '<div class="ci-card-empty">Preview unavailable.</div>';
+                        });
+                }
+
+                // Defer so the panel innerHTML is set first
+                window.requestAnimationFrame(() => {
+                    loadCiPreview(impactApiUrl, 'ci-impact-card', impactPageUrl, 'impact');
+                    loadCiPreview(traceApiUrl,  'ci-trace-card',  tracePageUrl,  'trace');
+                });
             }
 
             document.getElementById('pbody').innerHTML = h;

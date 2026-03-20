@@ -1,6 +1,6 @@
 {
     "name": "dndark/laravel-logic-map",
-    "description": "Understand, audit, and visualize your Laravel application's logic and workflows.",
+    "description": "Understand, audit, and visualize your Laravel application's workflows, change impact, and architectural risk.",
     "keywords": [
         "laravel",
         "architecture",

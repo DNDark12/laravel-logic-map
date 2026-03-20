@@ -17,6 +17,7 @@ class ChangeImpactReport
         public readonly array  $downstream,
         public readonly array  $criticalTouches,
         public readonly array  $reviewScope,
+        public readonly string $humanSummary = '',
     ) {
     }
 
@@ -29,6 +30,7 @@ class ChangeImpactReport
             'downstream'      => $this->downstream,
             'critical_touches' => $this->criticalTouches,
             'review_scope'    => $this->reviewScope,
+            'human_summary'   => $this->humanSummary,
         ];
     }
 }

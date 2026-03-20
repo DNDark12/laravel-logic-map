@@ -123,8 +123,8 @@ class ImpactEndpointTest extends TestCase
         $response = $this->getJson($url);
 
         $response->assertStatus(200);
-        $mustReview = $response->json('data.review_scope.must_review');
-        $this->assertContains(self::TARGET_ID, $mustReview);
+        $mustReviewIds = array_column($response->json('data.review_scope.must_review'), 'node_id');
+        $this->assertContains(self::TARGET_ID, $mustReviewIds);
     }
 
     #[Test]
