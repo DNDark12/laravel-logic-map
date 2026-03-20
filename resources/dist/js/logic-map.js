@@ -319,78 +319,11 @@
            FLOW MODE — Edge classification + filter
         ──────────────────────────────────── */
         // Returns 'keep', 'dim', or 'hide' for a given edge in Flow mode
-        function classifyEdgeForFlow(sourceKind, targetKind) {
-            const ARCHITECTURAL = new Set([
-                'route', 'controller', 'service',
-                'repository', 'model', 'job', 'listener', 'event'
-            ]);
-            const DROP = new Set(['command', 'component', 'unknown']);
-
-            if (ARCHITECTURAL.has(sourceKind) && ARCHITECTURAL.has(targetKind)) {
-                return 'keep'; // Both sides are architectural — real workflow edge
-            }
-            if (DROP.has(targetKind)) {
-                return 'hide'; // Target is known low-signal — remove entirely
-            }
-            // Source is architectural but target is ambiguous — show dimmed
-            return 'dim';
-        }
-
-        // Look up kind for a node id from the cy graph
         function getNodeKind(nodeId) {
             const n = cy.getElementById(nodeId);
             return n && n.length ? (n.data('kind') || 'unknown') : 'unknown';
         }
 
-        // Returns { keptNodeIds, edgeDecisions } for Flow mode filtering
-        function getFlowElements() {
-            const keptNodeIds = new Set();
-            const edgeDecisions = new Map(); // edgeId → 'keep' | 'dim' | 'hide'
-
-            cy.edges().forEach(edge => {
-                const srcKind = getNodeKind(edge.data('source'));
-                const tgtKind = getNodeKind(edge.data('target'));
-                const decision = classifyEdgeForFlow(srcKind, tgtKind);
-                edgeDecisions.set(edge.id(), decision);
-                if (decision === 'keep') {
-                    keptNodeIds.add(edge.data('source'));
-                    keptNodeIds.add(edge.data('target'));
-                }
-            });
-
-            return { keptNodeIds, edgeDecisions };
-        }
-
-        // Apply Flow mode edge visuals after layout
-        function applyFlowModeVisuals() {
-            const { keptNodeIds, edgeDecisions } = getFlowElements();
-
-            cy.nodes().forEach(n => {
-                if (n.data('_groupNode') || n.data('_orphan')) return;
-                if (!keptNodeIds.has(n.id()) && !sgMode) {
-                    n.style('display', 'none');
-                } else {
-                    n.style('display', 'element');
-                }
-            });
-
-            // Apply edge visuals
-            cy.edges().forEach(edge => {
-                const decision = edgeDecisions.get(edge.id());
-                if (decision === 'hide') {
-                    edge.style('display', 'none');
-                } else {
-                    edge.style('display', 'element');
-                    if (decision === 'dim') {
-                        edge.addClass('dimmed');
-                    } else {
-                        edge.removeClass('dimmed');
-                    }
-                }
-            });
-        }
-
-        // Restore all element visibility (used when leaving Flow/Risk/Zones modes)
         function restoreAllElementVisibility() {
             cy.elements().style('display', 'element');
             cy.edges().removeClass('dimmed');
@@ -442,8 +375,8 @@
         // Expand primary risk nodes by 1-hop, capped to prevent fan-out bomb
         function expandRiskNeighborhood(primaryNodes, allCyEdges, allCyNodes) {
             const ARCHITECTURAL = new Set([
-                'route', 'controller', 'service',
-                'repository', 'model', 'job', 'listener', 'event'
+                'route', 'controller', 'service', 'action', 'helper',
+                'repository', 'model', 'job', 'listener', 'event', 'policy', 'middleware', 'rule', 'observer', 'resource', 'provider', 'console'
             ]);
             const CAP = Math.max(5, Math.ceil(primaryNodes.length * 0.30));
             const primaryIds = new Set(primaryNodes.map(n => n.id()));
@@ -1303,16 +1236,42 @@
         function getLayoutOpts(name) {
             switch (name) {
                 case 'graph': return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20 };
-                case 'flow':  return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20 };
-                case 'risk':  return { name: 'dagre', rankDir: 'LR', nodeSep: 40, rankSep: 80 };
+                case 'flow':  return { name: 'dagre', rankDir: 'TB', nodeSep: 80, rankSep: 150, edgeSep: 30 };
+                case 'risk':  return { name: 'dagre', rankDir: 'LR', nodeSep: 40, rankSep: 120 };
                 case 'zones': return { name: 'dagre', rankDir: 'LR', nodeSep: 60, rankSep: 100, edgeSep: 20 };
-                // Legacy aliases — kept for backward-compat if any external code triggers them
-                case 'dagre':   return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20 };
-                case 'cose':    return { name: 'cose', idealEdgeLength: 100, nodeRepulsion: 45000, gravity: 0.1, numIter: 1000, initialTemp: 200, coolingFactor: 0.99, nodeDimensionsIncludeLabels: true, componentSpacing: 120, animate: true, animationDuration: 500 };
-                case 'lr':      return { name: 'dagre', rankDir: 'LR', nodeSep: 50, rankSep: 100, edgeSep: 20 };
-                case 'compact': return { name: 'dagre', rankDir: 'LR', nodeSep: 40, rankSep: 60, edgeSep: 10, padding: 30, animate: true, animationDuration: 500 };
                 default: return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100 };
             }
+        }
+
+
+        function applyFlowModeVisuals() {
+            // Flow elements decision uses current cy nodes/edges
+            const allNodes = cy.nodes().map(n => n.data());
+            const allEdges = cy.edges().map(e => e.data());
+            const { keptNodeIds, edgeDecisions } = getFlowElements(allNodes, allEdges);
+
+            cy.nodes().forEach(n => {
+                if (n.data('_groupNode') || n.data('_orphan')) return;
+                if (!keptNodeIds.has(n.id()) && !sgMode) {
+                    n.style('display', 'none');
+                } else {
+                    n.style('display', 'element');
+                }
+            });
+
+            cy.edges().forEach(edge => {
+                const decision = edgeDecisions.get(edge.id());
+                if (decision === 'hide') {
+                    edge.style('display', 'none');
+                } else {
+                    edge.style('display', 'element');
+                    if (decision === 'dim') {
+                        edge.addClass('dimmed');
+                    } else {
+                        edge.removeClass('dimmed');
+                    }
+                }
+            });
         }
 
         function syncMobileLayoutButtons(layoutName) {
@@ -1336,6 +1295,54 @@
             if (fitBtn) {
                 fitBtn.disabled = disabled || fitBusy;
             }
+        }
+
+
+        // Returns 'keep', 'dim', or 'hide' for a given edge in Flow mode
+        function classifyEdgeForFlow(sourceKind, targetKind) {
+            const ARCHITECTURAL = new Set([
+                'route', 'controller', 'service', 'action', 'helper',
+                'repository', 'model', 'job', 'listener', 'event', 'policy', 'middleware', 'rule', 'observer', 'resource', 'provider', 'console'
+            ]);
+            const DROP = new Set(['command', 'component', 'unknown', 'exception']);
+
+            if (ARCHITECTURAL.has(sourceKind) && ARCHITECTURAL.has(targetKind)) {
+                return 'keep'; // Both sides are architectural — this is a real workflow edge
+            }
+            if (DROP.has(targetKind)) {
+                return 'hide'; // Target is known low-signal — remove entirely
+            }
+            // Source is architectural but target is ambiguous — show dimmed
+            return 'dim';
+        }
+
+        function getFlowElements(allNodes, allEdges) {
+            // Collect which node IDs are kept or dimmed
+            const keptNodeIds = new Set();
+            const edgeDecisions = new Map(); // edgeId → 'keep' | 'dim' | 'hide'
+
+            const nodeById = new Map();
+            allNodes.forEach(n => nodeById.set(n.id, n));
+
+            for (const edge of allEdges) {
+                const srcNode = nodeById.get(edge.source);
+                const tgtNode = nodeById.get(edge.target);
+                const srcKind = srcNode ? srcNode.kind : 'unknown';
+                const tgtKind = tgtNode ? tgtNode.kind : 'unknown';
+                
+                const decision = classifyEdgeForFlow(srcKind, tgtKind);
+                edgeDecisions.set(edge.id, decision);
+                if (decision === 'keep') {
+                    keptNodeIds.add(edge.source);
+                    keptNodeIds.add(edge.target);
+                }
+            }
+
+            // Nodes with no kept edges are not shown in Flow mode
+            const visibleNodes = allNodes.filter(n => keptNodeIds.has(n.id));
+            const edges = allEdges.filter(e => edgeDecisions.get(e.id) !== 'hide');
+
+            return { nodes: visibleNodes, edges, edgeDecisions };
         }
 
         function runLayout(name, onDone = null) {
