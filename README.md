@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/DNDark12/laravel-logic-map/main/art/logo.png" alt="Laravel Logic Map Logo" width="600">
+</p>
+
 # Laravel Logic Map
 
 <p align="center">
