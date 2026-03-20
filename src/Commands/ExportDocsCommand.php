@@ -166,12 +166,14 @@ class ExportDocsCommand extends Command
 
                 // Apply max_workflows cap
                 if (count($workflowMeta) >= $maxWorkflows) {
-                    $this->output->progressFinish();
-                    $this->warn("Workflow cap ({$maxWorkflows}) reached — remaining entrypoints skipped.");
+                    $hitWorkflowCap = true;
                     break;
                 }
             }
             $this->output->progressFinish();
+            if (isset($hitWorkflowCap)) {
+                $this->warn("\nWorkflow cap ({$maxWorkflows}) reached — remaining entrypoints skipped.");
+            }
             $this->newLine();
         }
 
