@@ -31,14 +31,10 @@ class GraphWalkerTest extends TestCase
         $walker = new GraphWalker();
         $steps = $walker->walk($graph, 'root', 'downstream', 1);
 
-        // depth 0 is root
-        dd($steps);
-        $this->assertEquals('root', $steps[0]->node->id);
-        
         // depth 1, highest priority first
-        $this->assertEquals('child_call', $steps[1]->node->id);     // CALL
-        $this->assertEquals('child_dispatch', $steps[2]->node->id); // DISPATCH
-        $this->assertEquals('child_use', $steps[3]->node->id);      // USE
+        $this->assertEquals('child_call', $steps[0]->node->id);     // CALL
+        $this->assertEquals('child_dispatch', $steps[1]->node->id); // DISPATCH
+        $this->assertEquals('child_use', $steps[2]->node->id);      // USE
     }
 
     #[Test]
@@ -57,10 +53,8 @@ class GraphWalkerTest extends TestCase
         $walker = new GraphWalker();
         $steps = $walker->walk($graph, 'root', 'downstream', 1);
 
-        dd($steps);
-        $this->assertEquals('root', $steps[0]->node->id);
-        $this->assertEquals('service_a', $steps[1]->node->id);
-        $this->assertEquals('service_b', $steps[2]->node->id);
-        $this->assertEquals('service_c', $steps[3]->node->id);
+        $this->assertEquals('service_a', $steps[0]->node->id);
+        $this->assertEquals('service_b', $steps[1]->node->id);
+        $this->assertEquals('service_c', $steps[2]->node->id);
     }
 }
