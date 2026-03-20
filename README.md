@@ -53,15 +53,27 @@ php artisan logic-map:clear-cache    # Clear cached snapshots
 
 | Key | Action |
 | --- | --- |
-| `1`-`4` | Switch Layouts (Dagre, Force, LR, Compact) |
+| `1` | Graph Mode (Full map) |
+| `2` | Flow Mode (Request paths only) |
+| `3` | Risk Mode (Audit hotspots) |
+| `4` | Zones Mode (High-level module boundaries) |
 | `F` | Fit graph to view |
 | `S` | SubGraph mode (on selected node) |
 | `H` | Toggle Complexity Heatmap |
 | `M` | Toggle Module Explorer |
 | `T` | Cycle Themes |
-| `⌘K` | Focus search |
-| `Esc` | Close panel / Exit SubGraph |
+| `⌘K`| Focus search |
+| `Esc`| Close panel / Exit SubGraph |
 | `?` | Show shortcuts modal |
+
+## 📊 View Modes
+
+Laravel Logic Map provides 4 distinct semantic view modes to help answer different architectural questions:
+
+1. **Graph Mode (`1`)**: Full dependency map. Shows all nodes and all edges perfectly as parsed.
+2. **Flow Mode (`2`)**: Workflow paths. Hides utility classes/enums and drops messy edges (like simple model imports) to visualize how requests actually travel through code.
+3. **Risk Mode (`3`)**: Hotspot audit. Isolates the top 30% most coupled & complex nodes and expands their 1-hop context.
+4. **Zones Mode (`4`)**: Module overview. Aggregates all nodes into high-level logical "supernodes" per module. Double-click a zone to instantly isolate it and see its internal Flow.
 
 ## Requirements
 

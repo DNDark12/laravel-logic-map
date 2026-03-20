@@ -2,6 +2,7 @@
 
 namespace dndark\LogicMap\Analysis\Support;
 
+use Node\Stmt\ClassMethod;
 use PhpParser\Comment\Doc;
 use PhpParser\Node;
 
@@ -375,7 +376,7 @@ class IntentExtractor
             return $node->value;
         }
 
-        if ($node instanceof Node\Scalar\Encapsed) {
+        if ($node instanceof Node\Scalar\InterpolatedString) {
             $parts = [];
             foreach ($node->parts as $part) {
                 if ($part instanceof Node\InterpolatedStringPart) {

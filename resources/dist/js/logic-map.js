@@ -26,7 +26,7 @@
         // Kind display order for orphan groups
         const KIND_ORDER = ['route', 'controller', 'middleware', 'action', 'service', 'job', 'event', 'listener', 'observer', 'repository', 'model', 'policy', 'rule', 'resource', 'provider', 'console', 'command', 'helper', 'exception', 'component', 'unknown'];
 
-        let currentLayout = 'dagre';
+        let currentLayout = 'graph';
         let allNodesData = [];
         let allEdgesData = [];
         let sgOriginalElements = null;
@@ -127,7 +127,7 @@
                     selector: 'node', style: {
                         'background-color': tokens.nodeDefaultBg, 'label': 'data(label)', 'color': tokens.nodeDefaultText,
                         'font-size': '11px', 'font-family': 'system-ui,-apple-system,sans-serif',
-                        'font-weight': '600', 'text-valign': 'center', 'text-halign': 'center',
+                        'font-weight': 'bold', 'text-valign': 'center', 'text-halign': 'center',
                         'border-width': 1, 'border-color': tokens.nodeDefaultBorder, 'padding': '10px',
                         'shape': 'round-rectangle', 'width': '160px', 'height': '55px',
                         'text-max-width': '150px', 'text-wrap': 'wrap', 'line-height': 1.2,
@@ -138,17 +138,47 @@
                 { selector: 'node[risk="high"]', style: { 'border-color': tokens.riskColors.high, 'border-width': 2 } },
                 { selector: 'node[risk="medium"]', style: { 'border-color': tokens.riskColors.medium, 'border-width': 1.5 } },
 
-                { selector: 'node.highlighted', style: { 'border-width': 3, 'border-color': tokens.accent, 'z-index': 999 } },
-                { selector: 'node.neighbor', style: { 'border-width': 2, 'border-color': tokens.edge.highlight } },
-                { selector: 'node.dimmed', style: { 'opacity': 0.15, 'events': 'no' } },
+                { 
+                    selector: 'node.highlighted', 
+                    style: { 
+                        'border-width': 4, 
+                        'border-color': tokens.accent, 
+                        'underlay-color': tokens.accent,
+                        'underlay-padding': 10,
+                        'underlay-opacity': 0.35,
+                        'z-index': 999 
+                    } 
+                },
+                { 
+                    selector: 'node.neighbor', 
+                    style: { 
+                        'border-width': 3, 
+                        'border-color': tokens.edge.highlight,
+                        'underlay-color': tokens.edge.highlight,
+                        'underlay-padding': 5,
+                        'underlay-opacity': 0.15,
+                        'z-index': 998
+                    } 
+                },
+                { selector: 'node.dimmed', style: { 'opacity': 0.08, 'events': 'no' } },
                 { selector: 'node.module-focus', style: { 'border-width': 3, 'border-color': tokens.edge.highlight, 'z-index': 998 } },
                 {
-                    selector: 'edge', style: {
+                    selector: 'edge',
+                    style: {
+                        'curve-style': 'bezier',
                         'width': 1.5,
                         'line-color': tokens.edge.base,
                         'target-arrow-color': tokens.edge.base,
-                        'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
-                        'curve-style': 'bezier'
+                        'target-arrow-shape': 'triangle',
+                        'arrow-scale': 0.8
+                    }
+                },
+                {
+                    selector: 'edge:loop',
+                    style: {
+                        'curve-style': 'bezier',
+                        'loop-direction': '-45deg',
+                        'loop-sweep': '90deg'
                     }
                 },
                 { selector: 'edge[type="route_to_controller"]', style: { 'line-color': tokens.edge.route, 'target-arrow-color': tokens.edge.route } },
@@ -156,14 +186,19 @@
                 { selector: 'edge[type="use"]', style: { 'line-color': tokens.edge.use, 'target-arrow-color': tokens.edge.use, 'line-style': 'dashed' } },
                 {
                     selector: 'edge.highlighted', style: {
-                        'width': 2.5, 'line-color': tokens.edge.highlight, 'target-arrow-color': tokens.edge.highlight,
-                        'z-index': 999, 'line-style': 'dashed', 'line-dash-pattern': [8, 4], 'line-dash-offset': 0
+                        'width': 3.5, 'line-color': tokens.edge.highlight, 'target-arrow-color': tokens.edge.highlight,
+                        'z-index': 999, 'line-style': 'solid'
                     }
                 },
                 { selector: 'edge.highlighted[type="route_to_controller"]', style: { 'line-color': tokens.edge.route, 'target-arrow-color': tokens.edge.route } },
                 { selector: 'edge.highlighted[type="call"]', style: { 'line-color': tokens.edge.call, 'target-arrow-color': tokens.edge.call } },
                 { selector: 'edge.highlighted[type="use"]', style: { 'line-color': tokens.edge.use, 'target-arrow-color': tokens.edge.use } },
-                { selector: 'edge.dimmed', style: { 'opacity': 0.08, 'events': 'no' } },
+                { selector: 'edge.dimmed', style: { 'opacity': 0.05, 'events': 'no' } },
+                // Risk mode: primary hotspots vs expanded context nodes
+                { selector: 'node.risk-primary', style: { 'opacity': 1, 'border-style': 'solid' } },
+                { selector: 'node.risk-context', style: { 'opacity': 0.6, 'border-style': 'dashed' } },
+                // Zones mode: zone supernode style
+                { selector: 'node[kind="zone"]', style: { 'width': '180px', 'height': '70px', 'font-size': '13px', 'font-weight': 'bold', 'border-width': 2 } },
             ];
 
             Object.entries(tokens.kindColors).forEach(([kind, colors]) => {
@@ -244,6 +279,486 @@
             const clamped = Math.max(0, Math.min(1, ratio));
             const idx = Math.floor((sorted.length - 1) * clamped);
             return sorted[idx];
+        }
+
+        /* ────────────────────────────────────
+           Heatmap toggle visibility
+        ──────────────────────────────────── */
+        function syncHeatmapToggleVisibility() {
+            const btn = document.getElementById('heatmap-toggle');
+            if (!btn) return;
+            // In Risk mode, heat is always-on and the toggle has no meaningful effect
+            btn.style.display = (currentLayout === 'risk') ? 'none' : '';
+        }
+
+        /* ────────────────────────────────────
+           State bridge: onModeSwitch
+        ──────────────────────────────────── */
+        function onModeSwitch(fromMode, toMode) {
+            if (fromMode === toMode) return;
+
+            // 1. Capture state to persist
+            const persistedNodeId = activePanelNodeId;
+            const persistedPanelState = panelState;
+            const searchInput = document.getElementById('si');
+            const persistedSearchQuery = (searchInput ? searchInput.value : '') || '';
+
+            // 2. Reset transient state
+            cy.elements().removeClass('highlighted neighbor dimmed module-focus');
+            cy.elements().removeClass('risk-primary risk-context');
+
+            // 3. Store for post-layout restore (used in runLayout's layoutstop callback)
+            window._modeSwitchRestore = {
+                nodeId: persistedNodeId,
+                panelState: persistedPanelState,
+                searchQuery: persistedSearchQuery,
+            };
+        }
+
+        /* ────────────────────────────────────
+           FLOW MODE — Edge classification + filter
+        ──────────────────────────────────── */
+        // Returns 'keep', 'dim', or 'hide' for a given edge in Flow mode
+        function classifyEdgeForFlow(sourceKind, targetKind) {
+            const ARCHITECTURAL = new Set([
+                'route', 'controller', 'service',
+                'repository', 'model', 'job', 'listener', 'event'
+            ]);
+            const DROP = new Set(['command', 'component', 'unknown']);
+
+            if (ARCHITECTURAL.has(sourceKind) && ARCHITECTURAL.has(targetKind)) {
+                return 'keep'; // Both sides are architectural — real workflow edge
+            }
+            if (DROP.has(targetKind)) {
+                return 'hide'; // Target is known low-signal — remove entirely
+            }
+            // Source is architectural but target is ambiguous — show dimmed
+            return 'dim';
+        }
+
+        // Look up kind for a node id from the cy graph
+        function getNodeKind(nodeId) {
+            const n = cy.getElementById(nodeId);
+            return n && n.length ? (n.data('kind') || 'unknown') : 'unknown';
+        }
+
+        // Returns { keptNodeIds, edgeDecisions } for Flow mode filtering
+        function getFlowElements() {
+            const keptNodeIds = new Set();
+            const edgeDecisions = new Map(); // edgeId → 'keep' | 'dim' | 'hide'
+
+            cy.edges().forEach(edge => {
+                const srcKind = getNodeKind(edge.data('source'));
+                const tgtKind = getNodeKind(edge.data('target'));
+                const decision = classifyEdgeForFlow(srcKind, tgtKind);
+                edgeDecisions.set(edge.id(), decision);
+                if (decision === 'keep') {
+                    keptNodeIds.add(edge.data('source'));
+                    keptNodeIds.add(edge.data('target'));
+                }
+            });
+
+            return { keptNodeIds, edgeDecisions };
+        }
+
+        // Apply Flow mode edge visuals after layout
+        function applyFlowModeVisuals() {
+            const { keptNodeIds, edgeDecisions } = getFlowElements();
+
+            cy.nodes().forEach(n => {
+                if (n.data('_groupNode') || n.data('_orphan')) return;
+                if (!keptNodeIds.has(n.id()) && !sgMode) {
+                    n.style('display', 'none');
+                } else {
+                    n.style('display', 'element');
+                }
+            });
+
+            // Apply edge visuals
+            cy.edges().forEach(edge => {
+                const decision = edgeDecisions.get(edge.id());
+                if (decision === 'hide') {
+                    edge.style('display', 'none');
+                } else {
+                    edge.style('display', 'element');
+                    if (decision === 'dim') {
+                        edge.addClass('dimmed');
+                    } else {
+                        edge.removeClass('dimmed');
+                    }
+                }
+            });
+        }
+
+        // Restore all element visibility (used when leaving Flow/Risk/Zones modes)
+        function restoreAllElementVisibility() {
+            cy.elements().style('display', 'element');
+            cy.edges().removeClass('dimmed');
+        }
+
+        /* ────────────────────────────────────
+           RISK MODE — Percentile + Neighborhood
+        ──────────────────────────────────── */
+        // Given a sorted-desc array of { node, score }, return value at percentile
+        function percentileScore(sortedDesc, ratio) {
+            if (!sortedDesc.length) return 0;
+            const idx = Math.floor(sortedDesc.length * (1 - ratio));
+            return sortedDesc[Math.min(idx, sortedDesc.length - 1)].score;
+        }
+
+        // Returns the top-N nodes by heat_raw score with a guard for small datasets
+        function buildRiskNodeSet(allCyNodes) {
+            const scores = [];
+            allCyNodes.forEach(n => {
+                if (n.data('_groupNode')) return;
+                scores.push({ node: n, score: computeHeatRaw(n) });
+            });
+            scores.sort((a, b) => b.score - a.score);
+
+            const threshold70 = percentileScore(scores, 0.70); // top 30%
+            const minCount = Math.max(8, Math.floor(scores.length * 0.15));
+
+            let primary = scores.filter(s => s.score >= threshold70).map(s => s.node);
+
+            // Guard: if dataset is small or unusually clean, lower threshold
+            if (primary.length < minCount) {
+                const threshold50 = percentileScore(scores, 0.50);
+                primary = scores.filter(s => s.score >= threshold50).map(s => s.node);
+            }
+
+            return primary;
+        }
+
+        // Returns both in- and out-neighbor IDs for a node
+        function getDirectNeighborIds(nodeId, allCyEdges) {
+            const ids = new Set();
+            allCyEdges.forEach(edge => {
+                if (edge.data('source') === nodeId) ids.add(edge.data('target'));
+                if (edge.data('target') === nodeId) ids.add(edge.data('source'));
+            });
+            return ids;
+        }
+
+        // Expand primary risk nodes by 1-hop, capped to prevent fan-out bomb
+        function expandRiskNeighborhood(primaryNodes, allCyEdges, allCyNodes) {
+            const ARCHITECTURAL = new Set([
+                'route', 'controller', 'service',
+                'repository', 'model', 'job', 'listener', 'event'
+            ]);
+            const CAP = Math.max(5, Math.ceil(primaryNodes.length * 0.30));
+            const primaryIds = new Set(primaryNodes.map(n => n.id()));
+            const nodeById = new Map();
+            allCyNodes.forEach(n => nodeById.set(n.id(), n));
+
+            const candidates = [];
+            primaryNodes.forEach(node => {
+                const neighborIds = getDirectNeighborIds(node.id(), allCyEdges);
+                neighborIds.forEach(nId => {
+                    if (primaryIds.has(nId)) return;
+                    const neighbor = nodeById.get(nId);
+                    if (!neighbor || neighbor.data('_groupNode')) return;
+                    if (!ARCHITECTURAL.has(neighbor.data('kind'))) return;
+                    candidates.push({ node: neighbor, score: computeHeatRaw(neighbor) });
+                });
+            });
+
+            // De-duplicate and take highest-scoring up to CAP
+            const seen = new Set();
+            const unique = candidates
+                .filter(c => { if (seen.has(c.node.id())) return false; seen.add(c.node.id()); return true; })
+                .sort((a, b) => b.score - a.score)
+                .slice(0, CAP);
+
+            return { primary: primaryNodes, context: unique.map(c => c.node) };
+        }
+
+        // Apply Risk mode visuals — show/hide nodes, tag primary vs context
+        function applyRiskModeVisuals() {
+            const allCyNodes = cy.nodes().filter(n => !n.data('_groupNode') && !n.data('_orphan') && !n.data('_zoneNode'));
+            const allCyEdges = cy.edges();
+
+            const primaryNodes = buildRiskNodeSet(allCyNodes);
+            const { primary, context } = expandRiskNeighborhood(primaryNodes, allCyEdges, allCyNodes);
+            const primaryIds = new Set(primary.map(n => n.id()));
+            const contextIds = new Set(context.map(n => n.id()));
+            const visibleIds = new Set([...primaryIds, ...contextIds]);
+
+            // Hide nodes not in scope
+            cy.nodes().forEach(n => {
+                if (n.data('_groupNode')) return;
+                const isOrphan = n.data('_orphan');
+                if (isOrphan) {
+                    // Critical/high orphans get their own isolated row (already positioned)
+                    const riskOk = n.data('risk') === 'critical' || n.data('risk') === 'high';
+                    n.style('display', riskOk ? 'element' : 'none');
+                    return;
+                }
+                n.style('display', visibleIds.has(n.id()) ? 'element' : 'none');
+            });
+
+            // Tag classes for visual distinction
+            cy.nodes().forEach(n => {
+                n.removeClass('risk-primary risk-context');
+                if (primaryIds.has(n.id())) n.addClass('risk-primary');
+                else if (contextIds.has(n.id())) n.addClass('risk-context');
+            });
+
+            // Hide edges to hidden nodes
+            cy.edges().forEach(edge => {
+                const src = edge.source(), tgt = edge.target();
+                const srcVisible = visibleIds.has(src.id());
+                const tgtVisible = visibleIds.has(tgt.id());
+                edge.style('display', (srcVisible && tgtVisible) ? 'element' : 'none');
+            });
+        }
+
+        /* ────────────────────────────────────
+           ZONES MODE — Transform pipeline
+        ──────────────────────────────────── */
+        // State for zones: cache so we can restore on exit
+        let _zonesOriginalElements = null;
+
+        function inferZone(cyNode) {
+            // Priority 1: explicit module field
+            const mod = cyNode.data('module');
+            if (mod && mod.trim() !== '') return mod.trim();
+
+            // Priority 2: namespace prefix from node id
+            // Node IDs follow: "class:App\\Orders\\OrderService"
+            const id = cyNode.id();
+            const match = id.match(/App\\([^\\]+)/i);
+            if (match) return match[1];
+
+            // Priority 3: kind-based grouping
+            const kindZoneMap = {
+                route: 'Routing',
+                controller: 'Http',
+                command: 'Console',
+            };
+            const kind = cyNode.data('kind');
+            if (kindZoneMap[kind]) return kindZoneMap[kind];
+
+            return 'Shared';
+        }
+
+        function buildZoneAssignments(allCyNodes) {
+            // Step 1: assign raw zones
+            const nodeToZone = new Map();
+            allCyNodes.forEach(n => nodeToZone.set(n.id(), inferZone(n)));
+
+            // Step 2: count zone sizes
+            const zoneCounts = {};
+            for (const z of nodeToZone.values()) {
+                zoneCounts[z] = (zoneCounts[z] || 0) + 1;
+            }
+
+            // Step 3: adaptive minimum zone size
+            const MIN_ZONE = Math.max(2, Math.floor(allCyNodes.length * 0.04));
+
+            // Step 4: merge small zones into 'Other'; never merge 'Shared'
+            const smallZones = new Set(
+                Object.entries(zoneCounts)
+                    .filter(([z, c]) => c < MIN_ZONE && z !== 'Shared')
+                    .map(([z]) => z)
+            );
+            for (const [id, zone] of nodeToZone) {
+                if (smallZones.has(zone)) nodeToZone.set(id, 'Other');
+            }
+
+            return nodeToZone;
+        }
+
+        function worstRisk(current, incoming) {
+            const order = ['healthy', 'low', 'medium', 'high', 'critical'];
+            const ci = order.indexOf(current);
+            const ii = order.indexOf(incoming);
+            return ii > ci ? incoming : current;
+        }
+
+        function buildSupernodes(allCyNodes, nodeToZone) {
+            const zones = {};
+            allCyNodes.forEach(node => {
+                const zone = nodeToZone.get(node.id());
+                if (!zones[zone]) {
+                    zones[zone] = {
+                        id: `zone:${zone}`,
+                        label: zone,
+                        count: 0,
+                        childIds: [],
+                        maxRisk: 'healthy',
+                        totalHeat: 0,
+                    };
+                }
+                zones[zone].count++;
+                zones[zone].childIds.push(node.id());
+                zones[zone].totalHeat += computeHeatRaw(node);
+                zones[zone].maxRisk = worstRisk(zones[zone].maxRisk, node.data('risk') || 'healthy');
+            });
+
+            return Object.values(zones).map(z => ({
+                group: 'nodes',
+                data: {
+                    id: z.id,
+                    label: `${z.label} (${z.count})`,
+                    kind: 'zone',
+                    risk: z.maxRisk,
+                    _zoneNode: true,
+                    _zoneChildIds: z.childIds,
+                    _zoneLabel: z.label,
+                    _totalHeat: z.totalHeat,
+                }
+            }));
+        }
+
+        function buildZoneEdges(allCyEdges, nodeToZone) {
+            const edgeCounts = {}; // "zoneA→zoneB" → count
+            allCyEdges.forEach(edge => {
+                const srcZone = nodeToZone.get(edge.data('source'));
+                const tgtZone = nodeToZone.get(edge.data('target'));
+                if (!srcZone || !tgtZone || srcZone === tgtZone) return; // skip intra-zone
+                const key = `${srcZone}→${tgtZone}`;
+                edgeCounts[key] = (edgeCounts[key] || 0) + 1;
+            });
+
+            return Object.entries(edgeCounts).map(([key, count]) => {
+                const [src, tgt] = key.split('→');
+                return {
+                    group: 'edges',
+                    data: {
+                        id: `zone-edge:${key}`,
+                        source: `zone:${src}`,
+                        target: `zone:${tgt}`,
+                        label: count > 1 ? `${count}` : '',
+                        type: 'zone_link',
+                        _edgeCount: count,
+                    }
+                };
+            });
+        }
+
+        function checkZoneQuality(allCyNodes, nodeToZone) {
+            const UNNAMED = new Set(['Shared', 'Other']);
+            let namedCount = 0;
+            allCyNodes.forEach(n => {
+                if (!UNNAMED.has(nodeToZone.get(n.id()))) namedCount++;
+            });
+            const quality = namedCount / Math.max(1, allCyNodes.length);
+            if (quality < 0.60) {
+                showZoneWarning(
+                    `Zone grouping covers only ${Math.round(quality * 100)}% of nodes. ` +
+                    `Consider adding module metadata or using Graph or Flow mode.`
+                );
+            }
+        }
+
+        let _zoneWarningEl = null;
+        function showZoneWarning(message) {
+            if (_zoneWarningEl) _zoneWarningEl.remove();
+            const banner = document.createElement('div');
+            banner.style.cssText = `position:fixed;top:52px;left:50%;transform:translateX(-50%);` +
+                `background:rgba(234,179,8,.15);border:1px solid #eab308;padding:7px 14px;` +
+                `border-radius:6px;font-size:10px;color:#eab308;z-index:25;max-width:420px;` +
+                `display:flex;align-items:center;gap:8px;font-family:inherit;`;
+            banner.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>` +
+                `<span>${message}</span>` +
+                `<button style="margin-left:auto;background:none;border:none;cursor:pointer;color:#eab308;font-size:14px;padding:0 4px;" onclick="this.parentNode.remove()">×</button>`;
+            document.body.appendChild(banner);
+            _zoneWarningEl = banner;
+            setTimeout(() => { if (banner.parentNode) banner.remove(); }, 10000);
+        }
+
+        function dismissZoneWarning() {
+            if (_zoneWarningEl) { _zoneWarningEl.remove(); _zoneWarningEl = null; }
+        }
+
+        // Build and switch into Zones transform: replace cy elements with supernodes
+        function applyZonesMode() {
+            const allCyNodes = cy.nodes().filter(n => !n.data('_groupNode') && !n.data('_zoneNode'));
+            const allCyEdges = cy.edges();
+
+            if (!allCyNodes.length) return;
+
+            // Save original elements if not already saved (zones re-entry)
+            if (!_zonesOriginalElements) {
+                _zonesOriginalElements = cy.elements().jsons();
+            }
+
+            const nodeToZone = buildZoneAssignments(allCyNodes);
+            const supernodes = buildSupernodes(allCyNodes, nodeToZone);
+            const zoneEdges = buildZoneEdges(allCyEdges, nodeToZone);
+
+            // Replace cy with zone elements
+            cy.startBatch();
+            cy.elements().remove();
+            supernodes.forEach(n => cy.add(n));
+            zoneEdges.forEach(e => {
+                try { cy.add(e); } catch (_) { /* skip duplicate */ }
+            });
+            cy.endBatch();
+
+            // Bind zone tap handler
+            cy.off('tap', 'node[kind="zone"]'); // avoid double-binding
+            cy.on('tap', 'node[kind="zone"]', function(evt) {
+                openZoneDrillDown(evt.target);
+            });
+
+            // Quality check
+            checkZoneQuality(allCyNodes, nodeToZone);
+        }
+
+        // Restore original elements after leaving Zones mode
+        function restoreFromZonesMode() {
+            if (!_zonesOriginalElements) return;
+            dismissZoneWarning();
+            cy.off('tap', 'node[kind="zone"]');
+            cy.startBatch();
+            cy.elements().remove();
+            const nodes = _zonesOriginalElements.filter(el => el.group === 'nodes');
+            const edges = _zonesOriginalElements.filter(el => el.group === 'edges');
+            nodes.forEach(el => cy.add(el));
+            edges.forEach(el => cy.add(el));
+            cy.endBatch();
+            _zonesOriginalElements = null;
+        }
+
+        // Drill into a zone — use existing SubGraph enter with zone children as seed
+        function openZoneDrillDown(zoneNode) {
+            const childIds = zoneNode.data('_zoneChildIds') || [];
+            const zoneLabel = zoneNode.data('_zoneLabel') || 'Zone';
+            if (!childIds.length) return;
+
+            // Restore original elements first, then enter subgraph with firstChildId as seed
+            restoreFromZonesMode();
+
+            // Re-add all original elements then scope to childIds
+            const allElements = cy.elements().jsons();
+            if (!sgMode) {
+                sgOriginalElements = allElements;
+            }
+            sgMode = true;
+            sgLastSeed = childIds[0];
+
+            separateOrphanNodes();
+
+            const keepIds = new Set(childIds);
+            cy.startBatch();
+            cy.nodes().forEach(n => {
+                if (n.data('_groupNode')) return;
+                if (!keepIds.has(n.id())) n.remove();
+            });
+            cy.edges().forEach(e => {
+                if (!e.source().length || !e.target().length) e.remove();
+            });
+            cy.endBatch();
+
+            _sgShowUI(`Zone: ${zoneLabel}`);
+
+            // Apply flow filter within zone for best insights
+            runLayout('flow', () => {
+                applyFlowModeVisuals();
+                const fit = getDynamicViewportPadding(40, false);
+                cy.animate({ fit: { padding: fit }, duration: 400 });
+            });
         }
 
         function getHeatmapNodes() {
@@ -787,9 +1302,14 @@
         ──────────────────────────────────── */
         function getLayoutOpts(name) {
             switch (name) {
-                case 'dagre': return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20 };
-                case 'cose': return { name: 'cose', idealEdgeLength: 100, nodeRepulsion: 45000, gravity: 0.1, numIter: 1000, initialTemp: 200, coolingFactor: 0.99, nodeDimensionsIncludeLabels: true, componentSpacing: 120, animate: true, animationDuration: 500 };
-                case 'lr': return { name: 'dagre', rankDir: 'LR', nodeSep: 50, rankSep: 100, edgeSep: 20 };
+                case 'graph': return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20 };
+                case 'flow':  return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20 };
+                case 'risk':  return { name: 'dagre', rankDir: 'LR', nodeSep: 40, rankSep: 80 };
+                case 'zones': return { name: 'dagre', rankDir: 'LR', nodeSep: 60, rankSep: 100, edgeSep: 20 };
+                // Legacy aliases — kept for backward-compat if any external code triggers them
+                case 'dagre':   return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100, edgeSep: 20 };
+                case 'cose':    return { name: 'cose', idealEdgeLength: 100, nodeRepulsion: 45000, gravity: 0.1, numIter: 1000, initialTemp: 200, coolingFactor: 0.99, nodeDimensionsIncludeLabels: true, componentSpacing: 120, animate: true, animationDuration: 500 };
+                case 'lr':      return { name: 'dagre', rankDir: 'LR', nodeSep: 50, rankSep: 100, edgeSep: 20 };
                 case 'compact': return { name: 'dagre', rankDir: 'LR', nodeSep: 40, rankSep: 60, edgeSep: 10, padding: 30, animate: true, animationDuration: 500 };
                 default: return { name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 100 };
             }
@@ -802,9 +1322,16 @@
         }
 
         function setToolbarActionBusy(disabled) {
-            document.querySelectorAll('#layout-grp .seg-btn').forEach(btn => {
-                btn.disabled = disabled;
+            document.querySelectorAll('#layout-grp .seg-btn, #mobile-layout-list .mam-chip').forEach(btn => {
+                btn.disabled = disabled || sgMode;
             });
+            const snapTrigger = document.getElementById('snapshot-trigger');
+            if (snapTrigger) snapTrigger.disabled = disabled || sgMode;
+            
+            document.querySelectorAll('#mobile-snapshot-list .mam-action').forEach(btn => {
+                btn.disabled = disabled || sgMode;
+            });
+            
             const fitBtn = document.getElementById('fit-btn');
             if (fitBtn) {
                 fitBtn.disabled = disabled || fitBusy;
@@ -826,15 +1353,28 @@
                 return;
             }
 
+            // ── State bridge: capture persist state + reset transient ──
+            const previousLayout = currentLayout;
+            onModeSwitch(previousLayout, name);
+
             layoutBusy = true;
-            setToolbarActionBusy(true);
             currentLayout = name;
+            
+            // ── Restore full visibility unconditionally BEFORE any layout logic ──
+            restoreAllElementVisibility();
+            cy.nodes().removeClass('risk-primary risk-context');
+            
+            setToolbarActionBusy(true);
+
+            // ── Sync heatmap toggle visibility ──
+            syncHeatmapToggleVisibility();
+
+            // ── Update button active state ──
             const buttons = document.querySelectorAll('#layout-grp .seg-btn');
             buttons.forEach(b => {
                 const isActive = b.dataset.layout === name;
                 b.classList.toggle('active', isActive);
                 if (isActive) {
-                    // Update trigger UI
                     const triggerLabel = document.getElementById('layout-trigger-label');
                     const triggerIcon = document.getElementById('layout-trigger-icon');
                     if (triggerLabel) triggerLabel.textContent = b.querySelector('.btn-lbl')?.textContent || name;
@@ -846,25 +1386,103 @@
             });
             syncMobileLayoutButtons(name);
 
-            // Temporarily hide orphan nodes so dagre only arranges the connected graph.
-            // They will be repositioned manually after layout finishes.
-            cy.nodes().forEach(n => {
-                if (n.data('_orphan') && !n.data('_groupNode')) {
-                    n.style('display', 'none');
-                }
-            });
+            // ── ZONES MODE: transform pipeline (runs before layout) ──
+            if (name === 'zones') {
+                // Rebuild zone supernodes from current cy elements
+                applyZonesMode();
+            } else if (previousLayout === 'zones') {
+                // Leaving zones: restore original elements
+                restoreFromZonesMode();
+            }
+
+            // Always start from a clean slate of visibility + classes before applying mode-specific visuals
+            restoreAllElementVisibility();
+            cy.nodes().removeClass('risk-primary risk-context');
+
+            // ── FLOW PRE-FILTER ──
+            // Apply mode-specific visuals before Dagre runs, so it ignores hidden nodes/edges
+            if (name === 'flow') {
+                applyFlowModeVisuals();
+            }
+
+            // ── RISK MODE: Pre-sort elements array by heat_raw descending ──
+            // Dagre layout order is influenced by element insertion order.
+            if (name === 'risk') {
+                applyRiskModeVisuals(); // Hide nodes first, so only primary/context are processed
+                applyHeatmapMode();     // Heatmap always active in risk mode
+                
+                cy.startBatch();
+                const orderedNodes = cy.nodes().filter(n => !n.data('_groupNode') && !n.data('_orphan') && n.visible())
+                    .sort((a, b) => computeHeatRaw(b) - computeHeatRaw(a));
+                // Re-insert in sorted order so dagre receives them sorted by heat
+                const snapshots = orderedNodes.map(n => n.json());
+                orderedNodes.forEach(n => n.remove());
+                snapshots.forEach(snap => cy.add(snap));
+                cy.endBatch();
+            }
+
+            // ── Temporarily hide orphan nodes for clean Dagre arrangement ──
+            // (Zones mode has no orphans — only supernodes)
+            if (name !== 'zones') {
+                cy.nodes().forEach(n => {
+                    if (n.data('_orphan') && !n.data('_groupNode')) {
+                        n.style('display', 'none');
+                    }
+                });
+            }
 
             const layout = cy.layout(getLayoutOpts(name));
             layout.on('layoutstop', function () {
-                // Restore orphan visibility, then place them in kind-rows/cols
-                cy.nodes().forEach(n => {
-                    if (n.data('_orphan') && !n.data('_groupNode')) {
-                        n.style('display', 'element');
-                    }
-                });
-                positionOrphanGroups();
+                // Restore orphan visibility + positioning (skip in zones mode)
+                if (name !== 'zones') {
+                    cy.nodes().forEach(n => {
+                        if (n.data('_orphan') && !n.data('_groupNode')) {
+                            // Only restore visibility if the node shouldn't be hidden by a mode filter
+                            // Risk mode already handles its own orphan displaying logic in applyRiskModeVisuals
+                            if (name === 'risk') {
+                                const riskOk = n.data('risk') === 'critical' || n.data('risk') === 'high';
+                                n.style('display', riskOk ? 'element' : 'none');
+                            } else if (name === 'flow') {
+                                n.style('display', 'none'); // Flow mode doesn't show orphans
+                            } else {
+                                n.style('display', 'element'); // Graph mode
+                            }
+                        }
+                    });
+                    positionOrphanGroups();
+                }
+
+                if (name === 'graph') {
+                    applyHeatmapMode(); // restore heatmap state if was enabled
+                }
+
                 layoutBusy = false;
                 setToolbarActionBusy(false);
+
+                // ── fit + restore persisted state (state bridge post-layout) ──
+                cy.fit(undefined, 40);
+
+                const restore = window._modeSwitchRestore;
+                if (restore) {
+                    window._modeSwitchRestore = null;
+                    // Restore selected node if still visible in new mode
+                    if (restore.nodeId) {
+                        const targetNode = cy.getElementById(restore.nodeId);
+                        if (targetNode && targetNode.length && targetNode.visible()) {
+                            openPanel(targetNode.data(), restore.panelState || null);
+                        } else {
+                            window.closePanel && window.closePanel();
+                        }
+                    }
+                    // Restore search query
+                    if (restore.searchQuery) {
+                        const si = document.getElementById('si');
+                        if (si && !si.value) {
+                            si.value = restore.searchQuery;
+                            si.dispatchEvent(new Event('input'));
+                        }
+                    }
+                }
 
                 if (typeof onDone === 'function') {
                     onDone();
@@ -877,10 +1495,11 @@
                 }
             });
             layout.run();
-            
+
             // Close dropdown if in mobile mode
             document.querySelectorAll('.dropdown-grp').forEach(d => d.classList.remove('show'));
         }
+
 
         document.querySelectorAll('#layout-grp .seg-btn').forEach(btn => btn.addEventListener('click', () => runLayout(btn.dataset.layout)));
 
@@ -1365,10 +1984,19 @@
                 }
 
                 // Defer so the panel innerHTML is set first
-                window.requestAnimationFrame(() => {
-                    loadCiPreview(impactApiUrl, 'ci-impact-card', impactPageUrl, 'impact');
-                    loadCiPreview(traceApiUrl,  'ci-trace-card',  tracePageUrl,  'trace');
-                });
+                // 4. Fire CI Previews (if not a virtual zone node)
+                const isZoneNode = String(d.id).startsWith('zone:') || d._zoneNode;
+                
+                if (!isZoneNode) {
+                    window.requestAnimationFrame(() => {
+                        loadCiPreview(impactApiUrl, 'ci-impact-card', impactPageUrl, 'impact');
+                        loadCiPreview(traceApiUrl,  'ci-trace-card',  tracePageUrl,  'trace');
+                    });
+                } else {
+                    // Hide CI cards for zone nodes
+                    const ciPreviewCards = document.getElementById('ci-preview-cards');
+                    if (ciPreviewCards) ciPreviewCards.style.display = 'none';
+                }
             }
 
             document.getElementById('pbody').innerHTML = h;
@@ -1528,10 +2156,10 @@
                 if (e.key.toLowerCase() === 't') { e.preventDefault(); toggleThemePicker(); return; }
                 if (e.key.toLowerCase() === 'h') { e.preventDefault(); toggleHeatmap(); return; }
                 if (e.key.toLowerCase() === 'f') { e.preventDefault(); fitView(); return; }
-                if (e.key === '1') { e.preventDefault(); runLayout('dagre'); return; }
-                if (e.key === '2') { e.preventDefault(); runLayout('cose'); return; }
-                if (e.key === '3') { e.preventDefault(); runLayout('lr'); return; }
-                if (e.key === '4') { e.preventDefault(); runLayout('compact'); return; }
+                if (e.key === '1') { e.preventDefault(); runLayout('graph'); return; }
+                if (e.key === '2') { e.preventDefault(); runLayout('flow'); return; }
+                if (e.key === '3') { e.preventDefault(); runLayout('risk'); return; }
+                if (e.key === '4') { e.preventDefault(); runLayout('zones'); return; }
                 if (e.key === '?') { e.preventDefault(); const h = document.getElementById('kb-help'); if (h) h.style.display = h.style.display === 'flex' ? 'none' : 'flex'; return; }
                 if (e.key.toLowerCase() === 's') {
                     e.preventDefault();
@@ -1778,19 +2406,29 @@
         }
 
         window.enterSubGraph = function enterSubGraph(seedNodes) {
-            if (isSubgraphLocked()) return;
-            // Extract string ID immediately — cy collections become invalid after remove()
-            let seedId;
-            if (typeof seedNodes === 'string') {
-                seedId = seedNodes;
-            } else if (seedNodes && seedNodes.id && typeof seedNodes.id === 'function') {
-                seedId = seedNodes.id();                 // single cy node
-            } else if (seedNodes && seedNodes[0]) {
-                seedId = seedNodes[0].id();              // cy collection
-            }
-            if (!seedId) return;
+            if (!seedNodes) return;
 
-            // Store as string
+            let seeds = [];
+            if (typeof seedNodes === 'string') seeds = [seedNodes];
+            else if (seedNodes.length !== undefined) {
+                // Could be an array or a cytoscape collection
+                seedNodes.forEach(n => seeds.push(typeof n === 'string' ? n : n.id()));
+            } else if (seedNodes.id) {
+                seeds = [seedNodes.id()];
+            }
+
+            if (!seeds.length) return;
+            
+            // SECURITY/UX GUARD: Cannot run backend subgraph analysis on client-side Zone supernodes
+            if (seeds.some(id => String(id).startsWith('zone:'))) {
+                window.showWarning && window.showWarning('SubGraph API cannot be run on a generic Zone module. Double-click the zone to drill down instead.', 3000);
+                return;
+            }
+
+            if (isSubgraphLocked()) return;
+
+            // _loadSubgraph currently supports a single seed
+            const seedId = seeds[0];
             sgLastSeed = seedId;
 
             if (!sgMode) {
@@ -1838,14 +2476,24 @@
             sgLastSeed = null;
             _sgHideUI();
 
+            // If Zones drill-down created us, also clean up Zones transform state
+            if (_zonesOriginalElements) {
+                restoreFromZonesMode();
+            }
+
             if (sgOriginalElements) {
                 cy.startBatch();
                 cy.elements().remove();
-                sgOriginalElements.forEach(el => cy.add(el));
+                const nodes = sgOriginalElements.filter(el => el.group === 'nodes');
+                const edges = sgOriginalElements.filter(el => el.group === 'edges');
+                nodes.forEach(el => cy.add(el));
+                edges.forEach(el => cy.add(el));
                 cy.endBatch();
                 sgOriginalElements = null;
                 separateOrphanNodes();
-                runLayout(currentLayout, () => {
+                // Return to graph mode after zone drill-down; otherwise keep currentLayout
+                const returnLayout = currentLayout === 'zones' ? 'graph' : currentLayout;
+                runLayout(returnLayout, () => {
                     cy.animate({
                         fit: { padding: getDynamicViewportPadding(40, false) },
                         duration: 400
@@ -1916,7 +2564,7 @@
                 ? connected.boundingBox()
                 : { x1: 0, y1: 0, x2: 600, y2: 400 };
 
-            const isLR = (currentLayout === 'lr' || currentLayout === 'compact');
+            const isLR = (currentLayout === 'flow' || currentLayout === 'risk' || currentLayout === 'zones' || currentLayout === 'lr' || currentLayout === 'compact');
             const nodeW = 160, nodeH = 55;
             const gapX = 40, gapY = 30;   // gap between nodes
             const kindGap = 60;               // gap between kind groups
@@ -2460,7 +3108,7 @@
             setTimeout(() => {
                 // Force first render layout; without callback, runLayout short-circuits
                 // when currentLayout is already "dagre", causing all nodes to overlap at origin.
-                runLayout('dagre', () => { });
+                runLayout('graph', () => { });
                 const l = document.getElementById('loading');
                 l.style.opacity = '0'; setTimeout(() => l.style.display = 'none', 400);
             }, 100);

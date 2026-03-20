@@ -12,6 +12,7 @@ use dndark\LogicMap\Domain\Graph;
 use dndark\LogicMap\Domain\Node as DomainNode;
 use PhpParser\Node;
 use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitor;
 use PhpParser\NodeVisitorAbstract;
 
 class ClassMethodVisitor extends NodeVisitorAbstract
@@ -82,7 +83,7 @@ class ClassMethodVisitor extends NodeVisitorAbstract
 
             if (!$this->currentClass || $this->shouldSkipClass($this->currentClass)) {
                 $this->currentClass = null;
-                return NodeTraverser::DONT_TRAVERSE_CHILDREN;
+                return NodeVisitor::DONT_TRAVERSE_CHILDREN;
             }
 
             $this->processClass($node);

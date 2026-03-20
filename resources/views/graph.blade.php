@@ -93,21 +93,21 @@
             <svg class="exp-arr" viewBox="0 0 16 16"><polyline points="4 6 8 10 12 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         </button>
         <div class="seg-group" id="layout-grp">
-            <button class="seg-btn active" data-layout="dagre" title="Flow ↓ (1)">
+            <button class="seg-btn active" data-layout="graph" title="Graph — Full dependency graph. All node kinds, all edges. (1)">
                 <svg viewBox="0 0 16 16"><line x1="8" y1="1" x2="8" y2="7"/><polyline points="5,4 8,7 11,4"/><line x1="4" y1="9" x2="4" y2="15"/><line x1="8" y1="9" x2="8" y2="15"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
-                <span class="btn-lbl">Flow ↓</span>
+                <span class="btn-lbl">Graph</span>
             </button>
-            <button class="seg-btn" data-layout="cose" title="Force (2)">
-                <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="3" cy="3" r="1" fill="currentColor"/><circle cx="13" cy="3" r="1" fill="currentColor"/><circle cx="3" cy="13" r="1" fill="currentColor"/><circle cx="13" cy="13" r="1" fill="currentColor"/><line x1="8" y1="8" x2="3" y2="3"/><line x1="8" y1="8" x2="13" y2="3"/><line x1="8" y1="8" x2="3" y2="13"/><line x1="8" y1="8" x2="13" y2="13"/></svg>
-                <span class="btn-lbl">Force</span>
-            </button>
-            <button class="seg-btn" data-layout="lr" title="LR → (3)">
+            <button class="seg-btn" data-layout="flow" title="Flow — Workflow paths only. Hides utility edges, shows request flow. (2)">
                 <svg viewBox="0 0 16 16"><line x1="1" y1="8" x2="7" y2="8"/><polyline points="4,5 7,8 4,11"/><line x1="9" y1="4" x2="15" y2="4"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
-                <span class="btn-lbl">LR →</span>
+                <span class="btn-lbl">Flow</span>
             </button>
-            <button class="seg-btn" data-layout="compact" title="Compact (4)">
+            <button class="seg-btn" data-layout="risk" title="Risk — Hotspot view. Shows the most complex and coupled nodes. (3)">
+                <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="3" cy="3" r="1" fill="currentColor"/><circle cx="13" cy="3" r="1" fill="currentColor"/><circle cx="3" cy="13" r="1" fill="currentColor"/><circle cx="13" cy="13" r="1" fill="currentColor"/><line x1="8" y1="8" x2="3" y2="3"/><line x1="8" y1="8" x2="13" y2="3"/><line x1="8" y1="8" x2="3" y2="13"/><line x1="8" y1="8" x2="13" y2="13"/></svg>
+                <span class="btn-lbl">Risk</span>
+            </button>
+            <button class="seg-btn" data-layout="zones" title="Zones — Module overview. Groups nodes by logical area. (4)">
                 <svg viewBox="0 0 16 16"><rect x="1" y="1" width="5" height="4" rx="1"/><rect x="8" y="1" width="7" height="4" rx="1"/><rect x="1" y="7" width="7" height="4" rx="1"/><rect x="10" y="7" width="5" height="4" rx="1"/><rect x="4" y="13" width="8" height="2" rx="1"/></svg>
-                <span class="btn-lbl">Compact</span>
+                <span class="btn-lbl">Zones</span>
             </button>
         </div>
         <!-- Mobile Dropdown Clone -->
@@ -237,12 +237,12 @@
             </div>
 
             <div class="mam-sec">
-                <div class="mam-title">Layout</div>
+                <div class="mam-title">View Mode</div>
                 <div class="mam-row">
-                    <button class="mam-chip active" data-mobile-layout="dagre">Flow</button>
-                    <button class="mam-chip" data-mobile-layout="cose">Force</button>
-                    <button class="mam-chip" data-mobile-layout="lr">LR</button>
-                    <button class="mam-chip" data-mobile-layout="compact">Compact</button>
+                    <button class="mam-chip active" data-mobile-layout="graph">Graph</button>
+                    <button class="mam-chip" data-mobile-layout="flow">Flow</button>
+                    <button class="mam-chip" data-mobile-layout="risk">Risk</button>
+                    <button class="mam-chip" data-mobile-layout="zones">Zones</button>
                 </div>
             </div>
 
@@ -384,7 +384,7 @@
 <!-- ── Large Graph Warning ── -->
 <div id="lg-warning">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    Large graph (150+ nodes). Try Compact or SubGraph mode.
+    Large graph (150+ nodes). Try Zones for an overview, or SubGraph to focus on one area.
 </div>
 
 <!-- ── Legend (draggable + collapsible) ── -->
@@ -456,7 +456,10 @@
             </button>
         </div>
         <div class="kb-grid">
-            <kbd>1–4</kbd><span>Switch layouts</span>
+            <kbd>1</kbd><span>Graph — full dependency map (all nodes &amp; edges)</span>
+            <kbd>2</kbd><span>Flow — workflow paths (architectural edges only)</span>
+            <kbd>3</kbd><span>Risk — hotspot audit (top complexity nodes)</span>
+            <kbd>4</kbd><span>Zones — module overview (supernodes per area)</span>
             <kbd>F</kbd><span>Fit graph to view</span>
             <kbd>S</kbd><span>SubGraph — or click "Explore SubGraph" in panel</span>
             <kbd>M</kbd><span>Toggle Module Explorer</span>
