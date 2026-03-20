@@ -13,5 +13,15 @@ enum NodeKind: string
     case COMPONENT = 'component';
     case MODEL = 'model';
     case REPOSITORY = 'repository';
+    case ACTION = 'action';
+    case HELPER = 'helper';
+    case OBSERVER = 'observer';
+    case POLICY = 'policy';
+    case MIDDLEWARE = 'middleware';
+    case RULE = 'rule';
+    case EXCEPTION = 'exception';
+    case PROVIDER = 'provider';
+    case RESOURCE = 'resource';
+    case CONSOLE = 'console';
     case UNKNOWN = 'unknown';
 }

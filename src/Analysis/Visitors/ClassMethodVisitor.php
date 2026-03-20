@@ -444,6 +444,13 @@ class ClassMethodVisitor extends NodeVisitorAbstract
             NodeKind::EVENT,
             NodeKind::LISTENER,
             NodeKind::COMPONENT,
+            NodeKind::ACTION,
+            NodeKind::HELPER,
+            NodeKind::OBSERVER,
+            NodeKind::POLICY,
+            NodeKind::MIDDLEWARE,
+            NodeKind::RULE,
+            NodeKind::CONSOLE,
         ], true);
 
         if ($isBusinessFlowKind) {
@@ -530,11 +537,20 @@ class ClassMethodVisitor extends NodeVisitorAbstract
         // Check suffixes first (more specific)
         if (str_ends_with($className, 'Controller')) return NodeKind::CONTROLLER;
         if (str_ends_with($className, 'Service')) return NodeKind::SERVICE;
+        if (str_ends_with($className, 'Action')) return NodeKind::ACTION;
+        if (str_ends_with($className, 'Helper')) return NodeKind::HELPER;
         if (str_ends_with($className, 'Repository')) return NodeKind::REPOSITORY;
         if (str_ends_with($className, 'Job')) return NodeKind::JOB;
         if (str_ends_with($className, 'Event')) return NodeKind::EVENT;
         if (str_ends_with($className, 'Listener')) return NodeKind::LISTENER;
-        if (str_ends_with($className, 'Command')) return NodeKind::COMPONENT;
+        if (str_ends_with($className, 'Observer')) return NodeKind::OBSERVER;
+        if (str_ends_with($className, 'Policy')) return NodeKind::POLICY;
+        if (str_ends_with($className, 'Middleware')) return NodeKind::MIDDLEWARE;
+        if (str_ends_with($className, 'Rule')) return NodeKind::RULE;
+        if (str_ends_with($className, 'Exception')) return NodeKind::EXCEPTION;
+        if (str_ends_with($className, 'Provider')) return NodeKind::PROVIDER;
+        if (str_ends_with($className, 'Resource')) return NodeKind::RESOURCE;
+        if (str_ends_with($className, 'Command')) return NodeKind::CONSOLE;
         if (str_ends_with($className, 'Analyzer')) return NodeKind::COMPONENT;
         if (str_ends_with($className, 'Projector')) return NodeKind::COMPONENT;
         if (str_ends_with($className, 'Resolver')) return NodeKind::COMPONENT;
@@ -548,11 +564,21 @@ class ClassMethodVisitor extends NodeVisitorAbstract
         // Check namespace patterns
         if (str_contains($className, '\\Controllers\\')) return NodeKind::CONTROLLER;
         if (str_contains($className, '\\Services\\')) return NodeKind::SERVICE;
+        if (str_contains($className, '\\Actions\\')) return NodeKind::ACTION;
+        if (str_contains($className, '\\Helpers\\')) return NodeKind::HELPER;
         if (str_contains($className, '\\Repositories\\')) return NodeKind::REPOSITORY;
         if (str_contains($className, '\\Jobs\\')) return NodeKind::JOB;
         if (str_contains($className, '\\Events\\')) return NodeKind::EVENT;
         if (str_contains($className, '\\Listeners\\')) return NodeKind::LISTENER;
         if (str_contains($className, '\\Models\\')) return NodeKind::MODEL;
+        if (str_contains($className, '\\Observers\\')) return NodeKind::OBSERVER;
+        if (str_contains($className, '\\Policies\\')) return NodeKind::POLICY;
+        if (str_contains($className, '\\Middleware\\')) return NodeKind::MIDDLEWARE;
+        if (str_contains($className, '\\Rules\\')) return NodeKind::RULE;
+        if (str_contains($className, '\\Exceptions\\')) return NodeKind::EXCEPTION;
+        if (str_contains($className, '\\Providers\\')) return NodeKind::PROVIDER;
+        if (str_contains($className, '\\Resources\\')) return NodeKind::RESOURCE;
+        if (str_contains($className, '\\Console\\')) return NodeKind::CONSOLE;
         if (str_contains($className, '\\Analysis\\')) return NodeKind::COMPONENT;
         if (str_contains($className, '\\Projectors\\')) return NodeKind::COMPONENT;
         if (str_contains($className, '\\Support\\')) return NodeKind::COMPONENT;

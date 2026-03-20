@@ -18,11 +18,13 @@
             route: 'Routes', controller: 'Controllers', service: 'Services',
             repository: 'Repositories', model: 'Models', event: 'Events',
             job: 'Jobs', listener: 'Listeners', command: 'Commands',
-            component: 'Components', unknown: 'Other'
+            component: 'Components', 
+            action: 'Actions', helper: 'Helpers', observer: 'Observers', policy: 'Policies', middleware: 'Middleware', rule: 'Rules', exception: 'Exceptions', provider: 'Providers', resource: 'Resources', console: 'Console',
+            unknown: 'Other'
         };
 
         // Kind display order for orphan groups
-        const KIND_ORDER = ['route', 'controller', 'service', 'repository', 'model', 'event', 'job', 'listener', 'command', 'component', 'unknown'];
+        const KIND_ORDER = ['route', 'controller', 'middleware', 'action', 'service', 'job', 'event', 'listener', 'observer', 'repository', 'model', 'policy', 'rule', 'resource', 'provider', 'console', 'command', 'helper', 'exception', 'component', 'unknown'];
 
         let currentLayout = 'dagre';
         let allNodesData = [];
@@ -76,6 +78,16 @@
                     listener: { bg: cssVar('--kind-listener-bg', '#cffafe'), bd: cssVar('--kind-listener-bd', '#06b6d4') },
                     command: { bg: cssVar('--kind-command-bg', '#e0e7ff'), bd: cssVar('--kind-command-bd', '#6366f1') },
                     component: { bg: cssVar('--kind-component-bg', '#fef3c7'), bd: cssVar('--kind-component-bd', '#eab308') },
+                    action: { bg: cssVar('--kind-service-bg', '#fef3c7'), bd: cssVar('--kind-service-bd', '#f59e0b') },
+                    helper: { bg: cssVar('--kind-unknown-bg', '#f3f4f6'), bd: cssVar('--kind-unknown-bd', '#6b7280') },
+                    observer: { bg: cssVar('--kind-event-bg', '#cffafe'), bd: cssVar('--kind-event-bd', '#06b6d4') },
+                    policy: { bg: cssVar('--kind-controller-bg', '#dbeafe'), bd: cssVar('--kind-controller-bd', '#3b82f6') },
+                    middleware: { bg: cssVar('--kind-controller-bg', '#dbeafe'), bd: cssVar('--kind-controller-bd', '#3b82f6') },
+                    rule: { bg: cssVar('--kind-repository-bg', '#f3e8ff'), bd: cssVar('--kind-repository-bd', '#a855f7') },
+                    exception: { bg: cssVar('--kind-model-bg', '#fce7f3'), bd: cssVar('--kind-model-bd', '#ec4899') },
+                    provider: { bg: cssVar('--kind-component-bg', '#fef3c7'), bd: cssVar('--kind-component-bd', '#eab308') },
+                    resource: { bg: cssVar('--kind-controller-bg', '#dbeafe'), bd: cssVar('--kind-controller-bd', '#3b82f6') },
+                    console: { bg: cssVar('--kind-command-bg', '#e0e7ff'), bd: cssVar('--kind-command-bd', '#6366f1') },
                     unknown: { bg: cssVar('--kind-unknown-bg', '#f3f4f6'), bd: cssVar('--kind-unknown-bd', '#6b7280') }
                 },
                 riskColors: {
