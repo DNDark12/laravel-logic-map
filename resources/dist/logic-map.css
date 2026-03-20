@@ -1127,13 +1127,13 @@ html {
     padding: 10px 14px;
     border-radius: 999px;
     border: 1px solid var(--bdr2);
-    background: rgba(31, 38, 53, .94);
+    background: var(--bg-panel);
     color: var(--tx);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: .02em;
     cursor: pointer;
-    box-shadow: 0 16px 42px rgba(5, 10, 20, .3);
+    box-shadow: 0 16px 42px rgba(5, 10, 20, .18);
     backdrop-filter: blur(10px);
 }
 
@@ -2795,6 +2795,34 @@ kbd {
     border-color: var(--accent);
 }
 
+.panel-action-impact {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: rgba(214, 96, 24, 0.1);
+}
+
+.panel-action-impact:hover {
+    background: var(--orange);
+    color: #fff;
+    border-color: var(--orange);
+}
+
+.panel-action-trace {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(10, 153, 84, 0.1);
+}
+
+.panel-action-trace:hover {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green);
+}
+
+a.panel-action-btn {
+    text-decoration: none;
+}
+
 /* ══════════════════════════════════════
    HEADER CONTROL NORMALIZATION
 ══════════════════════════════════════ */
@@ -3003,10 +3031,6 @@ kbd {
         display: none !important;
     }
 
-    #sg-controls-bar {
-        display: none !important;
-    }
-
     #topbar .logo {
         display: none !important;
     }
@@ -3122,7 +3146,7 @@ kbd {
     }
 }
 
-@media (max-height: 620px) {
+@media (max-height: 620px), (max-width: 980px) {
     #sg-controls-bar {
         top: calc(var(--tb-h) + 6px);
         bottom: auto;

@@ -88,6 +88,26 @@ class LogicMapController extends Controller
         return $this->respond($result);
     }
 
+    public function impact(Request $request, string $id): JsonResponse
+    {
+        $snapshot  = $this->readSnapshot($request);
+        $direction = (string) ($request->query('direction') ?? 'both');
+        $maxDepth  = (int) ($request->query('max_depth') ?? 4);
+        $result    = $this->queryService->impact($id, $direction, $maxDepth, $snapshot);
+
+        return $this->respond($result);
+    }
+
+    public function trace(Request $request, string $id): JsonResponse
+    {
+        $snapshot  = $this->readSnapshot($request);
+        $direction = (string) ($request->query('direction') ?? 'forward');
+        $maxDepth  = (int) ($request->query('max_depth') ?? 6);
+        $result    = $this->queryService->trace($id, $direction, $maxDepth, $snapshot);
+
+        return $this->respond($result);
+    }
+
     public function exportGraph(Request $request): JsonResponse
     {
         $snapshot = $this->readSnapshot($request);

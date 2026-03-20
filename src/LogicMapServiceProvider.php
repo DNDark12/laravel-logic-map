@@ -22,10 +22,15 @@ use dndark\LogicMap\Services\ExportReadService;
 use dndark\LogicMap\Services\GraphReadService;
 use dndark\LogicMap\Services\HealthPayloadBuilder;
 use dndark\LogicMap\Services\HotspotsBuilder;
+use dndark\LogicMap\Services\ImpactReadService;
+use dndark\LogicMap\Services\Impact\ImpactProjector;
 use dndark\LogicMap\Services\QueryLogicMapService;
 use dndark\LogicMap\Services\SnapshotResolver;
+use dndark\LogicMap\Services\Trace\TraceProjector;
+use dndark\LogicMap\Services\TraceReadService;
 use dndark\LogicMap\Support\FileDiscovery;
 use dndark\LogicMap\Support\Fingerprint;
+use dndark\LogicMap\Support\Traversal\GraphWalker;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -65,11 +70,17 @@ class LogicMapServiceProvider extends ServiceProvider
         // Application services
         $this->app->singleton(BuildLogicMapService::class);
         $this->app->singleton(SnapshotResolver::class);
+        $this->app->singleton(GraphWalker::class);
         $this->app->singleton(GraphReadService::class);
         $this->app->singleton(HealthPayloadBuilder::class);
         $this->app->singleton(HotspotsBuilder::class);
         $this->app->singleton(AnalysisReadService::class);
         $this->app->singleton(ExportReadService::class);
+        // Change Intelligence (v1.3)
+        $this->app->singleton(ImpactProjector::class);
+        $this->app->singleton(ImpactReadService::class);
+        $this->app->singleton(TraceProjector::class);
+        $this->app->singleton(TraceReadService::class);
         $this->app->singleton(QueryLogicMapService::class);
     }
 

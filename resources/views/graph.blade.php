@@ -21,7 +21,9 @@
             exportAnalysisUrl:'{{ route("logic-map.export.analysis") }}',
             exportBundleUrl:'{{ route("logic-map.export.bundle") }}',
             exportJsonUrl:  '{{ route("logic-map.export.json") }}',
-            exportCsvUrl:   '{{ route("logic-map.export.csv") }}'
+            exportCsvUrl:   '{{ route("logic-map.export.csv") }}',
+            impactBaseUrl:  '{{ url("logic-map/impact") }}',
+            traceBaseUrl:   '{{ url("logic-map/trace") }}'
         };
     </script>
 </head>
@@ -356,13 +358,13 @@
         <div id="p-name"></div>
         <div id="p-id"></div>
         <div id="p-state-controls">
-            <button class="icon-btn panel-state-btn" id="p-peek" onclick="peekPanel()" title="Compact detail">
+            <button class="icon-btn panel-state-btn" id="p-peek" onclick="window.peekPanel()" title="Compact detail">
                 <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <button class="icon-btn panel-state-btn" id="p-expand" onclick="expandPanel()" title="Expand detail">
+            <button class="icon-btn panel-state-btn" id="p-expand" onclick="window.expandPanel()" title="Expand detail">
                 <svg viewBox="0 0 24 24"><polyline points="9 3 3 3 3 9"/><line x1="3" y1="3" x2="10" y2="10"/><polyline points="15 21 21 21 21 15"/><line x1="14" y1="14" x2="21" y2="21"/></svg>
             </button>
-            <button class="icon-btn panel-state-btn" id="p-hide" onclick="hidePanel()" title="Hide detail">
+            <button class="icon-btn panel-state-btn" id="p-hide" onclick="window.clearHighlight()" title="Close detail">
                 <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
@@ -374,7 +376,7 @@
     <div id="pbody"></div>
 </div>
 
-<button id="panel-restore" onclick="restorePanel()" hidden aria-hidden="true" title="Show detail">
+<button id="panel-restore" onclick="window.restorePanel()" hidden aria-hidden="true" title="Show detail">
     <svg viewBox="0 0 24 24"><polyline points="9 3 3 3 3 9"/><line x1="3" y1="3" x2="10" y2="10"/><polyline points="15 21 21 21 21 15"/><line x1="14" y1="14" x2="21" y2="21"/></svg>
     <span id="panel-restore-label">Show detail</span>
 </button>
@@ -487,13 +489,13 @@
         </div>
         <!-- hidden input keeps value for JS -->
         <input type="hidden" id="sg-hops" value="2">
-        <button class="sgc-btn" onclick="rerunSubGraph()" title="Re-fetch with current depth">
+        <button class="sgc-btn" onclick="window.rerunSubGraph()" title="Re-fetch with current depth">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                 <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
             </svg>
             Re-run
         </button>
-        <button class="sgc-exit" onclick="exitSubGraph()" title="Exit SubGraph (ESC)">
+        <button class="sgc-exit" onclick="window.exitSubGraph()" title="Exit SubGraph (ESC)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>

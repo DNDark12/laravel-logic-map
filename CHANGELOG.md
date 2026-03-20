@@ -6,7 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [1.2.1] - 2026-03-19
+## [1.3.0] - 2026-03-20
+
+### Added
+- **Change Intelligence — Impact Analysis**: `GET /logic-map/impact/{id}` endpoint surfaces blast-radius scoring (0–100), upstream/downstream traversal, `critical_touches` (persistence, async boundary, high-risk nodes), and a `review_scope` (must_review / should_review / test_focus) for a given node.
+- **Change Intelligence — Workflow Trace**: `GET /logic-map/trace/{id}` endpoint traces workflow segments for a node in `forward` or `backward` direction, surfacing async segment boundaries, `branch_points`, `entrypoints` (route nodes for backward traces), and `persistence_touchpoints`.
+- **Shared BFS Traversal Engine**: `GraphWalker` and `TraversalPolicy` — deterministic, cycle-safe BFS traversal shared by both Impact and Trace endpoints.
+- `ChangeImpactReport` and `WorkflowTraceReport` — dedicated query-time DTOs; these artifacts are never embedded into canonical graph payloads.
+- Blast-radius score formula: `min(100, 2*downstream + 1*upstream + 6*persistence + 5*async_boundary + 4*high_risk + 3*cross_module + 4*high_risk_low_coverage)`.
+- All error responses include structured `errors[0].type` for typed error handling by clients.
+- 17 new automated tests covering structure, validation (422), 404 scenarios, blast-radius scoring, async segment detection, and directional traversal.
+
+
 
 ### Fixed
 - Resolved PHPUnit CI warning "No tests found in AstParserTest" by standardizing on `#[Test]` attributes.

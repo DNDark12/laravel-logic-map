@@ -7,9 +7,11 @@ use dndark\LogicMap\Domain\QueryResult;
 class QueryLogicMapService
 {
     public function __construct(
-        protected GraphReadService $graphReads,
+        protected GraphReadService    $graphReads,
         protected AnalysisReadService $analysisReads,
-        protected ExportReadService $exportReads,
+        protected ExportReadService   $exportReads,
+        protected ImpactReadService   $impactReads,
+        protected TraceReadService    $traceReads,
     ) {
     }
 
@@ -56,6 +58,16 @@ class QueryLogicMapService
     public function hotspots(array $filters = [], ?string $snapshot = null): QueryResult
     {
         return $this->analysisReads->hotspots($filters, $snapshot);
+    }
+
+    public function impact(string $id, string $direction = 'both', int $maxDepth = 4, ?string $snapshot = null): QueryResult
+    {
+        return $this->impactReads->impact($id, $direction, $maxDepth, $snapshot);
+    }
+
+    public function trace(string $id, string $direction = 'forward', int $maxDepth = 6, ?string $snapshot = null): QueryResult
+    {
+        return $this->traceReads->trace($id, $direction, $maxDepth, $snapshot);
     }
 
     public function exportGraph(?string $snapshot = null): QueryResult

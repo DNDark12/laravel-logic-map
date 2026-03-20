@@ -125,11 +125,7 @@
                 { selector: 'node[risk="critical"]', style: { 'border-color': tokens.riskColors.critical, 'border-width': 2 } },
                 { selector: 'node[risk="high"]', style: { 'border-color': tokens.riskColors.high, 'border-width': 2 } },
                 { selector: 'node[risk="medium"]', style: { 'border-color': tokens.riskColors.medium, 'border-width': 1.5 } },
-                { selector: 'node.heatmap-on[heat_level = 0]', style: { 'background-color': tokens.heatmap[0].bg, 'border-color': tokens.heatmap[0].bd, 'color': tokens.heatmap[0].tx } },
-                { selector: 'node.heatmap-on[heat_level = 1]', style: { 'background-color': tokens.heatmap[1].bg, 'border-color': tokens.heatmap[1].bd, 'color': tokens.heatmap[1].tx } },
-                { selector: 'node.heatmap-on[heat_level = 2]', style: { 'background-color': tokens.heatmap[2].bg, 'border-color': tokens.heatmap[2].bd, 'color': tokens.heatmap[2].tx } },
-                { selector: 'node.heatmap-on[heat_level = 3]', style: { 'background-color': tokens.heatmap[3].bg, 'border-color': tokens.heatmap[3].bd, 'color': tokens.heatmap[3].tx } },
-                { selector: 'node.heatmap-on[heat_level = 4]', style: { 'background-color': tokens.heatmap[4].bg, 'border-color': tokens.heatmap[4].bd, 'color': tokens.heatmap[4].tx } },
+
                 { selector: 'node.highlighted', style: { 'border-width': 3, 'border-color': tokens.accent, 'z-index': 999 } },
                 { selector: 'node.neighbor', style: { 'border-width': 2, 'border-color': tokens.edge.highlight } },
                 { selector: 'node.dimmed', style: { 'opacity': 0.15, 'events': 'no' } },
@@ -161,6 +157,15 @@
                     style: { 'background-color': colors.bg, 'border-color': colors.bd }
                 });
             });
+
+            // Heatmap styles go last so they override kind colors when active
+            style.push(
+                { selector: 'node.heatmap-on[heat_level = 0]', style: { 'background-color': tokens.heatmap[0].bg, 'border-color': tokens.heatmap[0].bd, 'color': tokens.heatmap[0].tx } },
+                { selector: 'node.heatmap-on[heat_level = 1]', style: { 'background-color': tokens.heatmap[1].bg, 'border-color': tokens.heatmap[1].bd, 'color': tokens.heatmap[1].tx } },
+                { selector: 'node.heatmap-on[heat_level = 2]', style: { 'background-color': tokens.heatmap[2].bg, 'border-color': tokens.heatmap[2].bd, 'color': tokens.heatmap[2].tx } },
+                { selector: 'node.heatmap-on[heat_level = 3]', style: { 'background-color': tokens.heatmap[3].bg, 'border-color': tokens.heatmap[3].bd, 'color': tokens.heatmap[3].tx } },
+                { selector: 'node.heatmap-on[heat_level = 4]', style: { 'background-color': tokens.heatmap[4].bg, 'border-color': tokens.heatmap[4].bd, 'color': tokens.heatmap[4].tx } }
+            );
 
             return style;
         }
@@ -759,7 +764,7 @@
             pred.edges().addClass('highlighted');
             cy.elements().not(node).not(succ).not(pred).addClass('dimmed');
             startFlow();
-            cy.animate({ fit: { eles: node.union(succ).union(pred), padding: 80 }, duration: 600, easing: 'ease-out-quad' });
+            cy.animate({ fit: { eles: node.union(succ).union(pred), padding: getDynamicViewportPadding(80, true) }, duration: 600, easing: 'ease-out-quad' });
         }
 
         /* ────────────────────────────────────
@@ -1026,6 +1031,14 @@
             return isCompactPanelViewport() ? 'peek' : 'expanded';
         }
 
+        function getDynamicViewportPadding(basePadding = 60, assumePanelOpen = false) {
+            let rightPadding = basePadding;
+            let expectedState = panelState !== 'hidden' ? panelState : (assumePanelOpen ? getDefaultPanelState() : 'hidden');
+            if (expectedState === 'expanded' && !isCompactPanelViewport()) rightPadding = 400;
+            else if (expectedState === 'peek') rightPadding = 100;
+            return { top: basePadding, bottom: basePadding, left: basePadding, right: rightPadding };
+        }
+
         function getPanelNode() {
             if (!activePanelNodeId) return null;
             const node = cy.getElementById(activePanelNodeId);
@@ -1175,7 +1188,18 @@
                 }
             }
             document.getElementById('p-name').textContent = d.metadata?.shortLabel || d.name || d.label || d.id;
-            document.getElementById('p-id').textContent = d.id;
+            const pidEl = document.getElementById('p-id');
+            pidEl.textContent = d.id;
+            pidEl.title = 'Click to copy node ID';
+            pidEl.style.cursor = 'pointer';
+            pidEl.onclick = function() {
+                navigator.clipboard.writeText(d.id).then(() => {
+                    const prev = pidEl.textContent;
+                    pidEl.textContent = '✓ copied';
+                    pidEl.style.color = 'var(--green)';
+                    setTimeout(() => { pidEl.textContent = prev; pidEl.style.color = ''; }, 1500);
+                }).catch(() => {});
+            };
             document.getElementById('hub-warning').classList.toggle('show', isHubUtility(d));
 
             const meta = d.metadata || {};
@@ -1243,7 +1267,6 @@
 
             if (!sgMode) {
                 // SubGraph action button at bottom of panel
-                // Pass node id via data attr — window.enterSubGraph handles cy lookup
                 h += `<div class="ps panel-actions">
                 <button class="panel-action-btn panel-action-sg" data-node-id="${d.id}" onclick="window.enterSubGraph(this.dataset.nodeId)" title="Explore connected subgraph (S)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13">
@@ -1255,7 +1278,32 @@
                     </svg>
                     Explore SubGraph
                 </button>
-            </div>`;
+                </div>`;
+            }
+
+            // ── Change Intelligence actions (always visible) ──
+            if (window.logicMapConfig.impactBaseUrl && window.logicMapConfig.traceBaseUrl) {
+                const encodedId = encodeURIComponent(d.id);
+                const snap = selectedSnapshot ? `?snapshot=${encodeURIComponent(selectedSnapshot)}` : '';
+                const impactUrl = `${window.logicMapConfig.impactBaseUrl}/${encodedId}${snap}`;
+                const traceUrl  = `${window.logicMapConfig.traceBaseUrl}/${encodedId}${snap}`;
+                h += `<div class="ps panel-ci-actions">
+                <div class="sl" style="margin-bottom:8px">Change Intelligence</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <a class="panel-action-btn panel-action-impact" href="${impactUrl}" target="_blank" rel="noopener" title="View blast-radius impact analysis for this node">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        Impact Analysis
+                    </a>
+                    <a class="panel-action-btn panel-action-trace" href="${traceUrl}" target="_blank" rel="noopener" title="Trace workflow path for this node">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        Workflow Trace
+                    </a>
+                </div>
+                </div>`;
             }
 
             document.getElementById('pbody').innerHTML = h;
@@ -1277,8 +1325,17 @@
             fitBusy = true;
             setToolbarActionBusy(true);
             cy.stop();
+
+            let targetEles = cy.elements();
+            if (sgMode) {
+                targetEles = cy.elements(); // subgraph mode: fit all available nodes in subgraph
+            } else if (activePanelNodeId || cy.nodes('.highlighted').length > 0) {
+                const active = cy.elements('.highlighted, .neighbor');
+                if (active.length > 0) targetEles = active;
+            }
+
             cy.animate(
-                { fit: { padding: 60 } },
+                { fit: { eles: targetEles, padding: getDynamicViewportPadding(60, false) } },
                 {
                     duration: 500,
                     complete: () => {
@@ -1392,12 +1449,12 @@
                 if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('si')?.focus(); return; }
                 if (e.key === 'Escape') {
                     e.preventDefault();
-                    if (panelState !== 'hidden') {
-                        hidePanel();
-                        return;
-                    }
                     if (sgMode) {
                         exitSubGraph();
+                        return;
+                    }
+                    if (panelState !== 'hidden' || cy.nodes('.highlighted').length > 0) {
+                        clearHighlight();
                         return;
                     }
                 }
@@ -1562,7 +1619,7 @@
                 applyHighlight(seedNode);
                 openPanel(seedNode.data());
                 cy.animate({
-                    fit: { padding: 50 },
+                    fit: { padding: getDynamicViewportPadding(50, true) },
                     duration: 450,
                     easing: 'ease-out-cubic'
                 });
@@ -1725,7 +1782,7 @@
                 separateOrphanNodes();
                 runLayout(currentLayout, () => {
                     cy.animate({
-                        fit: { padding: 40 },
+                        fit: { padding: getDynamicViewportPadding(40, false) },
                         duration: 400
                     });
                 });
