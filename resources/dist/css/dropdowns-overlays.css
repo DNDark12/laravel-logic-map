@@ -1,0 +1,605 @@
+/* ══════════════════════════════════════
+   THEME PICKER DROPDOWN
+══════════════════════════════════════ */
+#theme-picker {
+    position: fixed;
+    top: calc(var(--tb-h) + 6px);
+    right: 8px;
+    background: var(--bg-panel);
+    border: 1px solid var(--bdr2);
+    border-radius: var(--radius-lg);
+    padding: 6px;
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    gap: 3px;
+    box-shadow: var(--shadow-lg);
+    min-width: 180px;
+}
+
+#theme-picker.open {
+    display: flex;
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 10.5px;
+    color: var(--tx2);
+    transition: all .12s;
+    border: 1px solid transparent;
+}
+
+.theme-option:hover {
+    background: var(--bg-elevated);
+    color: var(--tx);
+}
+
+.theme-option.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: var(--accent-dim);
+}
+
+.theme-dot {
+    width: 28px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    border: 1px solid var(--bdr2);
+}
+
+.theme-check {
+    margin-left: auto;
+    font-size: 11px;
+    display: none;
+}
+
+.theme-option.active .theme-check {
+    display: block;
+}
+
+/* ══════════════════════════════════════
+   WARNINGS
+══════════════════════════════════════ */
+#lg-warning {
+    display: none;
+    position: fixed;
+    top: 56px;
+    right: 16px;
+    background: rgba(249, 115, 22, .1);
+    border: 1px solid rgba(249, 115, 22, .3);
+    color: var(--orange);
+    font-size: 9.5px;
+    padding: 7px 12px;
+    border-radius: var(--radius);
+    z-index: 30;
+    max-width: 300px;
+    align-items: center;
+    gap: 7px;
+}
+
+#lg-warning.show {
+    display: flex;
+}
+
+/* ══════════════════════════════════════
+   LOADING
+══════════════════════════════════════ */
+#loading {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-canvas);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 100;
+    transition: opacity .4s;
+}
+
+.ld-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--tx);
+    letter-spacing: .05em;
+}
+
+.ld-sub {
+    font-size: 10px;
+    color: var(--tx3);
+}
+
+.ld-bw {
+    width: 140px;
+    height: 2px;
+    background: var(--bdr);
+    border-radius: 1px;
+    overflow: hidden;
+}
+
+.ld-b {
+    height: 100%;
+    width: 0;
+    background: var(--accent);
+    border-radius: 1px;
+    animation: ldp 2s ease-out forwards;
+}
+
+@keyframes ldp {
+    0% {
+        width: 0%
+    }
+
+    50% {
+        width: 60%
+    }
+
+    100% {
+        width: 100%
+    }
+}
+
+/* ══════════════════════════════════════
+   EXPORT DROPDOWN
+   ══════════════════════════════════════ */
+/* Unified Dropdowns (Export, Layout, Hops) */
+.dropdown-grp {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-trigger {
+    height: 32px;
+    padding: 0 10px;
+    gap: 6px;
+    border-radius: var(--radius);
+    font-weight: 700;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    z-index: 1000;
+    background: var(--bg-panel);
+    border: 1px solid var(--bdr2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    display: none;
+    flex-direction: column;
+    min-width: 180px;
+    padding: 6px;
+    animation: drip .15s ease-out;
+    font-family: inherit;
+}
+
+/* Specific alignments based on trigger position */
+#layout-dropdown .dropdown-menu,
+#hops-dropdown .dropdown-menu {
+    left: 0;
+    right: auto;
+}
+
+#export-dropdown .dropdown-menu {
+    right: 0;
+    left: auto;
+}
+
+#export-dropdown .dropdown-menu {
+    min-width: 236px;
+}
+
+#snapshot-dropdown .dropdown-menu {
+    left: 0;
+    right: auto;
+}
+
+#theme-picker {
+    right: 0;
+    left: auto;
+}
+
+.dropdown-menu.min-dropdown {
+    min-width: 60px;
+}
+
+.snapshot-menu {
+    min-width: 250px;
+    max-width: 340px;
+}
+
+#snapshot-menu .seg-btn {
+    font-size: 9px;
+    line-height: 1.35;
+}
+
+.dropdown-grp.show .dropdown-menu {
+    display: flex;
+}
+
+@keyframes drip {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-menu .seg-btn {
+    width: 100%;
+    height: 34px;
+    border-right: none !important;
+    border-bottom: 1px solid var(--bdr);
+    border-radius: 0;
+    justify-content: flex-start;
+    padding: 0 10px;
+}
+
+.dropdown-menu .seg-btn:first-child {
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.dropdown-menu .seg-btn:last-child {
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    border-bottom: none;
+}
+
+.dropdown-menu .seg-btn.active {
+    background: var(--bg-hover);
+    color: var(--accent);
+}
+
+.dropdown-trigger .exp-arr {
+    width: 10px;
+    height: 10px;
+    opacity: .6;
+    margin-left: 2px;
+    transition: transform .2s;
+}
+
+.dropdown-grp.show .exp-arr {
+    transform: rotate(180deg);
+}
+
+.exp-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background .12s;
+}
+
+.exp-item:hover {
+    background: var(--bg-hover);
+}
+
+.exp-ico {
+    font-size: 8px;
+    font-weight: 900;
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr);
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: var(--tx3);
+    min-width: 32px;
+    text-align: center;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+/* .exp-title removed, uses .btn-lbl instead */
+
+.exp-desc {
+    font-size: 11px;
+    color: var(--tx3);
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+
+/* ══════════════════════════════════════
+   RESPONSIVE TOPBAR
+   ══════════════════════════════════════ */
+/* Default: Triggers hidden, Groups visible */
+#topbar .dropdown-trigger {
+    display: none !important;
+}
+
+#topbar .seg-group:not(.dropdown-menu) {
+    display: flex !important;
+}
+
+/* Desktop-specific Export visibility: Use ID or explicit class to override */
+#topbar #export-dropdown .dropdown-trigger,
+#topbar .dropdown-trigger.exp-trigger {
+    display: flex !important;
+}
+
+@media (max-width: 1200px) {
+
+    .tb-label-sm,
+    .btn-lbl {
+        display: none;
+    }
+
+    /* Allow labels inside dropdown triggers AND dropdown menu items to stay visible */
+    .dropdown-trigger .btn-lbl,
+    .dropdown-menu .btn-lbl {
+        display: inline !important;
+    }
+
+    .seg-btn {
+        padding: 0 8px;
+    }
+
+    .search-wrap {
+        flex: 1;
+        min-width: 100px;
+        max-width: 250px;
+    }
+}
+
+@media (max-width: 992px) {
+    .logo-text {
+        display: none;
+    }
+
+    .search-wrap {
+        flex: 1;
+        min-width: 80px;
+        max-width: 220px;
+    }
+
+    #topbar .dropdown-trigger {
+        display: flex !important;
+    }
+
+    /* Hide the direct horizontal groups, we'll use dropdowns instead */
+    #topbar .seg-group:not(.dropdown-menu) {
+        display: none !important;
+    }
+
+    .tb-sep {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .tb-sep {
+        display: none;
+    }
+
+    #topbar {
+        gap: 4px;
+        padding: 0 6px;
+    }
+
+    .search-wrap {
+        flex: 1;
+        min-width: 80px;
+        max-width: none;
+    }
+
+    .tb-select {
+        min-width: 120px;
+        max-width: 150px;
+    }
+
+    .tb-btn,
+    .tb-icon,
+    .dropdown-trigger {
+        min-height: 34px;
+    }
+}
+
+@media (max-width: 650px) {
+    .logo {
+        display: none;
+    }
+
+    #topbar {
+        gap: 2px;
+        padding: 0 4px;
+    }
+}
+
+@media (max-width: 550px) {
+
+    #topbar .search-wrap,
+    #topbar .tb-icon#shortcuts-btn,
+    #topbar .tb-sep {
+        display: none !important;
+    }
+
+    .tb-snapshot {
+        display: none !important;
+    }
+
+    /* Restore text labels inside dropdown triggers and menu items */
+    .tb-btn .btn-lbl,
+    .dropdown-menu .btn-lbl {
+        display: inline !important;
+    }
+
+    /* Force health display to stay flex on mobile */
+    #health-display {
+        display: flex !important;
+    }
+
+    .health-badge {
+        padding: 0 8px;
+        gap: 6px;
+    }
+
+    .tb-btn {
+        padding: 0 4px;
+    }
+
+    #topbar {
+        justify-content: space-between;
+        gap: 4px;
+        padding: 0 4px;
+        overflow: visible !important;
+    }
+}
+
+@media (max-width: 460px) {
+
+    /* Hide non-critical elements for ultra-compact fit */
+    #topbar .logo,
+    #topbar .search-wrap,
+    #topbar .tb-sep {
+        display: none !important;
+    }
+
+    /* Ensure trigger labels stay visible even in ultra-compact mode */
+    #topbar .dropdown-trigger .btn-lbl {
+        display: inline !important;
+        font-size: 9px;
+    }
+
+    #topbar {
+        justify-content: space-around !important;
+        gap: 2px !important;
+        padding: 0 2px !important;
+        overflow: visible !important;
+    }
+
+    #topbar .tb-btn {
+        padding: 0 4px !important;
+        min-width: auto !important;
+    }
+
+    /* Hide the Shortcuts button (?) on very small screens to save 40px */
+    #topbar #shortcuts-btn {
+        display: none !important;
+    }
+
+    /* Ensure Health badge is compact but visible */
+    #topbar #health-display {
+        display: flex !important;
+        margin: 0 !important;
+    }
+
+    #topbar .health-badge {
+        padding: 0 6px !important;
+        gap: 4px !important;
+        border: 1px solid var(--bdr) !important;
+        background: var(--bg-elevated) !important;
+    }
+
+    .tb-snapshot {
+        display: none !important;
+    }
+}
+
+
+
+/* ══════════════════════════════════════
+   TOOLTIP
+══════════════════════════════════════ */
+#tip {
+    position: fixed;
+    z-index: 25;
+    pointer-events: none;
+    background: var(--bg-panel);
+    border: 1px solid var(--bdr2);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    font-size: 10px;
+    color: var(--tx2);
+    max-width: 260px;
+    word-break: break-all;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: opacity .12s;
+}
+
+#tip.show {
+    opacity: 1;
+}
+
+/* ══════════════════════════════════════
+   KEYBOARD HELP MODAL
+══════════════════════════════════════ */
+#kb-help {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .55);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+}
+
+.kb-modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--bdr2);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    max-width: 380px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+}
+
+.kb-hdr {
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--tx);
+}
+
+.kb-grid {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 7px 14px;
+    font-size: 10.5px;
+}
+
+kbd {
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr2);
+    border-radius: 4px;
+    padding: 3px 7px;
+    font-family: inherit;
+    font-size: 9.5px;
+    color: var(--tx2);
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kb-grid span {
+    color: var(--tx2);
+    align-self: center;
+}
+
+.kb-mouse {
+    margin-top: 12px;
+    font-size: 9.5px;
+    color: var(--tx3);
+    padding-top: 10px;
+    border-top: 1px solid var(--bdr);
+}
+
+/* ══════════════════════════════════════

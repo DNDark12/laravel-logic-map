@@ -1,0 +1,539 @@
+/* ══════════════════════════════════════
+   HEALTH PANEL
+══════════════════════════════════════ */
+#health-panel {
+    position: fixed;
+    top: var(--tb-h);
+    right: 0;
+    bottom: 0;
+    width: 360px;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--bdr2);
+    z-index: 16;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+
+#health-panel.open {
+    transform: translateX(0);
+}
+
+#hp-hdr {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--bdr);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+#hp-hdr span {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--tx);
+}
+
+#hp-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bdr2) transparent;
+}
+
+#hp-body::-webkit-scrollbar {
+    width: 3px;
+}
+
+#hp-body::-webkit-scrollbar-thumb {
+    background: var(--bdr2);
+    border-radius: 2px;
+}
+
+/* Score ring */
+.hp-top {
+    padding: 22px 18px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 1px solid var(--bdr);
+    background: var(--bg-elevated);
+}
+
+.hp-score-wrap {
+    position: relative;
+    flex-shrink: 0;
+    width: 88px;
+    height: 88px;
+}
+
+.hp-score-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.hp-score-val {
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.hp-score-lbl {
+    font-size: 8.5px;
+    color: var(--tx3);
+    margin-top: 2px;
+}
+
+.hp-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.hp-grade {
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.hp-summary {
+    font-size: 10px;
+    color: var(--tx2);
+    margin-top: 7px;
+    line-height: 1.55;
+}
+
+/* Sections */
+.hp-section {
+    border-bottom: 1px solid var(--bdr);
+}
+
+.hp-section:last-child {
+    border-bottom: none;
+}
+
+.hp-section-title {
+    padding: 12px 16px 0;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--tx3);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Collapsible sections */
+.hp-collapsible .hp-section-title,
+.hp-collapsible .hp-sev-hdr {
+    padding-bottom: 0;
+}
+
+.hp-toggle {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    margin-bottom: 0;
+    transition: background .12s;
+}
+
+.hp-toggle:hover {
+    background: var(--bg-hover);
+}
+
+.hp-chev {
+    width: 13px;
+    height: 13px;
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--tx3);
+    transition: transform .22s cubic-bezier(.22, 1, .36, 1);
+}
+
+.hp-collapsible-body {
+    overflow: hidden;
+    max-height: 4000px;
+    /* generous max for large lists */
+    padding: 0 16px 12px;
+    transition: max-height .35s cubic-bezier(.22, 1, .36, 1), padding .3s;
+}
+
+.hp-collapsed .hp-collapsible-body {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+}
+
+/* Severity group: body has less horizontal padding (uses parent padding) */
+.hp-sev-group .hp-collapsible-body {
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.hp-collapsed .hp-chev {
+    transform: rotate(-90deg);
+}
+
+.hp-vcount {
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 9px;
+    color: var(--tx3);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+/* Graph stats */
+.hp-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 0 16px 14px;
+}
+
+.hp-stat {
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr);
+    border-radius: var(--radius);
+    padding: 8px 5px;
+    text-align: center;
+}
+
+.hp-sv {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--tx);
+    line-height: 1;
+}
+
+.hp-sl {
+    font-size: 7.5px;
+    color: var(--tx3);
+    margin-top: 3px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.hp-cov-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    padding: 0 16px 10px;
+    color: var(--tx3);
+    font-size: 9px;
+}
+
+.hp-cov-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 16px 14px;
+}
+
+.hp-cov-item {
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr);
+    border-radius: var(--radius);
+    padding: 8px 9px;
+}
+
+.hp-cov-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hp-cov-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 9.5px;
+    color: var(--tx);
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hp-cov-sub {
+    margin-top: 3px;
+    font-size: 8px;
+    color: var(--tx3);
+    word-break: break-all;
+}
+
+.hp-cov-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--bdr2);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.hp-cov-pill.lv-none {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.55);
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.hp-cov-pill.lv-low {
+    color: #f97316;
+    border-color: rgba(249, 115, 22, 0.55);
+    background: rgba(249, 115, 22, 0.12);
+}
+
+.hp-cov-pill.lv-medium {
+    color: #ca8a04;
+    border-color: rgba(202, 138, 4, 0.5);
+    background: rgba(202, 138, 4, 0.12);
+}
+
+.hp-cov-pill.lv-high,
+.hp-cov-pill.lv-full {
+    color: #16a34a;
+    border-color: rgba(22, 163, 74, 0.45);
+    background: rgba(22, 163, 74, 0.1);
+}
+
+.hp-cov-pill.lv-unknown {
+    color: var(--tx2);
+    border-color: var(--bdr2);
+    background: var(--bg-input);
+}
+
+/* Violation groups */
+.hp-sev-group {
+    margin-bottom: 4px;
+}
+
+.hp-sev-group:last-child {
+    margin-bottom: 0;
+}
+
+.hp-sev-hdr {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background .12s;
+}
+
+.hp-sev-hdr:hover {
+    background: var(--bg-hover);
+}
+
+.hp-sev-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.hp-sev-cnt {
+    margin-left: auto;
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr);
+    border-radius: 10px;
+    font-size: 9px;
+    padding: 1px 7px;
+    color: var(--tx3);
+    font-weight: 600;
+}
+
+/* Individual violations */
+.hp-viol {
+    background: var(--bg-elevated);
+    border: 1px solid var(--bdr);
+    border-left-width: 3px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    transition: background .12s;
+    overflow: hidden;
+    /* prevent blowout */
+}
+
+.hp-viol:last-child {
+    margin-bottom: 0;
+}
+
+.hp-viol[onclick]:hover {
+    background: var(--bg-hover);
+}
+
+.hp-viol-type {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--tx);
+    margin-bottom: 5px;
+}
+
+.hp-viol-desc {
+    font-size: 9px;
+    color: var(--tx3);
+    margin-bottom: 7px;
+    font-style: italic;
+    line-height: 1.3;
+}
+
+/* Plain message: ellipsis if too long */
+.hp-viol-msg {
+    font-size: 9px;
+    color: var(--tx2);
+    line-height: 1.5;
+    word-break: break-word;
+    /* break long FQCNs */
+    overflow-wrap: anywhere;
+}
+
+/* Circular dependency chain — wrapping badge list */
+.hp-viol-chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+    margin-top: 2px;
+}
+
+.hp-chain-step {
+    font-size: 8.5px;
+    font-weight: 600;
+    color: var(--tx);
+    background: var(--bg-panel);
+    border: 1px solid var(--bdr2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hp-chain-arr {
+    font-size: 9px;
+    color: var(--tx3);
+    flex-shrink: 0;
+}
+
+/* Node reference footer */
+.hp-viol-node {
+    font-size: 8px;
+    color: var(--tx3);
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Empty state */
+.hp-empty-state {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--tx3);
+}
+
+/* Scoring guide */
+.hp-guide {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 12px;
+}
+
+.hp-guide-row {
+    display: grid;
+    grid-template-columns: 60px 50px 1fr;
+    align-items: center;
+    gap: 8px;
+    font-size: 9.5px;
+}
+
+.hp-guide-sev {
+    font-weight: 800;
+}
+
+.hp-guide-desc {
+    color: var(--tx3);
+    font-size: 9px;
+}
+
+.hp-grades {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.hp-grade-pill {
+    font-size: 8.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+}
+
+.hp-grade-pill.gS {
+    background: rgba(22, 163, 74, .12);
+    color: #16a34a;
+    border-color: rgba(22, 163, 74, .25);
+}
+
+.hp-grade-pill.gA {
+    background: rgba(34, 197, 94, .12);
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, .25);
+}
+
+.hp-grade-pill.gB {
+    background: rgba(132, 204, 22, .12);
+    color: #84cc16;
+    border-color: rgba(132, 204, 22, .25);
+}
+
+.hp-grade-pill.gC {
+    background: rgba(200, 160, 48, .12);
+    color: #C8A030;
+    border-color: rgba(200, 160, 48, .25);
+}
+
+.hp-grade-pill.gD {
+    background: rgba(212, 115, 58, .12);
+    color: #D4733A;
+    border-color: rgba(212, 115, 58, .25);
+}
+
+.hp-grade-pill.gF {
+    background: rgba(217, 69, 69, .12);
+    color: #D94545;
+    border-color: rgba(217, 69, 69, .25);
+}

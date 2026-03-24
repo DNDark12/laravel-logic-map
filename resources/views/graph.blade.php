@@ -510,6 +510,13 @@
 <!-- ── Graph Canvas ── -->
 <div id="cy"></div>
 
-<script>{!! $logicMapJs !!}</script>
+@if(isset($logicMapJsInline) && $logicMapJsInline)
+<script>{!! $logicMapJsInline !!}</script>
+@else
+<script>
+    window.__LM_BASE = "{{ rtrim($logicMapJsBase, '/') }}";
+</script>
+<script type="module" src="{{ $logicMapJsUrl }}"></script>
+@endif
 </body>
 </html>
