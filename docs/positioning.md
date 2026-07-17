@@ -1,13 +1,34 @@
-# Product Positioning
+# Product positioning
 
-**Laravel Logic Map** is NOT a generic diagramming tool. It is a specialized **Change Intelligence** and **Workflow Understanding** package tailored specifically for Laravel.
+Laravel Logic Map is a Laravel semantic workflow and change-impact engine, not a generic class diagram generator.
 
-## Target Audience
-- **PM / CTO / Tech Leads:** Visualize system complexity, assess architecture health, and review blast radius before approving major releases.
-- **Engineers:** Onboard faster, trace execution flows, and confidently refactor legacy code without breaking decoupled components.
-- **AI Assistants (Claude, Cursor, etc.):** Ingest token-efficient, deterministic facts (`llms.txt`, Workflow Dossiers) instead of hallucinating Laravel magic (Events, Jobs, Facades).
+Its primary job is to reduce the uncertainty around a change:
 
-## Core Principles
-1. **Fact over Fiction:** We rely on deterministic static AST parsing (`nikic/php-parser`), not regex or LLM guessing.
-2. **Performance by Default:** Heavy analysis happens in `artisan logic-map:build`. The UI and AI agents query cached snapshots in milliseconds.
-3. **Workflow-Centric:** We care about how logic actually executes (Route → Controller → Service → Event), not just static namespace diagrams.
+- show the full execution workflow rather than one direct call chain;
+- connect routes, validation, authorization, services, branches, transactions, events, jobs, listeners, state effects, and external effects;
+- explain why a module/function is affected with an ordered evidence chain;
+- distinguish certain, probable, possible, unresolved, and runtime-observed facts;
+- expose machine-readable contracts for engineers and AI coding tools.
+
+## Intended users
+
+- Engineers planning or reviewing risky changes in Laravel systems.
+- Tech leads identifying affected modules, contracts, and test scope before implementation.
+- Maintainers onboarding into event-driven or legacy applications.
+- AI assistants that need deterministic repository facts instead of guessed framework behavior.
+
+## Product principles
+
+1. Evidence over visual confidence: every meaningful relation must be explainable.
+2. Impact over inventory: a graph is useful only when it helps scope a real change.
+3. Laravel semantics over generic PHP calls: framework registrations and effects are first-class.
+4. Unknown stays unknown: missing observation is not proof of non-execution.
+5. Local-first and bounded: indexing and optional runtime evidence stay in the consumer project.
+
+## Non-goals for 2.0
+
+- whole-program proof for arbitrary reflection or generated code;
+- production APM or distributed tracing replacement;
+- automatic code modification;
+- V1 route, cache, command, UI, or snapshot compatibility;
+- inference of causal dependencies from timestamps alone.

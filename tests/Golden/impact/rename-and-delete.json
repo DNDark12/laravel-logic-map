@@ -1,0 +1,1790 @@
+{
+    "change_set": {
+        "count": 6,
+        "by_type": {
+            "added": 2,
+            "modified": 2,
+            "deleted": 1,
+            "renamed": 1
+        }
+    },
+    "summary": {
+        "changed_symbol_count": 6,
+        "affected_symbol_count": 13,
+        "affected_module_count": 4,
+        "selected_test_count": 1,
+        "uncertainty_count": 3
+    },
+    "changed_symbols": [
+        {
+            "change_type": "renamed",
+            "old_node_id": "class:Fixtures\\CommerceApp\\Listeners\\SendCancellationWebhook",
+            "new_node_id": "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+            "old_path": "app/Listeners/SendCancellationWebhook.php",
+            "new_path": "app/Listeners/SendOrderCancellationWebhook.php",
+            "old_start_line": 9,
+            "old_end_line": 9,
+            "new_start_line": 9,
+            "new_end_line": 9,
+            "evidence_id": "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+            "attributes": {
+                "diagnostic_callers": [],
+                "diagnostic_evidence_ids": []
+            }
+        },
+        {
+            "change_type": "added",
+            "old_node_id": null,
+            "new_node_id": "class:Fixtures\\CommerceApp\\Services\\UnreferencedHelper",
+            "old_path": null,
+            "new_path": "app/Services/UnreferencedHelper.php",
+            "old_start_line": null,
+            "old_end_line": null,
+            "new_start_line": 1,
+            "new_end_line": 11,
+            "evidence_id": "656cb2c8c7183524c7cb2bec84fe14f14a8955692469452b5c461c8cdc84c05b",
+            "attributes": []
+        },
+        {
+            "change_type": "modified",
+            "old_node_id": null,
+            "new_node_id": "file:app/Providers/CommerceServiceProvider.php",
+            "old_path": "app/Providers/CommerceServiceProvider.php",
+            "new_path": "app/Providers/CommerceServiceProvider.php",
+            "old_start_line": 9,
+            "old_end_line": 9,
+            "new_start_line": 9,
+            "new_end_line": 9,
+            "evidence_id": "49da921b22bac0d377997f81fcc807072723eb520c2594ebd970fb53721b0453",
+            "attributes": []
+        },
+        {
+            "change_type": "deleted",
+            "old_node_id": "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+            "new_node_id": null,
+            "old_path": "app/Models/Order.php",
+            "new_path": "app/Models/Order.php",
+            "old_start_line": 16,
+            "old_end_line": 20,
+            "new_start_line": 15,
+            "new_end_line": 15,
+            "evidence_id": "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+            "attributes": {
+                "diagnostic_callers": [
+                    "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel"
+                ],
+                "diagnostic_evidence_ids": [
+                    "2c3890a04129da37338d55002984a3d0380ceaa774857afbdc6f5fcf69432a46",
+                    "a83f535b1aba27078de390b7b5d90895caf80afce54e5c64d1f7f27076e3b0ee"
+                ]
+            }
+        },
+        {
+            "change_type": "modified",
+            "old_node_id": null,
+            "new_node_id": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+            "old_path": "app/Providers/CommerceServiceProvider.php",
+            "new_path": "app/Providers/CommerceServiceProvider.php",
+            "old_start_line": 33,
+            "old_end_line": 33,
+            "new_start_line": 33,
+            "new_end_line": 33,
+            "evidence_id": "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+            "attributes": []
+        },
+        {
+            "change_type": "added",
+            "old_node_id": null,
+            "new_node_id": "method:Fixtures\\CommerceApp\\Services\\UnreferencedHelper::format",
+            "old_path": null,
+            "new_path": "app/Services/UnreferencedHelper.php",
+            "old_start_line": null,
+            "old_end_line": null,
+            "new_start_line": 1,
+            "new_end_line": 11,
+            "evidence_id": "656cb2c8c7183524c7cb2bec84fe14f14a8955692469452b5c461c8cdc84c05b",
+            "attributes": []
+        }
+    ],
+    "affected_symbols": [
+        {
+            "node_id": "cache:order-summary:{id}",
+            "reasons": [
+                {
+                    "category": "external_contract",
+                    "level": "transitive",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "cache:order-summary:{id}"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                        "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364",
+                        "84fdcedd21cf88f38a0579c660befb0502c995d63df7fd7e9223a1b3188ce6eb"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                        "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+                        "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e"
+                    ],
+                    "sentence": "cache:order-summary:{id} is transitive through external_contract from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+                },
+                {
+                    "category": "external_contract",
+                    "level": "transitive",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "cache:order-summary:{id}"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                        "84fdcedd21cf88f38a0579c660befb0502c995d63df7fd7e9223a1b3188ce6eb"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                        "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e"
+                    ],
+                    "sentence": "cache:order-summary:{id} is transitive through external_contract from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+                }
+            ]
+        },
+        {
+            "node_id": "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+            "reasons": [
+                {
+                    "category": "async",
+                    "level": "direct",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a"
+                    ],
+                    "sentence": "class:Fixtures\\CommerceApp\\Events\\OrderCancelled is direct through async from class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+                }
+            ]
+        },
+        {
+            "node_id": "class:Fixtures\\CommerceApp\\Listeners\\RestockInventory",
+            "reasons": [
+                {
+                    "category": "async",
+                    "level": "transitive",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                        "class:Fixtures\\CommerceApp\\Listeners\\RestockInventory"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                        "77d8cc76dc42aa1baef9166859a5b08158cc650e50f8a451269fd5b9b6755267"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                        "c616bdacbae082286451b549c15d5cbc553917f86bfdb35080f46474ae924c51"
+                    ],
+                    "sentence": "class:Fixtures\\CommerceApp\\Listeners\\RestockInventory is transitive through async from class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+                }
+            ]
+        },
+        {
+            "node_id": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+            "reasons": [
+                {
+                    "category": "external_contract",
+                    "level": "transitive",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                        "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364",
+                        "8ef1b9ad444153dff9ad2ae2a293af9f9d3ba649e68244ecd67ab645cb2d3842"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                        "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+                        "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be"
+                    ],
+                    "sentence": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled is transitive through external_contract from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+                },
+                {
+                    "category": "external_contract",
+                    "level": "transitive",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                        "8ef1b9ad444153dff9ad2ae2a293af9f9d3ba649e68244ecd67ab645cb2d3842"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                        "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be"
+                    ],
+                    "sentence": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled is transitive through external_contract from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+                }
+            ]
+        },
+        {
+            "node_id": "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel",
+            "reasons": [
+                {
+                    "category": "hard_dependency",
+                    "level": "breaks",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:b3bcde45cdf5997222c1182521f1aa11363deb6487fb85349eb3d0e3df3f8e6d"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "d2eec5ae3b04dda71073c5fbdca767afff399360ab7646ce89ba7822b005dfeb"
+                    ],
+                    "sentence": "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel breaks because method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled was deleted."
+                }
+            ]
+        },
+        {
+            "node_id": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+            "reasons": [
+                {
+                    "category": "uncertainty",
+                    "level": "possible",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot"
+                    ],
+                    "edge_chain": [],
+                    "evidence_ids": [
+                        "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                        "e5608f7967658711cc4494f76a0d9028422f88a4f42e5146cbed346188cf436e"
+                    ],
+                    "sentence": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot has adjacent ambiguous_target uncertainty."
+                },
+                {
+                    "category": "uncertainty",
+                    "level": "possible",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot"
+                    ],
+                    "edge_chain": [],
+                    "evidence_ids": [
+                        "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                        "2bb4ffedad57860d84eef7205b87a711b4de5cfea62248e6224170e465d9dc16"
+                    ],
+                    "sentence": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot has adjacent ambiguous_target uncertainty."
+                },
+                {
+                    "category": "uncertainty",
+                    "level": "possible",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot"
+                    ],
+                    "edge_chain": [],
+                    "evidence_ids": [
+                        "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                        "eb4fed4a8df8dbe54ce266c3b53a6b8f7b969e6824fedbf5a5863486af32d109"
+                    ],
+                    "sentence": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot has adjacent ambiguous_target uncertainty."
+                }
+            ]
+        },
+        {
+            "node_id": "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+            "reasons": [
+                {
+                    "category": "async",
+                    "level": "transitive",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                        "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                        "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce"
+                    ],
+                    "sentence": "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel is transitive through async from class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+                },
+                {
+                    "category": "hard_dependency",
+                    "level": "breaks",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2"
+                    ],
+                    "sentence": "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel breaks because method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled was deleted."
+                }
+            ]
+        },
+        {
+            "node_id": "module:Integration",
+            "reasons": [
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "module:Integration"
+                    ],
+                    "edge_chain": [
+                        "86af073ae3b71bb0329bc7a61b093a71210055dcd1944ddb238821775ed0c55f"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "a42c15de4eac253b4f824f8ee54012d0210654dacac83f0da505a6ad6f667f01"
+                    ],
+                    "sentence": "module:Integration contains affected symbol class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+                }
+            ]
+        },
+        {
+            "node_id": "module:Inventory",
+            "reasons": [
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                        "class:Fixtures\\CommerceApp\\Listeners\\RestockInventory",
+                        "module:Inventory"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                        "77d8cc76dc42aa1baef9166859a5b08158cc650e50f8a451269fd5b9b6755267",
+                        "77b59c437ac6d47026b842f8828abbd6249328c1d03361fb81ef9253f5887d3c"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                        "c616bdacbae082286451b549c15d5cbc553917f86bfdb35080f46474ae924c51",
+                        "044063606022f98f8976e566500915fcc97e373439510f85e663b96a4353e6e5"
+                    ],
+                    "sentence": "module:Inventory contains affected symbol class:Fixtures\\CommerceApp\\Listeners\\RestockInventory."
+                }
+            ]
+        },
+        {
+            "node_id": "module:Orders",
+            "reasons": [
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+                        "module:Orders"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                        "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364",
+                        "8ef1b9ad444153dff9ad2ae2a293af9f9d3ba649e68244ecd67ab645cb2d3842",
+                        "672abd7540898dfd94358680349858c881ecdfa831b267248fb73aedddff833c"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                        "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+                        "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be",
+                        "90385b0416766d1bf9ceb47a5a1f513fefa74a5da8d69440d1d673bd71843c7d"
+                    ],
+                    "sentence": "module:Orders contains affected symbol class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled."
+                },
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "module:Orders"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                        "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364",
+                        "a6648d7331991760a1a3f1039ec2f5f6c33507eed787b088f71995b648e183a0"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                        "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+                        "7916aff4e57b97af9627000039ea332bce907740825d265f55e36e0d0e2c5bf8"
+                    ],
+                    "sentence": "module:Orders contains affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+                },
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                        "module:Orders"
+                    ],
+                    "edge_chain": [
+                        "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                        "8777c75a80b856a211eabe1e3c8c77c7c53bd716eb6e1cb35c565c0a45b19b50"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                        "07437e21c8d68bd680373bec2bfd369dbb8ae69496f5e02b72564fe4edf5f416"
+                    ],
+                    "sentence": "module:Orders contains affected symbol class:Fixtures\\CommerceApp\\Events\\OrderCancelled."
+                },
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel",
+                        "module:Orders"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:b3bcde45cdf5997222c1182521f1aa11363deb6487fb85349eb3d0e3df3f8e6d",
+                        "cfb0743fa6c3c397c2ecbc282814514d9e1660237c32b1c2068fd5dadfbf95d2"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "d2eec5ae3b04dda71073c5fbdca767afff399360ab7646ce89ba7822b005dfeb",
+                        "adac75f7e6a3a270d706af4266a89a44ec8fe3b5785e06fa54aff8bfd969c52e"
+                    ],
+                    "sentence": "module:Orders contains affected symbol method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel."
+                },
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+                        "module:Orders"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                        "8ef1b9ad444153dff9ad2ae2a293af9f9d3ba649e68244ecd67ab645cb2d3842",
+                        "672abd7540898dfd94358680349858c881ecdfa831b267248fb73aedddff833c"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                        "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be",
+                        "90385b0416766d1bf9ceb47a5a1f513fefa74a5da8d69440d1d673bd71843c7d"
+                    ],
+                    "sentence": "module:Orders contains affected symbol class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled."
+                },
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "module:Orders"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                        "a6648d7331991760a1a3f1039ec2f5f6c33507eed787b088f71995b648e183a0"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                        "7916aff4e57b97af9627000039ea332bce907740825d265f55e36e0d0e2c5bf8"
+                    ],
+                    "sentence": "module:Orders contains affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+                }
+            ]
+        },
+        {
+            "node_id": "module:Providers",
+            "reasons": [
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                        "module:Providers"
+                    ],
+                    "edge_chain": [
+                        "289f7f117944b8e28fae2f9d21d9726e5be36be361a610056534c6be911a865d"
+                    ],
+                    "evidence_ids": [
+                        "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                        "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511"
+                    ],
+                    "sentence": "module:Providers contains affected symbol method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot."
+                },
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                        "module:Providers"
+                    ],
+                    "edge_chain": [
+                        "289f7f117944b8e28fae2f9d21d9726e5be36be361a610056534c6be911a865d"
+                    ],
+                    "evidence_ids": [
+                        "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                        "e5608f7967658711cc4494f76a0d9028422f88a4f42e5146cbed346188cf436e",
+                        "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511"
+                    ],
+                    "sentence": "module:Providers contains affected symbol method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot."
+                },
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                        "module:Providers"
+                    ],
+                    "edge_chain": [
+                        "289f7f117944b8e28fae2f9d21d9726e5be36be361a610056534c6be911a865d"
+                    ],
+                    "evidence_ids": [
+                        "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                        "2bb4ffedad57860d84eef7205b87a711b4de5cfea62248e6224170e465d9dc16",
+                        "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511"
+                    ],
+                    "sentence": "module:Providers contains affected symbol method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot."
+                },
+                {
+                    "category": "module",
+                    "level": "direct",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                        "module:Providers"
+                    ],
+                    "edge_chain": [
+                        "289f7f117944b8e28fae2f9d21d9726e5be36be361a610056534c6be911a865d"
+                    ],
+                    "evidence_ids": [
+                        "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                        "eb4fed4a8df8dbe54ce266c3b53a6b8f7b969e6824fedbf5a5863486af32d109",
+                        "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511"
+                    ],
+                    "sentence": "module:Providers contains affected symbol method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot."
+                }
+            ]
+        },
+        {
+            "node_id": "process:class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+            "reasons": [
+                {
+                    "category": "workflow",
+                    "level": "direct",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "process:class:Fixtures\\CommerceApp\\Events\\OrderCancelled"
+                    ],
+                    "edge_chain": [
+                        "967aa6193b88fa4ecfa47815ab02350a812b006ff0d413b0f98bc6a9f3dd176a"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "2b6820d532988095423f41fe29990c0669959336fbec432ed29beb3b8067a92c"
+                    ],
+                    "sentence": "process:class:Fixtures\\CommerceApp\\Events\\OrderCancelled is direct through workflow from class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+                }
+            ]
+        },
+        {
+            "node_id": "process:route:POST:orders/{order}/cancel",
+            "reasons": [
+                {
+                    "category": "workflow",
+                    "level": "direct",
+                    "node_chain": [
+                        "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                        "process:route:POST:orders/{order}/cancel"
+                    ],
+                    "edge_chain": [
+                        "b77b50fc6a3285cfced20bfcccf30b083031f15b54af7666fa0243478097be1b"
+                    ],
+                    "evidence_ids": [
+                        "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                        "1ba59068120124bfa43b23b91afd1f3ceb1aac0d9b37fc5ccb63598e969285e9"
+                    ],
+                    "sentence": "process:route:POST:orders/{order}/cancel is direct through workflow from class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+                },
+                {
+                    "category": "workflow",
+                    "level": "transitive",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel",
+                        "process:route:POST:orders/{order}/cancel"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:b3bcde45cdf5997222c1182521f1aa11363deb6487fb85349eb3d0e3df3f8e6d",
+                        "118e71a296a299817f7ef8fc999cf887c58a96aa605219acf3ccb7748c80cbfe"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "d2eec5ae3b04dda71073c5fbdca767afff399360ab7646ce89ba7822b005dfeb",
+                        "c5a243ed6314813116a7055e40936c16d62a694288ab2a2fa641b33d38539b7d"
+                    ],
+                    "sentence": "process:route:POST:orders/{order}/cancel is transitive through workflow from affected symbol method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel."
+                },
+                {
+                    "category": "workflow",
+                    "level": "transitive",
+                    "node_chain": [
+                        "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                        "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "process:route:POST:orders/{order}/cancel"
+                    ],
+                    "edge_chain": [
+                        "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                        "60e59158a0d7af5834fc40724a6605d76c4453a215a309264c04ccf554278f21"
+                    ],
+                    "evidence_ids": [
+                        "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                        "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                        "4f4547dad99f51c876eb22887ba812574d1e0b906dc2096199db24622e57775d"
+                    ],
+                    "sentence": "process:route:POST:orders/{order}/cancel is transitive through workflow from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+                }
+            ]
+        }
+    ],
+    "workflows": [
+        {
+            "node_id": "process:class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+            "reason": {
+                "category": "workflow",
+                "level": "direct",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "process:class:Fixtures\\CommerceApp\\Events\\OrderCancelled"
+                ],
+                "edge_chain": [
+                    "967aa6193b88fa4ecfa47815ab02350a812b006ff0d413b0f98bc6a9f3dd176a"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "2b6820d532988095423f41fe29990c0669959336fbec432ed29beb3b8067a92c"
+                ],
+                "sentence": "process:class:Fixtures\\CommerceApp\\Events\\OrderCancelled is direct through workflow from class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+            }
+        },
+        {
+            "node_id": "process:route:POST:orders/{order}/cancel",
+            "reason": {
+                "category": "workflow",
+                "level": "direct",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "process:route:POST:orders/{order}/cancel"
+                ],
+                "edge_chain": [
+                    "b77b50fc6a3285cfced20bfcccf30b083031f15b54af7666fa0243478097be1b"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "1ba59068120124bfa43b23b91afd1f3ceb1aac0d9b37fc5ccb63598e969285e9"
+                ],
+                "sentence": "process:route:POST:orders/{order}/cancel is direct through workflow from class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+            }
+        },
+        {
+            "node_id": "process:route:POST:orders/{order}/cancel",
+            "reason": {
+                "category": "workflow",
+                "level": "transitive",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                    "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel",
+                    "process:route:POST:orders/{order}/cancel"
+                ],
+                "edge_chain": [
+                    "diagnostic:b3bcde45cdf5997222c1182521f1aa11363deb6487fb85349eb3d0e3df3f8e6d",
+                    "118e71a296a299817f7ef8fc999cf887c58a96aa605219acf3ccb7748c80cbfe"
+                ],
+                "evidence_ids": [
+                    "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                    "d2eec5ae3b04dda71073c5fbdca767afff399360ab7646ce89ba7822b005dfeb",
+                    "c5a243ed6314813116a7055e40936c16d62a694288ab2a2fa641b33d38539b7d"
+                ],
+                "sentence": "process:route:POST:orders/{order}/cancel is transitive through workflow from affected symbol method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel."
+            }
+        },
+        {
+            "node_id": "process:route:POST:orders/{order}/cancel",
+            "reason": {
+                "category": "workflow",
+                "level": "transitive",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "process:route:POST:orders/{order}/cancel"
+                ],
+                "edge_chain": [
+                    "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                    "60e59158a0d7af5834fc40724a6605d76c4453a215a309264c04ccf554278f21"
+                ],
+                "evidence_ids": [
+                    "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                    "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                    "4f4547dad99f51c876eb22887ba812574d1e0b906dc2096199db24622e57775d"
+                ],
+                "sentence": "process:route:POST:orders/{order}/cancel is transitive through workflow from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+            }
+        }
+    ],
+    "modules": [
+        {
+            "node_id": "module:Integration",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "module:Integration"
+                ],
+                "edge_chain": [
+                    "86af073ae3b71bb0329bc7a61b093a71210055dcd1944ddb238821775ed0c55f"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "a42c15de4eac253b4f824f8ee54012d0210654dacac83f0da505a6ad6f667f01"
+                ],
+                "sentence": "module:Integration contains affected symbol class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook."
+            }
+        },
+        {
+            "node_id": "module:Inventory",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                    "class:Fixtures\\CommerceApp\\Listeners\\RestockInventory",
+                    "module:Inventory"
+                ],
+                "edge_chain": [
+                    "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                    "77d8cc76dc42aa1baef9166859a5b08158cc650e50f8a451269fd5b9b6755267",
+                    "77b59c437ac6d47026b842f8828abbd6249328c1d03361fb81ef9253f5887d3c"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                    "c616bdacbae082286451b549c15d5cbc553917f86bfdb35080f46474ae924c51",
+                    "044063606022f98f8976e566500915fcc97e373439510f85e663b96a4353e6e5"
+                ],
+                "sentence": "module:Inventory contains affected symbol class:Fixtures\\CommerceApp\\Listeners\\RestockInventory."
+            }
+        },
+        {
+            "node_id": "module:Orders",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                    "module:Orders"
+                ],
+                "edge_chain": [
+                    "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                    "8777c75a80b856a211eabe1e3c8c77c7c53bd716eb6e1cb35c565c0a45b19b50"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                    "07437e21c8d68bd680373bec2bfd369dbb8ae69496f5e02b72564fe4edf5f416"
+                ],
+                "sentence": "module:Orders contains affected symbol class:Fixtures\\CommerceApp\\Events\\OrderCancelled."
+            }
+        },
+        {
+            "node_id": "module:Orders",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+                    "module:Orders"
+                ],
+                "edge_chain": [
+                    "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                    "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364",
+                    "8ef1b9ad444153dff9ad2ae2a293af9f9d3ba649e68244ecd67ab645cb2d3842",
+                    "672abd7540898dfd94358680349858c881ecdfa831b267248fb73aedddff833c"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                    "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+                    "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be",
+                    "90385b0416766d1bf9ceb47a5a1f513fefa74a5da8d69440d1d673bd71843c7d"
+                ],
+                "sentence": "module:Orders contains affected symbol class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled."
+            }
+        },
+        {
+            "node_id": "module:Orders",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+                    "module:Orders"
+                ],
+                "edge_chain": [
+                    "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                    "8ef1b9ad444153dff9ad2ae2a293af9f9d3ba649e68244ecd67ab645cb2d3842",
+                    "672abd7540898dfd94358680349858c881ecdfa831b267248fb73aedddff833c"
+                ],
+                "evidence_ids": [
+                    "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                    "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                    "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be",
+                    "90385b0416766d1bf9ceb47a5a1f513fefa74a5da8d69440d1d673bd71843c7d"
+                ],
+                "sentence": "module:Orders contains affected symbol class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled."
+            }
+        },
+        {
+            "node_id": "module:Orders",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                    "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel",
+                    "module:Orders"
+                ],
+                "edge_chain": [
+                    "diagnostic:b3bcde45cdf5997222c1182521f1aa11363deb6487fb85349eb3d0e3df3f8e6d",
+                    "cfb0743fa6c3c397c2ecbc282814514d9e1660237c32b1c2068fd5dadfbf95d2"
+                ],
+                "evidence_ids": [
+                    "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                    "d2eec5ae3b04dda71073c5fbdca767afff399360ab7646ce89ba7822b005dfeb",
+                    "adac75f7e6a3a270d706af4266a89a44ec8fe3b5785e06fa54aff8bfd969c52e"
+                ],
+                "sentence": "module:Orders contains affected symbol method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel."
+            }
+        },
+        {
+            "node_id": "module:Orders",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "module:Orders"
+                ],
+                "edge_chain": [
+                    "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                    "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364",
+                    "a6648d7331991760a1a3f1039ec2f5f6c33507eed787b088f71995b648e183a0"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                    "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+                    "7916aff4e57b97af9627000039ea332bce907740825d265f55e36e0d0e2c5bf8"
+                ],
+                "sentence": "module:Orders contains affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+            }
+        },
+        {
+            "node_id": "module:Orders",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "module:Orders"
+                ],
+                "edge_chain": [
+                    "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                    "a6648d7331991760a1a3f1039ec2f5f6c33507eed787b088f71995b648e183a0"
+                ],
+                "evidence_ids": [
+                    "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                    "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                    "7916aff4e57b97af9627000039ea332bce907740825d265f55e36e0d0e2c5bf8"
+                ],
+                "sentence": "module:Orders contains affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+            }
+        },
+        {
+            "node_id": "module:Providers",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                    "module:Providers"
+                ],
+                "edge_chain": [
+                    "289f7f117944b8e28fae2f9d21d9726e5be36be361a610056534c6be911a865d"
+                ],
+                "evidence_ids": [
+                    "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                    "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511"
+                ],
+                "sentence": "module:Providers contains affected symbol method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot."
+            }
+        },
+        {
+            "node_id": "module:Providers",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                    "module:Providers"
+                ],
+                "edge_chain": [
+                    "289f7f117944b8e28fae2f9d21d9726e5be36be361a610056534c6be911a865d"
+                ],
+                "evidence_ids": [
+                    "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                    "e5608f7967658711cc4494f76a0d9028422f88a4f42e5146cbed346188cf436e",
+                    "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511"
+                ],
+                "sentence": "module:Providers contains affected symbol method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot."
+            }
+        },
+        {
+            "node_id": "module:Providers",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                    "module:Providers"
+                ],
+                "edge_chain": [
+                    "289f7f117944b8e28fae2f9d21d9726e5be36be361a610056534c6be911a865d"
+                ],
+                "evidence_ids": [
+                    "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                    "2bb4ffedad57860d84eef7205b87a711b4de5cfea62248e6224170e465d9dc16",
+                    "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511"
+                ],
+                "sentence": "module:Providers contains affected symbol method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot."
+            }
+        },
+        {
+            "node_id": "module:Providers",
+            "reason": {
+                "category": "module",
+                "level": "direct",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                    "module:Providers"
+                ],
+                "edge_chain": [
+                    "289f7f117944b8e28fae2f9d21d9726e5be36be361a610056534c6be911a865d"
+                ],
+                "evidence_ids": [
+                    "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                    "eb4fed4a8df8dbe54ce266c3b53a6b8f7b969e6824fedbf5a5863486af32d109",
+                    "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511"
+                ],
+                "sentence": "module:Providers contains affected symbol method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot."
+            }
+        }
+    ],
+    "shared_resources": [],
+    "external_contracts": [
+        {
+            "node_id": "cache:order-summary:{id}",
+            "reason": {
+                "category": "external_contract",
+                "level": "transitive",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "cache:order-summary:{id}"
+                ],
+                "edge_chain": [
+                    "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                    "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364",
+                    "84fdcedd21cf88f38a0579c660befb0502c995d63df7fd7e9223a1b3188ce6eb"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                    "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+                    "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e"
+                ],
+                "sentence": "cache:order-summary:{id} is transitive through external_contract from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+            }
+        },
+        {
+            "node_id": "cache:order-summary:{id}",
+            "reason": {
+                "category": "external_contract",
+                "level": "transitive",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "cache:order-summary:{id}"
+                ],
+                "edge_chain": [
+                    "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                    "84fdcedd21cf88f38a0579c660befb0502c995d63df7fd7e9223a1b3188ce6eb"
+                ],
+                "evidence_ids": [
+                    "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                    "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                    "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e"
+                ],
+                "sentence": "cache:order-summary:{id} is transitive through external_contract from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+            }
+        },
+        {
+            "node_id": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+            "reason": {
+                "category": "external_contract",
+                "level": "transitive",
+                "node_chain": [
+                    "class:Fixtures\\CommerceApp\\Listeners\\SendOrderCancellationWebhook",
+                    "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled"
+                ],
+                "edge_chain": [
+                    "54f830f4405b5ee3f57ea7015a514445f33175a63d0fa5512162e66520a25377",
+                    "e11a35b9c9fa1ccc1aae55c72b38903272dcbca8e66aadad8bebb7aa91899364",
+                    "8ef1b9ad444153dff9ad2ae2a293af9f9d3ba649e68244ecd67ab645cb2d3842"
+                ],
+                "evidence_ids": [
+                    "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+                    "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+                    "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+                    "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be"
+                ],
+                "sentence": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled is transitive through external_contract from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+            }
+        },
+        {
+            "node_id": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+            "reason": {
+                "category": "external_contract",
+                "level": "transitive",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                    "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                    "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled"
+                ],
+                "edge_chain": [
+                    "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                    "8ef1b9ad444153dff9ad2ae2a293af9f9d3ba649e68244ecd67ab645cb2d3842"
+                ],
+                "evidence_ids": [
+                    "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+                    "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+                    "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be"
+                ],
+                "sentence": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled is transitive through external_contract from affected symbol method:Fixtures\\CommerceApp\\Services\\OrderService::cancel."
+            }
+        }
+    ],
+    "tests": [
+        {
+            "test_node_id": "test:tests/Feature/CancelOrderTest.php::test_cancel_order_flow",
+            "rank": 2,
+            "reason": "Selected by direct static symbol reference to method:Fixtures\\CommerceApp\\Services\\OrderService::cancel.",
+            "evidence_ids": [
+                "f43afe88a7dda077583e4b202f00869e33611b99b55eab33969dbc5c21ebddef"
+            ]
+        }
+    ],
+    "uncertainty": [
+        {
+            "node_id": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+            "reason": {
+                "category": "uncertainty",
+                "level": "possible",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot"
+                ],
+                "edge_chain": [],
+                "evidence_ids": [
+                    "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                    "e5608f7967658711cc4494f76a0d9028422f88a4f42e5146cbed346188cf436e"
+                ],
+                "sentence": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot has adjacent ambiguous_target uncertainty."
+            }
+        },
+        {
+            "node_id": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+            "reason": {
+                "category": "uncertainty",
+                "level": "possible",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot"
+                ],
+                "edge_chain": [],
+                "evidence_ids": [
+                    "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                    "2bb4ffedad57860d84eef7205b87a711b4de5cfea62248e6224170e465d9dc16"
+                ],
+                "sentence": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot has adjacent ambiguous_target uncertainty."
+            }
+        },
+        {
+            "node_id": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+            "reason": {
+                "category": "uncertainty",
+                "level": "possible",
+                "node_chain": [
+                    "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot"
+                ],
+                "edge_chain": [],
+                "evidence_ids": [
+                    "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+                    "eb4fed4a8df8dbe54ce266c3b53a6b8f7b969e6824fedbf5a5863486af32d109"
+                ],
+                "sentence": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot has adjacent ambiguous_target uncertainty."
+            }
+        }
+    ],
+    "truncation": {
+        "hard_dependency": {
+            "truncated": false,
+            "max_depth": 1,
+            "visited_count": 2,
+            "edge_count": 2,
+            "omitted_count": 0,
+            "frontier": []
+        },
+        "workflow": {
+            "truncated": false,
+            "max_depth": 1,
+            "visited_count": 3,
+            "edge_count": 4,
+            "omitted_count": 0,
+            "frontier": []
+        },
+        "async": {
+            "truncated": false,
+            "max_depth": 2,
+            "visited_count": 3,
+            "edge_count": 3,
+            "omitted_count": 0,
+            "frontier": []
+        },
+        "shared_state": {
+            "truncated": false,
+            "max_depth": 0,
+            "visited_count": 0,
+            "edge_count": 0,
+            "omitted_count": 0,
+            "frontier": []
+        },
+        "external_contract": {
+            "truncated": false,
+            "max_depth": 1,
+            "visited_count": 2,
+            "edge_count": 4,
+            "omitted_count": 0,
+            "frontier": []
+        },
+        "module": {
+            "truncated": false,
+            "max_depth": 1,
+            "visited_count": 4,
+            "edge_count": 12,
+            "omitted_count": 0,
+            "frontier": []
+        },
+        "test_scope": {
+            "truncated": false,
+            "max_depth": 1,
+            "visited_count": 1,
+            "edge_count": 1,
+            "omitted_count": 0,
+            "frontier": []
+        },
+        "uncertainty": {
+            "truncated": false,
+            "max_depth": 0,
+            "visited_count": 1,
+            "edge_count": 0,
+            "omitted_count": 0,
+            "frontier": []
+        }
+    },
+    "evidence": [
+        {
+            "id": "044063606022f98f8976e566500915fcc97e373439510f85e663b96a4353e6e5",
+            "origin": "static_ast",
+            "detector": "module-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Listeners/RestockInventory.php",
+                "start_line": 7,
+                "end_line": 13
+            },
+            "expression": "explicit mapping",
+            "condition": null,
+            "attributes": {
+                "reason": "explicit mapping",
+                "semantic_relation_key": "0da2e04e2e6768414bc650411d978b14cec6f25c067f567a5f1d0ea7c78899a6"
+            }
+        },
+        {
+            "id": "07437e21c8d68bd680373bec2bfd369dbb8ae69496f5e02b72564fe4edf5f416",
+            "origin": "static_ast",
+            "detector": "module-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Events/OrderCancelled.php",
+                "start_line": 10,
+                "end_line": 19
+            },
+            "expression": "explicit mapping",
+            "condition": null,
+            "attributes": {
+                "reason": "explicit mapping",
+                "semantic_relation_key": "634454e21dbd782c62e34332d7d6c037a1124694a6f8ac1fd71c941f51b59733"
+            }
+        },
+        {
+            "id": "1ba59068120124bfa43b23b91afd1f3ceb1aac0d9b37fc5ccb63598e969285e9",
+            "origin": "static_ast",
+            "detector": "process-membership",
+            "certainty": "certain",
+            "location": null,
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "entrypoint_id": "route:POST:orders/{order}/cancel",
+                "step_id": "step:f1f3acd572fceecaceae9b9e3ca453ad914f3daf27f589326a3cb4525d4af609",
+                "registration_key": "process:route:POST:orders/{order}/cancel\u0000step:f1f3acd572fceecaceae9b9e3ca453ad914f3daf27f589326a3cb4525d4af609",
+                "semantic_relation_key": "b57770317b02a3cad5ef4066c3030df452dfa254599ed148352ef17a362212f6"
+            }
+        },
+        {
+            "id": "1ed10c4c4b9730c2fb7682dd2d7bb2807f8c936b7c4462b2ba4c065464ebd18d",
+            "origin": "git_diff",
+            "detector": "git-diff-symbol-mapper",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Listeners/SendCancellationWebhook.php",
+                "start_line": 9,
+                "end_line": 9
+            },
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "change_type": "renamed",
+                "old_path": "app/Listeners/SendCancellationWebhook.php",
+                "new_path": "app/Listeners/SendOrderCancellationWebhook.php",
+                "old_span": [
+                    9,
+                    9
+                ],
+                "new_span": [
+                    9,
+                    9
+                ],
+                "base_commit": "9f74baca059e6bd8976da027b3a7c6b55ce758dd",
+                "head_commit": "361f2a13c5c42347ba5c678e6db85220084b78c8"
+            }
+        },
+        {
+            "id": "23fa93fbe69462c7f80203865ff8e9c756e34e11393e7bbabcdd07e5485c32c2",
+            "origin": "static_ast",
+            "detector": "unresolved-call-diagnostic",
+            "certainty": "certain",
+            "location": null,
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "occurrence": "diagnostic:a4a6c5d618bfa4344906ea71f8a6aefe748b16aac0efa681d9bccdbc041374b0",
+                "caller_id": "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                "attempted_target_id": "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                "source_evidence_ids": [
+                    "2c3890a04129da37338d55002984a3d0380ceaa774857afbdc6f5fcf69432a46",
+                    "a83f535b1aba27078de390b7b5d90895caf80afce54e5c64d1f7f27076e3b0ee"
+                ]
+            }
+        },
+        {
+            "id": "2b6820d532988095423f41fe29990c0669959336fbec432ed29beb3b8067a92c",
+            "origin": "static_ast",
+            "detector": "process-membership",
+            "certainty": "certain",
+            "location": null,
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "entrypoint_id": "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+                "step_id": "step:f1f3acd572fceecaceae9b9e3ca453ad914f3daf27f589326a3cb4525d4af609",
+                "registration_key": "process:class:Fixtures\\CommerceApp\\Events\\OrderCancelled\u0000step:f1f3acd572fceecaceae9b9e3ca453ad914f3daf27f589326a3cb4525d4af609",
+                "semantic_relation_key": "15434c5e85121d370b462c015288a9eb47a960663a180e005a2d2b98f467449f"
+            }
+        },
+        {
+            "id": "2bb4ffedad57860d84eef7205b87a711b4de5cfea62248e6224170e465d9dc16",
+            "origin": "static_ast",
+            "detector": "impact-diagnostic-adjacency",
+            "certainty": "possible",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 32,
+                "end_line": 32
+            },
+            "expression": "No canonical target Illuminate\\Support\\Facades\\Event::listen was found.",
+            "condition": null,
+            "attributes": {
+                "code": "ambiguous_target",
+                "phase": "resolve",
+                "receiver_type": "Illuminate\\Support\\Facades\\Event",
+                "target_name": "listen",
+                "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                "expression": "Event::listen(OrderCancelled::class, RestockInventory::class)",
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        },
+        {
+            "id": "3849c7c7d03ee1f56fb404b9fd7caa3ff4358e434971435e8ddcd06e6871c0e1",
+            "origin": "git_diff",
+            "detector": "git-diff-symbol-mapper",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 33,
+                "end_line": 33
+            },
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "change_type": "modified",
+                "old_path": "app/Providers/CommerceServiceProvider.php",
+                "new_path": "app/Providers/CommerceServiceProvider.php",
+                "old_span": [
+                    33,
+                    33
+                ],
+                "new_span": [
+                    33,
+                    33
+                ],
+                "base_commit": "9f74baca059e6bd8976da027b3a7c6b55ce758dd",
+                "head_commit": "361f2a13c5c42347ba5c678e6db85220084b78c8"
+            }
+        },
+        {
+            "id": "49da921b22bac0d377997f81fcc807072723eb520c2594ebd970fb53721b0453",
+            "origin": "git_diff",
+            "detector": "git-diff-symbol-mapper",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 9,
+                "end_line": 9
+            },
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "change_type": "modified",
+                "old_path": "app/Providers/CommerceServiceProvider.php",
+                "new_path": "app/Providers/CommerceServiceProvider.php",
+                "old_span": [
+                    9,
+                    9
+                ],
+                "new_span": [
+                    9,
+                    9
+                ],
+                "base_commit": "9f74baca059e6bd8976da027b3a7c6b55ce758dd",
+                "head_commit": "361f2a13c5c42347ba5c678e6db85220084b78c8"
+            }
+        },
+        {
+            "id": "4f4547dad99f51c876eb22887ba812574d1e0b906dc2096199db24622e57775d",
+            "origin": "static_ast",
+            "detector": "process-membership",
+            "certainty": "certain",
+            "location": null,
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "entrypoint_id": "route:POST:orders/{order}/cancel",
+                "step_id": "step:b4b8ae2e1434868029cc1c765b5942eb766d45d40e5dca86ff352e36670b9775",
+                "registration_key": "process:route:POST:orders/{order}/cancel\u0000step:b4b8ae2e1434868029cc1c765b5942eb766d45d40e5dca86ff352e36670b9775",
+                "semantic_relation_key": "3edbb9e3cc0ca6f345c1788792c89839a07bb572be19efa8058477e4a41415b7"
+            }
+        },
+        {
+            "id": "58ec707167be6ef1793cf41ca2f83590db4ef8be898933b3df358f9d3bff6511",
+            "origin": "static_ast",
+            "detector": "module-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 29,
+                "end_line": 34
+            },
+            "expression": "namespace_root convention: Fixtures\\CommerceApp\\",
+            "condition": null,
+            "attributes": {
+                "reason": "namespace_root convention: Fixtures\\CommerceApp\\",
+                "semantic_relation_key": "0113dbf72dfc9fbc7b8725fd2733af5fce9fbb2944534d935fd0d44fa9b7c6d1"
+            }
+        },
+        {
+            "id": "656cb2c8c7183524c7cb2bec84fe14f14a8955692469452b5c461c8cdc84c05b",
+            "origin": "git_diff",
+            "detector": "git-diff-symbol-mapper",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/UnreferencedHelper.php",
+                "start_line": 1,
+                "end_line": 11
+            },
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "change_type": "added",
+                "old_path": null,
+                "new_path": "app/Services/UnreferencedHelper.php",
+                "old_span": [
+                    0,
+                    0
+                ],
+                "new_span": [
+                    1,
+                    11
+                ],
+                "base_commit": "9f74baca059e6bd8976da027b3a7c6b55ce758dd",
+                "head_commit": "361f2a13c5c42347ba5c678e6db85220084b78c8"
+            }
+        },
+        {
+            "id": "739b38198e4daeac94d0def0fe2304594bc552390719b02eb040235f0d63ee2a",
+            "origin": "git_diff",
+            "detector": "git-diff-symbol-mapper",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Models/Order.php",
+                "start_line": 16,
+                "end_line": 20
+            },
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "change_type": "deleted",
+                "old_path": "app/Models/Order.php",
+                "new_path": "app/Models/Order.php",
+                "old_span": [
+                    16,
+                    20
+                ],
+                "new_span": [
+                    15,
+                    15
+                ],
+                "base_commit": "9f74baca059e6bd8976da027b3a7c6b55ce758dd",
+                "head_commit": "361f2a13c5c42347ba5c678e6db85220084b78c8"
+            }
+        },
+        {
+            "id": "7916aff4e57b97af9627000039ea332bce907740825d265f55e36e0d0e2c5bf8",
+            "origin": "static_ast",
+            "detector": "module-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 20,
+                "end_line": 39
+            },
+            "expression": "explicit mapping",
+            "condition": null,
+            "attributes": {
+                "reason": "explicit mapping",
+                "semantic_relation_key": "e5b23524d165758947a2fa24ac03ff532523a55bf4391bec6cd35cbd4c6c9e30"
+            }
+        },
+        {
+            "id": "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+            "origin": "static_ast",
+            "detector": "event_dispatch_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 36,
+                "end_line": 36
+            },
+            "expression": "OrderCancelled::dispatch($order)",
+            "condition": null,
+            "attributes": {
+                "execution": "sync",
+                "syntax": "dispatch"
+            }
+        },
+        {
+            "id": "90385b0416766d1bf9ceb47a5a1f513fefa74a5da8d69440d1d673bd71843c7d",
+            "origin": "static_ast",
+            "detector": "module-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Notifications/OrderWasCancelled.php",
+                "start_line": 10,
+                "end_line": 27
+            },
+            "expression": "explicit mapping",
+            "condition": null,
+            "attributes": {
+                "reason": "explicit mapping",
+                "semantic_relation_key": "4fc35405cea8135bca594df8c24b6edcf1b3d40dcbc8dd3e0b4c6e1f1ca8caea"
+            }
+        },
+        {
+            "id": "91335780675d478880a26614b185a168447c901e087aaef55be8bf45bad8681a",
+            "origin": "static_ast",
+            "detector": "listener_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 33,
+                "end_line": 33
+            },
+            "expression": "Event::listen(OrderCancelled::class, SendOrderCancellationWebhook::class)",
+            "condition": null,
+            "attributes": {
+                "execution": "async",
+                "effective": false,
+                "registration_key": "listener:app/Providers/CommerceServiceProvider.php:33:33",
+                "semantic_relation_key": "46d90206eaf09477afd407183c5c83024eef21e354cf32142338b02ea4c0e631"
+            }
+        },
+        {
+            "id": "a42c15de4eac253b4f824f8ee54012d0210654dacac83f0da505a6ad6f667f01",
+            "origin": "static_ast",
+            "detector": "module-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Listeners/SendOrderCancellationWebhook.php",
+                "start_line": 9,
+                "end_line": 17
+            },
+            "expression": "explicit mapping",
+            "condition": null,
+            "attributes": {
+                "reason": "explicit mapping",
+                "semantic_relation_key": "4630e9754e13f4a0901c2a4637caeee12788f266b89ce70a25a12b5d66208adc"
+            }
+        },
+        {
+            "id": "adac75f7e6a3a270d706af4266a89a44ec8fe3b5785e06fa54aff8bfd969c52e",
+            "origin": "static_ast",
+            "detector": "module-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Policies/OrderPolicy.php",
+                "start_line": 10,
+                "end_line": 13
+            },
+            "expression": "explicit mapping",
+            "condition": null,
+            "attributes": {
+                "reason": "explicit mapping",
+                "semantic_relation_key": "656069487ccfcb00d70736d1c4ef4784867169fea313ee912442acd2ab0b1bc3"
+            }
+        },
+        {
+            "id": "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be",
+            "origin": "static_ast",
+            "detector": "notification_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 38,
+                "end_line": 38
+            },
+            "expression": "$order->user->notify(new OrderWasCancelled($order))",
+            "condition": null,
+            "attributes": {
+                "execution": "async",
+                "recipient_type": null
+            }
+        },
+        {
+            "id": "c5a243ed6314813116a7055e40936c16d62a694288ab2a2fa641b33d38539b7d",
+            "origin": "static_ast",
+            "detector": "process-membership",
+            "certainty": "certain",
+            "location": null,
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "entrypoint_id": "route:POST:orders/{order}/cancel",
+                "step_id": "step:1c763cba75a022eceb569cd588c977aaa537619bf33590fbde9e787509e5922f",
+                "registration_key": "process:route:POST:orders/{order}/cancel\u0000step:1c763cba75a022eceb569cd588c977aaa537619bf33590fbde9e787509e5922f",
+                "semantic_relation_key": "41c4b84aa26860d1e91a9e4bfd0615f99fb1f3127815e6728fdd487c7fb7bfcf"
+            }
+        },
+        {
+            "id": "c616bdacbae082286451b549c15d5cbc553917f86bfdb35080f46474ae924c51",
+            "origin": "laravel_boot",
+            "detector": "listener_detector",
+            "certainty": "certain",
+            "location": null,
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "execution": "sync",
+                "effective": true,
+                "registration_key": "listener:Fixtures\\CommerceApp\\Events\\OrderCancelled=>Fixtures\\CommerceApp\\Listeners\\RestockInventory::handle",
+                "semantic_relation_key": "eb7ab6f61cb46b4b491588849d88bdf99e0d0e9c1c7473c0d9ffd1561909f12a"
+            }
+        },
+        {
+            "id": "d2eec5ae3b04dda71073c5fbdca767afff399360ab7646ce89ba7822b005dfeb",
+            "origin": "static_ast",
+            "detector": "unresolved-call-diagnostic",
+            "certainty": "certain",
+            "location": null,
+            "expression": null,
+            "condition": null,
+            "attributes": {
+                "occurrence": "diagnostic:b3bcde45cdf5997222c1182521f1aa11363deb6487fb85349eb3d0e3df3f8e6d",
+                "caller_id": "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel",
+                "attempted_target_id": "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+                "source_evidence_ids": [
+                    "2c3890a04129da37338d55002984a3d0380ceaa774857afbdc6f5fcf69432a46",
+                    "a83f535b1aba27078de390b7b5d90895caf80afce54e5c64d1f7f27076e3b0ee"
+                ]
+            }
+        },
+        {
+            "id": "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e",
+            "origin": "static_ast",
+            "detector": "cache_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 37,
+                "end_line": 37
+            },
+            "expression": "invalidates_cache(order-summary:{id})",
+            "condition": null,
+            "attributes": {
+                "resource_type": "cache_key",
+                "resource": "order-summary:{id}",
+                "operation": "forget"
+            }
+        },
+        {
+            "id": "e5608f7967658711cc4494f76a0d9028422f88a4f42e5146cbed346188cf436e",
+            "origin": "static_ast",
+            "detector": "impact-diagnostic-adjacency",
+            "certainty": "possible",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 31,
+                "end_line": 31
+            },
+            "expression": "No canonical target Illuminate\\Support\\Facades\\Gate::policy was found.",
+            "condition": null,
+            "attributes": {
+                "code": "ambiguous_target",
+                "phase": "resolve",
+                "receiver_type": "Illuminate\\Support\\Facades\\Gate",
+                "target_name": "policy",
+                "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                "expression": "Gate::policy(Order::class, OrderPolicy::class)",
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        },
+        {
+            "id": "eb4fed4a8df8dbe54ce266c3b53a6b8f7b969e6824fedbf5a5863486af32d109",
+            "origin": "static_ast",
+            "detector": "impact-diagnostic-adjacency",
+            "certainty": "possible",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 33,
+                "end_line": 33
+            },
+            "expression": "No canonical target Illuminate\\Support\\Facades\\Event::listen was found.",
+            "condition": null,
+            "attributes": {
+                "code": "ambiguous_target",
+                "phase": "resolve",
+                "receiver_type": "Illuminate\\Support\\Facades\\Event",
+                "target_name": "listen",
+                "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Providers\\CommerceServiceProvider::boot",
+                "expression": "Event::listen(OrderCancelled::class, SendOrderCancellationWebhook::class)",
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        },
+        {
+            "id": "f43afe88a7dda077583e4b202f00869e33611b99b55eab33969dbc5c21ebddef",
+            "origin": "static_ast",
+            "detector": "test-reference-detector",
+            "certainty": "certain",
+            "location": {
+                "file": "tests/Feature/CancelOrderTest.php",
+                "start_line": 26,
+                "end_line": 26
+            },
+            "expression": "(new OrderService($gateway))->cancel($order, 'fixture reference')",
+            "condition": null,
+            "attributes": {
+                "coverage_kind": "reference",
+                "reference_kind": "direct_symbol"
+            }
+        }
+    ]
+}
