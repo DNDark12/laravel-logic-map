@@ -4,6 +4,7 @@ namespace DNDark\LogicMap\Analysis\Laravel;
 
 use DNDark\LogicMap\Analysis\Laravel\Detectors\AuthorizationDetector;
 use DNDark\LogicMap\Analysis\Laravel\Detectors\CacheEffectDetector;
+use DNDark\LogicMap\Analysis\Laravel\Detectors\CommandDetector;
 use DNDark\LogicMap\Analysis\Laravel\Detectors\ConfigEffectDetector;
 use DNDark\LogicMap\Analysis\Laravel\Detectors\ContainerBindingDetector;
 use DNDark\LogicMap\Analysis\Laravel\Detectors\EloquentEffectDetector;
@@ -130,6 +131,9 @@ final class LaravelSemanticAnalyzer
             ))->classify($files, $symbols, $bootFacts, $graph);
 
             return [$outputs['classifications'], []];
+        });
+        $this->run($metrics, $diagnostics, 'command', $this->bootFactCount($bootFacts, ['command']), $graph, function () use ($files, $symbols, $bootFacts, $graph): array {
+            return [[], (new CommandDetector())->detect($files, $symbols, $bootFacts, $graph)];
         });
         $this->run($metrics, $diagnostics, 'module', count($symbols->all()), $graph, function () use ($symbols, $graph, &$outputs): array {
             $outputs['module_assignments'] = (new ModuleResolver(

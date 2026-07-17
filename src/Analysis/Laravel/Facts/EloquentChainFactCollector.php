@@ -122,7 +122,7 @@ final class EloquentChainFactCollector extends NodeVisitorAbstract implements Fi
 
     private function collectCall(Expr\MethodCall|Expr\StaticCall $call): void
     {
-        if ($this->methodStack === []) {
+        if ($this->methodStack === [] || $call->isFirstClassCallable()) {
             return;
         }
 

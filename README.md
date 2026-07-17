@@ -35,11 +35,11 @@ php artisan logic-map:index --force
 php artisan logic-map:status
 ```
 
-Configuration is flat under `logic-map.*`; there is no `logic-map.v2.*` wrapper. The defaults scan `app`, `routes`, `database`, and `config`, then store the active snapshot at `storage/framework/logic-map/index.sqlite`.
+Configuration is flat under `logic-map.*`; there is no `logic-map.v2.*` wrapper. The defaults scan `app`, `routes`, `database`, `config`, and `tests`, then store the active snapshot at `storage/framework/logic-map/index.sqlite`. The `tests` root is required for impact reports to select related tests; remove it only when that trade-off is intentional.
 
 ```php
 // config/logic-map.php
-'scan_paths' => ['app', 'routes', 'database', 'config'],
+'scan_paths' => ['app', 'routes', 'database', 'config', 'tests'],
 'excludes' => ['app/Generated'],
 ```
 
@@ -119,29 +119,6 @@ Runtime collection is disabled by default. Enable it only in an environment wher
 Only observations with stable source and target node IDs, a compatible relation kind, and the same snapshot ID can overlay static queries. Coverage uses only these phrases: `Observed in N selected runtime sessions`, `Not observed in selected sessions`, and `No runtime data available`.
 
 See [docs/runtime-evidence.md](docs/runtime-evidence.md).
-
-## Test this package in another Laravel project
-
-From a separate Laravel application, register the local package directory as a Composer path repository. Replace the example path with the actual package path:
-
-```bash
-composer config repositories.logic-map path /Volumes/WorkSpaces/Projects/laravel-logic-map/packages/dndark/laravel-logic-map
-composer require --dev dndark/laravel-logic-map:@dev
-php artisan vendor:publish --tag=logic-map-config --force
-php artisan vendor:publish --tag=logic-map-assets --force
-php artisan logic-map:index --force
-php artisan logic-map:status
-php artisan route:list --name=logic-map
-```
-
-Then start that application's documented runtime (Docker/Sail/local server), open `/logic-map`, and smoke-test one real workflow and one real symbol impact:
-
-```bash
-php artisan logic-map:workflow 'route:GET:/' --format=json
-php artisan logic-map:impact 'method:App\Http\Controllers\HomeController::index' --format=json
-```
-
-Choose canonical IDs that exist in the consumer project. Composer path repositories symlink by default, so package edits can be re-tested after `composer dump-autoload` without publishing to Packagist.
 
 ## Known static-analysis limits
 

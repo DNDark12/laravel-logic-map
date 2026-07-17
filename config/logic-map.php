@@ -7,6 +7,7 @@ return [
         'routes',
         'database',
         'config',
+        'tests',
     ],
 
     /* Additional repository-relative paths excluded from indexing. */

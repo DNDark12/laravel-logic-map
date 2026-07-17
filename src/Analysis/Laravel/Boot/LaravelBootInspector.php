@@ -140,6 +140,12 @@ final class LaravelBootInspector
             return false;
         }
 
+        $name = $this->commandName($name);
+
+        if ($name === null) {
+            return false;
+        }
+
         foreach ($parsedFiles as $file) {
             if (! $file instanceof ParsedFile) {
                 continue;
@@ -152,12 +158,20 @@ final class LaravelBootInspector
 
                 $value = $fact->attributes['value'] ?? null;
 
-                if (is_string($value) && trim($value, "'\"") === $name) {
+                if (is_string($value) && $this->commandName(trim($value, "'\"")) === $name) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    private function commandName(string $signature): ?string
+    {
+        $parts = preg_split('/\s+/', trim($signature));
+        $name = $parts[0] ?? '';
+
+        return $name === '' ? null : $name;
     }
 }

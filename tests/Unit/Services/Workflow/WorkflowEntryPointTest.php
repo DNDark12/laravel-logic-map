@@ -82,6 +82,50 @@ final class WorkflowEntryPointTest extends CommerceFixtureTestCase
         self::assertSame(['method:Example\B::run'], $truncated->truncation['frontier']);
     }
 
+    public function test_command_entrypoint_follows_only_its_resolved_command_class(): void
+    {
+        $graph = new KnowledgeGraph();
+        $firstSignature = NodeId::named(NodeKind::Command, 'first:run');
+        $secondSignature = NodeId::named(NodeKind::Command, 'second:run');
+        $firstClass = NodeId::symbol(NodeKind::ClassSymbol, 'App\Console\Commands\FirstCommand');
+        $secondClass = NodeId::symbol(NodeKind::ClassSymbol, 'App\Console\Commands\SecondCommand');
+        $firstHandle = NodeId::method('App\Console\Commands\FirstCommand', 'handle');
+        $secondHandle = NodeId::method('App\Console\Commands\SecondCommand', 'handle');
+
+        $graph->addNode(new GraphNode($firstSignature, NodeKind::Command, 'first:run', null, null));
+        $graph->addNode(new GraphNode($secondSignature, NodeKind::Command, 'second:run', null, null));
+        $graph->addNode(new GraphNode($firstClass, NodeKind::Command, 'FirstCommand', 'App\Console\Commands\FirstCommand', new SourceLocation('app/Console/Commands/FirstCommand.php', 1, 10)));
+        $graph->addNode(new GraphNode($secondClass, NodeKind::Command, 'SecondCommand', 'App\Console\Commands\SecondCommand', new SourceLocation('app/Console/Commands/SecondCommand.php', 1, 10)));
+        $graph->addNode(new GraphNode($firstHandle, NodeKind::Method, 'handle', 'App\Console\Commands\FirstCommand::handle', new SourceLocation('app/Console/Commands/FirstCommand.php', 6, 9)));
+        $graph->addNode(new GraphNode($secondHandle, NodeKind::Method, 'handle', 'App\Console\Commands\SecondCommand::handle', new SourceLocation('app/Console/Commands/SecondCommand.php', 6, 9)));
+
+        foreach ([[$firstSignature, $firstClass], [$secondSignature, $secondClass]] as [$signature, $class]) {
+            SemanticEdgeFactory::add(
+                $graph,
+                $signature,
+                EdgeType::ResolvesTo,
+                $class,
+                EvidenceOrigin::LaravelBoot,
+                'command_detector',
+                Certainty::Certain,
+                null,
+                null,
+                'command:'.$signature->value,
+            );
+        }
+
+        $workflow = (new WorkflowBuilder($graph))->build(new WorkflowRequest($firstSignature, 20, 10));
+        $nodeIds = array_values(array_filter(array_map(
+            static fn ($step): ?string => $step->nodeId?->value,
+            $workflow->steps,
+        )));
+
+        self::assertContains($firstClass->value, $nodeIds);
+        self::assertContains($firstHandle->value, $nodeIds);
+        self::assertNotContains($secondClass->value, $nodeIds);
+        self::assertNotContains($secondHandle->value, $nodeIds);
+    }
+
     public function test_process_membership_is_precomputed_only_for_stable_framework_entries(): void
     {
         [$graph, $diagnostics, , , , $outputs] = $this->buildSemanticGraph();

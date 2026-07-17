@@ -15,7 +15,7 @@ RepositoryFileDiscovery
   -> SqliteGraphRepository
 ```
 
-The parser emits structural PHP facts and Laravel-specific facts. Resolvers turn those facts into stable nodes, typed edges, diagnostics, process steps, and evidence records. The source fingerprint includes the analysis and schema versions, so detector/process semantic changes invalidate stale snapshots even when source files did not change.
+The parser emits structural PHP facts and Laravel-specific facts. Resolvers turn those facts into stable nodes, typed edges, diagnostics, process steps, and evidence records. After symbol classification, the command detector reconciles effective Artisan names with a unique in-scope `$signature`/`$name` declaration and emits `command:* -> resolves_to -> class:*`; ambiguous matches remain diagnostics rather than false-positive workflow edges. The source fingerprint includes the analysis and schema versions, so detector/process semantic changes invalidate stale snapshots even when source files did not change.
 
 ## Stable identities
 
@@ -53,7 +53,7 @@ Matching evidence augments a query-time relation. Runtime-only evidence remains 
 
 ## Storage and bounds
 
-SQLite owns snapshots, nodes, edges, evidence, diagnostics, process steps, runtime sessions, and runtime observations. Query depth, node/edge count, response bytes, session retention, session capacity, and observations per session are bounded by config. `logic-map:clear --force` removes only the configured package database.
+SQLite owns snapshots, nodes, edges, evidence, diagnostics, process steps, runtime sessions, and runtime observations. Query depth, node/edge count, response bytes, session retention, session capacity, and observations per session are bounded by config. Oversized list projections retain the largest prefix that fits the byte envelope and report `meta.truncated`; trimming uses binary search to avoid request-time work proportional to every removed item. `logic-map:clear --force` removes only the configured package database.
 
 ## Security boundaries
 

@@ -2,6 +2,10 @@
 
 namespace DNDark\LogicMap\Tests\Unit\Analysis\Php;
 
+use DNDark\LogicMap\Analysis\Laravel\Facts\BranchConditionFactCollector;
+use DNDark\LogicMap\Analysis\Laravel\Facts\EloquentChainFactCollector;
+use DNDark\LogicMap\Analysis\Laravel\Facts\FacadeEffectFactCollector;
+use DNDark\LogicMap\Analysis\Laravel\Facts\LaravelRegistrationFactCollector;
 use DNDark\LogicMap\Analysis\Php\PhpFileParser;
 use DNDark\LogicMap\Analysis\Php\SymbolTable;
 use DNDark\LogicMap\Domain\Snapshot\DiagnosticCode;
@@ -115,5 +119,42 @@ PHP);
         self::assertTrue($gateway->attributes['nullsafe']);
         self::assertTrue($callable->attributes['first_class_callable']);
         self::assertSame([], $callable->arguments);
+    }
+
+    public function test_production_fact_collectors_accept_first_class_callable_arguments(): void
+    {
+        $parser = new PhpFileParser([
+            new LaravelRegistrationFactCollector(),
+            new BranchConditionFactCollector(),
+            new EloquentChainFactCollector(),
+            new FacadeEffectFactCollector(),
+        ]);
+
+        $parsed = $parser->parse('app/Services/CsvService.php', <<<'PHP'
+<?php
+namespace App\Services;
+
+final class CsvService
+{
+    public function export(array $headers): array
+    {
+        return array_map($this->quoteCsvField(...), $headers);
+    }
+
+    private function quoteCsvField(string $value): string
+    {
+        return $value;
+    }
+}
+PHP);
+
+        $callable = array_values(array_filter(
+            $parsed->callSites,
+            static fn ($call): bool => $call->targetName === 'quoteCsvField',
+        ));
+
+        self::assertCount(1, $callable);
+        self::assertTrue($callable[0]->attributes['first_class_callable']);
+        self::assertSame([], $callable[0]->arguments);
     }
 }

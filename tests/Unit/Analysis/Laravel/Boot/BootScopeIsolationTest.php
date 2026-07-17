@@ -2,6 +2,9 @@
 
 namespace DNDark\LogicMap\Tests\Unit\Analysis\Laravel\Boot;
 
+use DNDark\LogicMap\Analysis\Laravel\Boot\BootCollectionResult;
+use DNDark\LogicMap\Analysis\Laravel\Boot\BootCollector;
+use DNDark\LogicMap\Analysis\Laravel\Boot\BootFact;
 use DNDark\LogicMap\Analysis\Laravel\Boot\ContainerBootCollector;
 use DNDark\LogicMap\Analysis\Laravel\Boot\LaravelBootInspector;
 use DNDark\LogicMap\Analysis\Laravel\Boot\PolicyBootCollector;
@@ -53,6 +56,44 @@ final class BootScopeIsolationTest extends CommerceFixtureTestCase
                 self::assertCount(1, $table->exact($fact->attributes['policy']));
             }
         }
+    }
+
+    public function test_command_with_arguments_is_reconciled_by_its_artisan_name(): void
+    {
+        $parsed = (new PhpFileParser())->parse('app/Console/Commands/ExportOrders.php', <<<'PHP'
+<?php
+namespace App\Console\Commands;
+
+final class ExportOrders extends \Illuminate\Console\Command
+{
+    protected $signature = 'orders:export {tenant} {--force}';
+}
+PHP);
+        $symbols = new SymbolTable();
+
+        foreach ($parsed->symbols as $symbol) {
+            $symbols->add($symbol);
+        }
+
+        $collector = new class implements BootCollector
+        {
+            public function name(): string
+            {
+                return 'fixture_commands';
+            }
+
+            public function collect(\Illuminate\Foundation\Application $application): BootCollectionResult
+            {
+                return new BootCollectionResult([
+                    new BootFact('command', $this->name(), ['name' => 'orders:export']),
+                ]);
+            }
+        };
+        $result = (new LaravelBootInspector(fn () => $this->app, [$collector]))
+            ->inspect($symbols, [$parsed]);
+
+        self::assertCount(1, $result->facts);
+        self::assertSame('orders:export', $result->facts[0]->attributes['name']);
     }
 
     private function fixtureSymbols(): array

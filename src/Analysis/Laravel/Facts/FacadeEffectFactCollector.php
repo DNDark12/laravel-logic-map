@@ -115,7 +115,7 @@ final class FacadeEffectFactCollector extends NodeVisitorAbstract implements Fil
 
     private function collect(Expr\MethodCall|Expr\StaticCall|Expr\FuncCall $call): void
     {
-        if ($this->methodStack === []) {
+        if ($this->methodStack === [] || $call->isFirstClassCallable()) {
             return;
         }
 

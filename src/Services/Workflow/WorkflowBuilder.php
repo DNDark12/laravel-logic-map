@@ -292,13 +292,8 @@ final class WorkflowBuilder
         $node = $this->nodes[$nodeId->value];
         $targets = [];
 
-        if ($node->kind === NodeKind::Command && str_starts_with($nodeId->value, 'command:')) {
-            foreach ($this->nodes as $candidate) {
-                if ($candidate->kind === NodeKind::Command && str_starts_with($candidate->id->value, 'class:')) {
-                    $targets[] = $candidate->id;
-                }
-            }
-        } elseif (in_array($node->kind, [NodeKind::Command, NodeKind::Job, NodeKind::Listener], true)
+        if (in_array($node->kind, [NodeKind::Command, NodeKind::Job, NodeKind::Listener], true)
+            && ! str_starts_with($nodeId->value, 'command:')
             && is_string($node->qualifiedName)) {
             $method = NodeId::method($node->qualifiedName, 'handle');
 
@@ -328,7 +323,7 @@ final class WorkflowBuilder
             $decision = (new DecisionStepFactory())->make($terminal->guard, $module);
             $this->steps[$decision->id] ??= $decision;
             $this->transition($fromStep, $decision->id, ExecutionBoundary::Sync, null, null, false, []);
-            $terminalStep = (new TerminalStepFactory())->make($terminal, $module);
+            $terminalStep = (new TerminalStepFactory())->make($terminal, $module, $this->nodes);
             $this->steps[$terminalStep->id] ??= $terminalStep;
             $this->transition(
                 $decision->id,

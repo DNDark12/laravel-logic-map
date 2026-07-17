@@ -42,7 +42,7 @@ final class V2LaravelSemanticAccuracyGateTest extends CommerceFixtureTestCase
         'route', 'container', 'form-request', 'authorization',
         'event', 'job', 'listener', 'schedule', 'notification', 'mail',
         'eloquent', 'query-builder', 'cache', 'config', 'storage', 'view',
-        'http-client', 'symbol-classifier', 'module', 'test-reference',
+        'http-client', 'symbol-classifier', 'command', 'module', 'test-reference',
     ];
 
     private const EDGE_DETECTORS = [

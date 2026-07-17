@@ -41,6 +41,19 @@ Old snapshots cannot be upgraded. V2 uses a package-owned SQLite schema and new 
 
 Configuration moved from legacy cache/analysis keys and the transitional `logic-map.v2.*` wrapper to flat keys such as `logic-map.scan_paths`, `logic-map.storage.sqlite_path`, `logic-map.query.*`, and `logic-map.runtime.*`.
 
+The V2 default scan scope includes `tests` so symbol/Git impact can return a selected test scope. If an already-published config predates this default, add `tests` manually and rebuild the snapshot.
+
+PHP namespaces changed from the legacy lowercase prefix to `DNDark\LogicMap`. After updating a path repository, run Composer install/update (or `composer reinstall dndark/laravel-logic-map` for a mirrored Docker install) before dumping autoload so Composer refreshes installed package metadata as well as the class map.
+
+If Artisan fails with `Class "dndark\LogicMap\LogicMapServiceProvider" not found`, Laravel is still reading the generated V1 discovery cache. Remove only the generated discovery manifests, then rebuild them with the new Composer metadata:
+
+```bash
+rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+composer dump-autoload
+```
+
+For a Docker consumer, remove those two files in the mounted project and run the final `composer dump-autoload` inside the PHP container.
+
 ## HTTP and runtime defaults
 
 HTTP access is limited to `local` and `testing` by default. Add production only with application-owned authentication/authorization middleware.

@@ -37,7 +37,7 @@ final readonly class ResponseLimiter
                 $trimmed = false;
 
                 foreach (self::TRIMMABLE_KEYS as $key) {
-                    if ($this->trimKey($data, $key)) {
+                    if ($this->trimKey($data, $data, $key, $meta)) {
                         $trimmed = true;
                         break;
                     }
@@ -55,18 +55,18 @@ final readonly class ResponseLimiter
         return ['data' => $data, 'meta' => $meta];
     }
 
-    private function trimKey(array &$value, string $key): bool
+    private function trimKey(array &$root, array &$value, string $key, array $meta): bool
     {
         if (isset($value[$key]) && is_array($value[$key])) {
             if (array_is_list($value[$key]) && $value[$key] !== []) {
-                array_pop($value[$key]);
+                $this->trimList($root, $value[$key], $meta);
 
                 return true;
             }
 
             foreach ($value[$key] as &$group) {
                 if (is_array($group) && array_is_list($group) && $group !== []) {
-                    array_pop($group);
+                    $this->trimList($root, $group, $meta);
 
                     return true;
                 }
@@ -75,13 +75,35 @@ final readonly class ResponseLimiter
         }
 
         foreach ($value as &$child) {
-            if (is_array($child) && $this->trimKey($child, $key)) {
+            if (is_array($child) && $this->trimKey($root, $child, $key, $meta)) {
                 return true;
             }
         }
         unset($child);
 
         return false;
+    }
+
+    private function trimList(array &$root, array &$list, array $meta): void
+    {
+        $original = $list;
+        $low = 0;
+        $high = count($original) - 1;
+        $best = null;
+
+        while ($low <= $high) {
+            $candidate = intdiv($low + $high, 2);
+            $list = array_slice($original, 0, $candidate);
+
+            if ($this->bytes($root, $meta) <= $this->maxBytes) {
+                $best = $candidate;
+                $low = $candidate + 1;
+            } else {
+                $high = $candidate - 1;
+            }
+        }
+
+        $list = $best === null ? [] : array_slice($original, 0, $best);
     }
 
     private function bytes(mixed $data, array $meta): int
