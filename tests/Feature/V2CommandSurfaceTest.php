@@ -80,6 +80,49 @@ final class V2CommandSurfaceTest extends CommerceFixtureTestCase
         self::assertStringContainsString('"affected_symbols"', Artisan::output());
     }
 
+    public function test_workflow_command_projects_modules_and_class_containers_as_collections(): void
+    {
+        $this->index();
+
+        self::assertSame(0, Artisan::call('logic-map:workflow', [
+            'symbol' => 'module:Orders',
+            '--format' => 'json',
+        ]));
+        $module = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame('module', $module['identity']['workflow_type']);
+        self::assertSame('module:Orders', $module['module']['node_id']);
+        self::assertGreaterThan(1, $module['summary']['entrypoint_count']);
+        self::assertGreaterThan(1, count($module['entry_workflows']));
+
+        self::assertSame(0, Artisan::call('logic-map:workflow', [
+            'symbol' => 'module:Orders',
+            '--format' => 'markdown',
+        ]));
+        $moduleMarkdown = Artisan::output();
+        self::assertStringContainsString('# Module workflow Orders', $moduleMarkdown);
+        self::assertGreaterThan(1, substr_count($moduleMarkdown, '```mermaid'));
+
+        self::assertSame(0, Artisan::call('logic-map:workflow', [
+            'symbol' => 'class:Fixtures\\CommerceApp\\Http\\Controllers\\OrderController',
+            '--format' => 'json',
+        ]));
+        $collection = json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame('symbol_collection', $collection['identity']['workflow_type']);
+        self::assertSame(
+            'class:Fixtures\\CommerceApp\\Http\\Controllers\\OrderController',
+            $collection['selection']['node_id'],
+        );
+        self::assertGreaterThan(1, $collection['summary']['entrypoint_count']);
+
+        self::assertSame(0, Artisan::call('logic-map:workflow', [
+            'symbol' => 'class:Fixtures\\CommerceApp\\Http\\Controllers\\OrderController',
+            '--format' => 'markdown',
+        ]));
+        $collectionMarkdown = Artisan::output();
+        self::assertStringContainsString('# Workflow collection OrderController', $collectionMarkdown);
+        self::assertGreaterThan(1, substr_count($collectionMarkdown, '```mermaid'));
+    }
+
     public function test_invalid_formats_and_unsafe_outputs_fail_without_writing(): void
     {
         $this->index();

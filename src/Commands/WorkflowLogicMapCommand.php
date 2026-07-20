@@ -5,6 +5,11 @@ namespace DNDark\LogicMap\Commands;
 use DateTimeImmutable;
 use DateTimeZone;
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
+use DNDark\LogicMap\Domain\Graph\NodeKind;
+use DNDark\LogicMap\Projectors\ModuleWorkflowJsonProjector;
+use DNDark\LogicMap\Projectors\ModuleWorkflowMarkdownProjector;
+use DNDark\LogicMap\Projectors\SymbolWorkflowCollectionJsonProjector;
+use DNDark\LogicMap\Projectors\SymbolWorkflowCollectionMarkdownProjector;
 use DNDark\LogicMap\Projectors\WorkflowJsonProjector;
 use DNDark\LogicMap\Projectors\WorkflowMarkdownProjector;
 use DNDark\LogicMap\Projectors\WorkflowMermaidProjector;
@@ -43,6 +48,74 @@ final class WorkflowLogicMapCommand extends Command
 
         try {
             $entrypoint = $service->resolve($snapshot, (string) $this->argument('symbol'));
+
+            if ($snapshot->graph->findNode($entrypoint)?->kind === NodeKind::Module) {
+                $moduleWorkflow = $service->buildModule($snapshot, $entrypoint);
+                $evidence = [];
+
+                foreach ($moduleWorkflow->entryWorkflows as $workflow) {
+                    $evidence[$workflow->id->value] = $service->evidence($snapshot, $workflow);
+                }
+
+                $content = match ($format) {
+                    'json' => json_encode(
+                        (new ModuleWorkflowJsonProjector())->project($moduleWorkflow, $snapshot->id, $evidence),
+                        JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+                    )."\n",
+                    'markdown' => (new ModuleWorkflowMarkdownProjector())->project(
+                        $moduleWorkflow,
+                        $snapshot->id,
+                        new DateTimeImmutable('now', new DateTimeZone('UTC')),
+                        $evidence,
+                    ),
+                    'mermaid' => throw new \InvalidArgumentException(
+                        'Module workflows contain multiple diagrams; use markdown or json.',
+                    ),
+                };
+
+                return $this->emit($content);
+            }
+
+            $collection = $service->buildSymbolCollection($snapshot, $entrypoint);
+
+            if ($collection !== []) {
+                $selection = $snapshot->graph->findNode($entrypoint);
+
+                if ($selection === null) {
+                    throw new \InvalidArgumentException('Workflow selection does not exist in the active snapshot.');
+                }
+
+                $evidence = [];
+
+                foreach ($collection as $workflow) {
+                    $evidence[$workflow->id->value] = $service->evidence($snapshot, $workflow);
+                }
+
+                $content = match ($format) {
+                    'json' => json_encode(
+                        (new SymbolWorkflowCollectionJsonProjector())->project(
+                            $selection,
+                            $collection,
+                            $snapshot->id,
+                            $evidence,
+                        ),
+                        JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+                    )."\n",
+                    'markdown' => (new SymbolWorkflowCollectionMarkdownProjector())->project(
+                        $selection,
+                        $collection,
+                        $snapshot->id,
+                        new DateTimeImmutable('now', new DateTimeZone('UTC')),
+                        $evidence,
+                    ),
+                    'mermaid' => throw new \InvalidArgumentException(
+                        'Symbol workflow collections contain multiple diagrams; use markdown or json.',
+                    ),
+                };
+
+                return $this->emit($content);
+            }
+
             $workflow = $service->build($snapshot, $entrypoint);
             $evidence = $service->evidence($snapshot, $workflow);
             $content = match ($format) {

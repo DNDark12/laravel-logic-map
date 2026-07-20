@@ -15,11 +15,12 @@
 **Files:**
 - Modify: `tests/Feature/V2CommandSurfaceTest.php`
 - Modify: `src/Commands/WorkflowLogicMapCommand.php`
+- Create: `src/Projectors/SymbolWorkflowCollectionMarkdownProjector.php`
 
-- [ ] Add failing command tests asserting `module:Orders` returns `workflow_type=module` with more than one entry workflow and a controller returns `workflow_type=symbol_collection`.
-- [ ] Run `vendor/bin/phpunit tests/Feature/V2CommandSurfaceTest.php` and verify the current one-node projection fails.
-- [ ] Dispatch module and container selections to `buildModule()` and `buildSymbolCollection()` while retaining ordinary workflow behavior.
-- [ ] Re-run the focused command tests and verify they pass.
+- [x] Add failing command tests asserting `module:Orders` returns `workflow_type=module` with more than one entry workflow and a controller returns `workflow_type=symbol_collection`.
+- [x] Run `vendor/bin/phpunit tests/Feature/V2CommandSurfaceTest.php` and verify the current one-node projection fails.
+- [x] Dispatch module and container selections to `buildModule()` and `buildSymbolCollection()` while retaining ordinary workflow behavior.
+- [x] Re-run the focused command tests and verify they pass.
 
 ### Task 2: Add module and workflow dossier Markdown
 
@@ -28,10 +29,10 @@
 - Create: `src/Projectors/WorkflowDossierMarkdownProjector.php`
 - Create: `tests/Unit/Projectors/ModuleWorkflowMarkdownProjectorTest.php`
 
-- [ ] Add failing projector tests requiring schema/snapshot metadata, all module entrypoints, relations, shared resources, gaps, and fenced Mermaid diagrams.
-- [ ] Run the projector test and verify the classes are missing.
-- [ ] Implement deterministic composition from `ModuleWorkflowJsonProjector`, `WorkflowMarkdownProjector`, and `WorkflowMermaidProjector`.
-- [ ] Re-run projector tests and verify they pass.
+- [x] Add failing projector tests requiring schema/snapshot metadata, all module entrypoints, relations, shared resources, gaps, and fenced Mermaid diagrams.
+- [x] Run the projector test and verify the classes are missing.
+- [x] Implement deterministic composition from `ModuleWorkflowJsonProjector`, `WorkflowMarkdownProjector`, and `WorkflowMermaidProjector`.
+- [x] Re-run projector tests and verify they pass.
 
 ### Task 3: Restore V2-native batch documentation command
 
@@ -42,11 +43,11 @@
 - Modify: `tests/Feature/DocumentationCommandContractTest.php`
 - Create: `tests/Feature/ExportDocsCommandTest.php`
 
-- [ ] Add failing tests requiring command registration, deterministic overview/module/workflow files, overwrite protection, and repository path safety.
-- [ ] Run the two feature test files and verify `logic-map:export-docs` is absent.
-- [ ] Implement the command using the active snapshot, module enumeration, `buildModule()`, and `SafeOutputWriter`.
-- [ ] Register the command and add bounded export defaults.
-- [ ] Re-run the focused feature tests and verify they pass.
+- [x] Add failing tests requiring command registration, deterministic overview/module/workflow files, overwrite protection, and repository path safety.
+- [x] Run the two feature test files and verify `logic-map:export-docs` is absent.
+- [x] Implement the command using the active snapshot, module enumeration, `buildModule()`, and `SafeOutputWriter`.
+- [x] Register the command and add bounded export defaults.
+- [x] Re-run the focused feature tests and verify they pass.
 
 ### Task 4: Contract cleanup and verification
 
@@ -54,7 +55,7 @@
 - Modify: `tests/Feature/V1RemovalContractTest.php`
 - Modify: `README.md`
 
-- [ ] Update the removal contract so only truly removed V1 surfaces remain forbidden.
-- [ ] Document the P0 export command and exact generated files.
-- [ ] Run `vendor/bin/phpunit` and verify all tests pass.
-- [ ] Run `git diff --check` and inspect the final diff for V1 contract leakage or calls to `ImpactQueryService` from doc export.
+- [x] Update the removal contract so only truly removed V1 surfaces remain forbidden.
+- [x] Document the P0 export command and exact generated files.
+- [x] Run `vendor/bin/phpunit` and verify all tests pass.
+- [x] Run `git diff --check` and inspect the final diff for V1 contract leakage or calls to `ImpactQueryService` from doc export.

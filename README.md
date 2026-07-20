@@ -68,6 +68,17 @@ php artisan logic-map:impact --base=origin/main --head=HEAD --format=markdown
 
 Impact is reason-grouped rather than a flat dependency list. Each affected symbol contains its ordered node/edge chain and evidence IDs. Categories include hard dependency, workflow, async, shared state, external contract, module, uncertainty, and test scope.
 
+## AI documentation export
+
+Export the active V2 snapshot as module and workflow dossiers:
+
+```bash
+php artisan logic-map:export-docs
+php artisan logic-map:export-docs --output=docs/architecture-map --force
+```
+
+The command writes `overview.md`, `modules/*.md`, and `workflows/*.md`. Module dossiers use the module workflow projection rather than treating every module member as a changed symbol. Workflow dossiers embed Mermaid diagrams together with ordered steps, effects, gaps, and evidence.
+
 ## HTTP API
 
 ```text
@@ -134,10 +145,11 @@ logic-map:index
 logic-map:status
 logic-map:workflow
 logic-map:impact
+logic-map:export-docs
 logic-map:clear
 ```
 
-V1 commands, cache snapshots, routes, reports, and UI are intentionally removed. See [UPGRADING.md](UPGRADING.md).
+V1 cache snapshots, routes, reports, and UI are intentionally removed. The `export-docs` name is reused by a V2-native implementation; no V1 graph/report compatibility layer is loaded. See [UPGRADING.md](UPGRADING.md).
 
 ## License
 

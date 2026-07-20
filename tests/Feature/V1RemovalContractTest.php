@@ -54,13 +54,12 @@ final class V1RemovalContractTest extends TestCase
             'logic-map:build',
             'logic-map:clear-cache',
             'logic-map:analyze',
-            'logic-map:export-docs',
             'logic-map:export-note',
         ] as $removed) {
             self::assertNotContains($removed, $commands, $removed);
         }
 
-        foreach (['logic-map:index', 'logic-map:status', 'logic-map:workflow', 'logic-map:impact', 'logic-map:clear'] as $active) {
+        foreach (['logic-map:index', 'logic-map:status', 'logic-map:workflow', 'logic-map:impact', 'logic-map:export-docs', 'logic-map:clear'] as $active) {
             self::assertContains($active, $commands, $active);
         }
 

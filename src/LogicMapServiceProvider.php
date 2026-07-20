@@ -187,6 +187,7 @@ final class LogicMapServiceProvider extends ServiceProvider
                 Commands\StatusLogicMapCommand::class,
                 Commands\WorkflowLogicMapCommand::class,
                 Commands\ImpactLogicMapCommand::class,
+                Commands\ExportDocsCommand::class,
                 Commands\ClearLogicMapCommand::class,
             ]);
         }

@@ -64,6 +64,12 @@ return [
         'allow_absolute_paths' => false,
     ],
 
+    'doc_export' => [
+        'output' => 'docs/logic-map',
+        'max_modules' => 100,
+        'max_workflows' => 500,
+    ],
+
     /* Opt-in sanitized observations; disabled by default. */
     'runtime' => [
         'enabled' => false,
