@@ -91,6 +91,6 @@ final class V1RemovalContractTest extends TestCase
         self::assertTrue(class_exists(RuntimeEvidenceMerger::class));
         self::assertInstanceOf(SemanticGraphRepository::class, $this->app->make(SemanticGraphRepository::class));
         self::assertIsArray(config('logic-map.scan_paths'));
-        self::assertIsString(config('logic-map.storage.sqlite_path'));
+        self::assertArrayHasKey('connection', config('logic-map.storage'));
     }
 }

@@ -15,15 +15,17 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Throwable;
 
-final readonly class LaravelRuntimeSubscriber
+final class LaravelRuntimeSubscriber
 {
+    private bool $recording = false;
+
     public function __construct(
-        private RuntimeEvidenceRepository $repository,
-        private RuntimeTraceContext $context,
-        private SqlTableObservationParser $sqlParser,
-        private QueueTracePayload $queuePayload,
-        private bool $collectCacheEvents,
-        private string $applicationNamespace,
+        private readonly RuntimeEvidenceRepository $repository,
+        private readonly RuntimeTraceContext $context,
+        private readonly SqlTableObservationParser $sqlParser,
+        private readonly QueueTracePayload $queuePayload,
+        private readonly bool $collectCacheEvents,
+        private readonly string $applicationNamespace,
     ) {
     }
 
@@ -40,9 +42,18 @@ final readonly class LaravelRuntimeSubscriber
             return;
         }
 
+        $tableNames = (array) ($parsed['table_names'] ?? []);
+
+        if ($tableNames !== [] && array_filter(
+            $tableNames,
+            static fn (string $table): bool => ! str_starts_with($table, 'lm_'),
+        ) === []) {
+            return;
+        }
+
         $this->record(
             'sql_'.$parsed['operation'],
-            ['table_names' => $parsed['table_names']],
+            ['table_names' => $tableNames],
             durationMs: is_numeric($event->time) ? (float) $event->time : null,
             success: true,
         );
@@ -169,9 +180,11 @@ final readonly class LaravelRuntimeSubscriber
         ?float $durationMs = null,
         ?bool $success = null,
     ): void {
-        if (! $this->context->active()) {
+        if (! $this->context->active() || $this->recording) {
             return;
         }
+
+        $this->recording = true;
 
         try {
             $this->repository->record(new RuntimeObservation(
@@ -188,6 +201,8 @@ final readonly class LaravelRuntimeSubscriber
             ));
         } catch (Throwable $throwable) {
             $this->repository->diagnose('runtime_observation_write_failed', $throwable->getMessage());
+        } finally {
+            $this->recording = false;
         }
     }
 }

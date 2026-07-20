@@ -20,23 +20,14 @@ final readonly class ModuleQueryService
 
     public function all(GraphSnapshot $snapshot): array
     {
-        $counts = [];
-
-        foreach ($snapshot->graph->edges() as $edge) {
-            if ($edge->type === EdgeType::MemberOfModule) {
-                $counts[$edge->target->value] = ($counts[$edge->target->value] ?? 0) + 1;
-            }
-        }
-
+        $counts = $snapshot->graph->moduleMemberCounts();
         $modules = [];
 
-        foreach ($snapshot->graph->nodes() as $node) {
-            if ($node->kind === NodeKind::Module) {
-                $modules[] = [
-                    ...$this->node($node),
-                    'member_count' => $counts[$node->id->value] ?? 0,
-                ];
-            }
+        foreach ($snapshot->graph->nodesByKind(NodeKind::Module) as $node) {
+            $modules[] = [
+                ...$this->node($node),
+                'member_count' => $counts[$node->id->value] ?? 0,
+            ];
         }
 
         $truncated = count($modules) > $this->maxNodes;
@@ -49,29 +40,26 @@ final readonly class ModuleQueryService
 
     public function find(GraphSnapshot $snapshot, NodeId $id): ?array
     {
-        $nodes = [];
+        $module = $snapshot->graph->findNode($id);
 
-        foreach ($snapshot->graph->nodes() as $node) {
-            $nodes[$node->id->value] = $node;
-        }
-
-        if (($nodes[$id->value] ?? null)?->kind !== NodeKind::Module) {
+        if ($module?->kind !== NodeKind::Module) {
             return null;
         }
 
-        $memberships = [];
+        // Members of this module only; ordering follows edge ids like the
+        // previous whole-graph pass did.
+        $memberIds = [];
 
-        foreach ($snapshot->graph->edges() as $edge) {
-            if ($edge->type === EdgeType::MemberOfModule) {
-                $memberships[$edge->source->value] = $edge->target->value;
-            }
+        foreach ($snapshot->graph->incoming($id, [EdgeType::MemberOfModule]) as $edge) {
+            $memberIds[$edge->source->value] = true;
         }
 
+        $memberNodes = $snapshot->graph->nodesByIds(array_keys($memberIds));
         $members = [];
 
-        foreach ($memberships as $memberId => $moduleId) {
-            if ($moduleId === $id->value && isset($nodes[$memberId])) {
-                $members[] = $this->node($nodes[$memberId]);
+        foreach ($memberIds as $memberId => $unused) {
+            if (isset($memberNodes[$memberId])) {
+                $members[] = $this->node($memberNodes[$memberId]);
             }
         }
 
@@ -84,11 +72,35 @@ final readonly class ModuleQueryService
         $outbound = [];
         $shared = [];
 
-        foreach ($snapshot->graph->edges() as $edge) {
-            if (in_array($edge->type, [EdgeType::Contains, EdgeType::Defines, EdgeType::MemberOfModule], true)) {
-                continue;
-            }
+        // Only edges touching this module's members can classify as
+        // inbound/outbound/shared — no whole-graph pass required.
+        $touching = $snapshot->graph->edgesTouching(
+            array_keys($memberIds),
+            null,
+            [EdgeType::Contains, EdgeType::Defines, EdgeType::MemberOfModule],
+        );
+        $otherEndpoints = [];
 
+        foreach ($touching as $edge) {
+            $otherEndpoints[$edge->source->value] = true;
+            $otherEndpoints[$edge->target->value] = true;
+        }
+
+        $memberships = [
+            ...$snapshot->graph->membershipsOf(array_keys($otherEndpoints)),
+            ...array_fill_keys(array_keys($memberIds), $id->value),
+        ];
+        $sharedCandidates = [];
+
+        foreach ($touching as $edge) {
+            if (($memberships[$edge->source->value] ?? null) === $id->value) {
+                $sharedCandidates[$edge->target->value] = true;
+            }
+        }
+
+        $sharedNodes = $snapshot->graph->nodesByIds(array_keys($sharedCandidates));
+
+        foreach ($touching as $edge) {
             $sourceModule = $memberships[$edge->source->value] ?? null;
             $targetModule = $memberships[$edge->target->value] ?? null;
             $row = [
@@ -104,9 +116,9 @@ final readonly class ModuleQueryService
                 $inbound[] = $row;
             }
 
-            if ($sourceModule === $id->value && isset($nodes[$edge->target->value])
-                && in_array($nodes[$edge->target->value]->kind, self::resourceKinds(), true)) {
-                $shared[$edge->target->value] = $this->node($nodes[$edge->target->value]);
+            if ($sourceModule === $id->value && isset($sharedNodes[$edge->target->value])
+                && in_array($sharedNodes[$edge->target->value]->kind, self::resourceKinds(), true)) {
+                $shared[$edge->target->value] = $this->node($sharedNodes[$edge->target->value]);
             }
         }
 
@@ -119,7 +131,7 @@ final readonly class ModuleQueryService
 
         return [
             'data' => [
-                'module' => $this->node($nodes[$id->value]),
+                'module' => $this->node($module),
                 'members' => $members,
                 'entrypoints' => $entrypoints,
                 'inbound' => $inbound,

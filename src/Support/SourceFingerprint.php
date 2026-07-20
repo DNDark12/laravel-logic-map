@@ -11,6 +11,7 @@ final readonly class SourceFingerprint
     public function __construct(
         private string $analysisVersion,
         private int $schemaVersion,
+        private array $semanticConfiguration = [],
     ) {
         if (trim($analysisVersion) === '' || $schemaVersion < 1) {
             throw new InvalidArgumentException('Fingerprint version inputs must be valid.');
@@ -22,11 +23,17 @@ final readonly class SourceFingerprint
     {
         usort($files, static fn (IndexedFile $left, IndexedFile $right): int => $left->path <=> $right->path);
 
-        return hash('sha256', CanonicalJson::encode([
+        $payload = [
             'schema_version' => $this->schemaVersion,
             'analysis_version' => $this->analysisVersion,
             'options' => $options->fingerprintData(),
             'files' => array_map(static fn (IndexedFile $file): array => $file->toArray(), $files),
-        ]));
+        ];
+
+        if ($this->semanticConfiguration !== []) {
+            $payload['semantic_configuration'] = $this->semanticConfiguration;
+        }
+
+        return hash('sha256', CanonicalJson::encode($payload));
     }
 }

@@ -36,7 +36,11 @@ final class RuntimeEvidenceMergerTest extends TestCase
             ],
         );
 
-        $result = (new RuntimeEvidenceMerger($repository))->merge($snapshot, ['selected']);
+        $result = (new RuntimeEvidenceMerger($repository))->merge(
+            $snapshot,
+            ['selected'],
+            ['method:App\\A::run', 'method:App\\B::run'],
+        );
         $matched = $this->relation($result, 'method:App\\A::run', 'method:App\\B::run', EdgeType::Calls);
         $runtimeOnly = $this->relation($result, 'method:App\\B::run', 'table:orders', EdgeType::ReadsTable);
 
@@ -60,7 +64,11 @@ final class RuntimeEvidenceMergerTest extends TestCase
         [$snapshot] = $this->snapshot('current');
         $repository = $this->repository([$this->session('selected', $snapshot->id)], []);
 
-        $result = (new RuntimeEvidenceMerger($repository))->merge($snapshot, ['selected']);
+        $result = (new RuntimeEvidenceMerger($repository))->merge(
+            $snapshot,
+            ['selected'],
+            ['method:App\\A::run', 'method:App\\B::run'],
+        );
         $relation = $this->relation($result, 'method:App\\A::run', 'method:App\\B::run', EdgeType::Calls);
 
         self::assertSame(Certainty::Certain->value, $relation['static_certainty']);
@@ -72,7 +80,11 @@ final class RuntimeEvidenceMergerTest extends TestCase
     public function test_no_sessions_reports_unknown_coverage_instead_of_never_executed(): void
     {
         [$snapshot] = $this->snapshot('current');
-        $result = (new RuntimeEvidenceMerger($this->repository([], [])))->merge($snapshot);
+        $result = (new RuntimeEvidenceMerger($this->repository([], [])))->merge(
+            $snapshot,
+            null,
+            ['method:App\\A::run', 'method:App\\B::run'],
+        );
         $relation = $this->relation($result, 'method:App\\A::run', 'method:App\\B::run', EdgeType::Calls);
 
         self::assertSame('No runtime data available', $result['coverage']);

@@ -9,13 +9,13 @@ Laravel Logic Map builds an evidence-backed semantic graph of a Laravel applicat
 - Which relationships are proven by AST/Laravel boot facts, which are probable/possible, and which were observed at runtime?
 - Where did analysis stop because a target was dynamic or ambiguous?
 
-The index is deterministic and stored in a package-owned SQLite database. Runtime collection is optional and never replaces static evidence.
+The index is deterministic and stored in `lm_*` tables on the application's configured database connection. Runtime collection is optional and never replaces static evidence.
 
 ## Requirements
 
 - PHP 8.2+
 - Laravel 10, 11, or 12
-- `ext-pdo` and `ext-pdo_sqlite`
+- `ext-pdo` and the PDO driver used by the application's database connection
 - Composer
 
 ## Installation
@@ -35,7 +35,7 @@ php artisan logic-map:index --force
 php artisan logic-map:status
 ```
 
-Configuration is flat under `logic-map.*`; there is no `logic-map.v2.*` wrapper. The defaults scan `app`, `routes`, `database`, `config`, and `tests`, then store the active snapshot at `storage/framework/logic-map/index.sqlite`. The `tests` root is required for impact reports to select related tests; remove it only when that trade-off is intentional.
+Configuration is flat under `logic-map.*`; there is no `logic-map.v2.*` wrapper. The defaults scan `app`, `routes`, `database`, `config`, and `tests`, then store the active snapshot in `lm_*` tables on the application's database connection (created by the package migrations — run `php artisan migrate`; override the connection with `logic-map.storage.connection` / `LOGIC_MAP_DB_CONNECTION`). The `tests` root is required for impact reports to select related tests; remove it only when that trade-off is intentional.
 
 ```php
 // config/logic-map.php

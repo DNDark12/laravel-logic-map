@@ -6,8 +6,10 @@ use DNDark\LogicMap\Analysis\Php\PhpFileParser;
 use DNDark\LogicMap\Analysis\Php\SymbolDefinition;
 use DNDark\LogicMap\Analysis\Php\SymbolTable;
 use DNDark\LogicMap\Domain\Graph\Certainty;
+use DNDark\LogicMap\Domain\Graph\EdgeType;
 use DNDark\LogicMap\Domain\Graph\EvidenceOrigin;
 use DNDark\LogicMap\Domain\Graph\EvidenceRecord;
+use DNDark\LogicMap\Domain\Graph\GraphNode;
 use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
 use DNDark\LogicMap\Domain\Impact\ChangedFile;
@@ -51,7 +53,7 @@ final readonly class ImpactQueryService
         }
 
         if ($symbol !== null) {
-            $changes = [$this->selectedSymbol($snapshot, $symbol)];
+            $changes = $this->selectedSymbols($snapshot, $symbol);
             $diagnostics = $snapshot->diagnostics;
         } else {
             [$changes, $diagnostics] = $this->gitChanges(
@@ -83,32 +85,97 @@ final readonly class ImpactQueryService
         ));
     }
 
-    private function selectedSymbol(GraphSnapshot $snapshot, string $symbol): ChangedSymbol
+    /** @return list<ChangedSymbol> */
+    private function selectedSymbols(GraphSnapshot $snapshot, string $symbol): array
     {
-        $node = null;
+        $matches = [];
 
-        foreach ($snapshot->graph->nodes() as $candidate) {
-            if ($candidate->id->value === $symbol || $candidate->qualifiedName === ltrim($symbol, '\\')) {
-                if ($node !== null) {
-                    throw new InvalidArgumentException('Symbol selection is ambiguous; use the canonical node ID.');
-                }
+        try {
+            $candidate = $snapshot->graph->findNode(NodeId::fromString($symbol));
 
-                $node = $candidate;
+            if ($candidate !== null) {
+                $matches[$candidate->id->value] = $candidate;
             }
+        } catch (InvalidArgumentException) {
         }
+
+        foreach ($snapshot->graph->nodesByQualifiedName(ltrim($symbol, '\\')) as $candidate) {
+            $matches[$candidate->id->value] = $candidate;
+        }
+
+        if (count($matches) > 1) {
+            throw new InvalidArgumentException('Symbol selection is ambiguous; use the canonical node ID.');
+        }
+
+        $node = $matches === [] ? null : array_values($matches)[0];
 
         if ($node === null) {
             throw new InvalidArgumentException('Selected symbol does not exist in the active snapshot.');
         }
 
+        if ($node->kind !== NodeKind::Module) {
+            $definedMethodIds = array_map(
+                static fn ($edge): string => $edge->target->value,
+                $snapshot->graph->outgoing($node->id, [EdgeType::Defines]),
+            );
+            $definedMethods = $snapshot->graph->nodesByIds(array_slice($definedMethodIds, 0, $this->maxNodes));
+            $changes = [];
+
+            foreach ($definedMethodIds as $methodId) {
+                if (($definedMethods[$methodId] ?? null)?->kind === NodeKind::Method) {
+                    $changes[] = $this->changedSymbol($snapshot, $definedMethods[$methodId], 'container', $node->id->value);
+                }
+            }
+
+            return $changes === []
+                ? [$this->changedSymbol($snapshot, $node, 'direct')]
+                : $changes;
+        }
+
+        $memberIds = array_map(
+            static fn ($edge): string => $edge->source->value,
+            $snapshot->graph->incoming($node->id, [EdgeType::MemberOfModule]),
+        );
+        $members = $snapshot->graph->nodesByIds(array_slice($memberIds, 0, $this->maxNodes));
+        $changes = [];
+
+        foreach ($memberIds as $memberId) {
+            if (isset($members[$memberId]) && ! in_array($members[$memberId]->kind, [NodeKind::Module, NodeKind::Process], true)) {
+                $changes[] = $this->changedSymbol($snapshot, $members[$memberId], 'module', $node->id->value);
+            }
+        }
+
+        if ($changes === []) {
+            throw new InvalidArgumentException('Selected module has no indexed members to analyze.');
+        }
+
+        return $changes;
+    }
+
+    private function changedSymbol(
+        GraphSnapshot $snapshot,
+        GraphNode $node,
+        string $selection,
+        ?string $moduleId = null,
+    ): ChangedSymbol {
+        $attributes = ['selection' => $selection];
+
+        if ($moduleId !== null) {
+            $attributes[$selection === 'module' ? 'module_id' : 'container_id'] = $moduleId;
+        }
+
         $evidence = new EvidenceRecord(
             EvidenceOrigin::StaticAst,
-            'symbol-selection',
+            match ($selection) {
+                'module' => 'module-selection',
+                'container' => 'container-selection',
+                default => 'symbol-selection',
+            },
             Certainty::Certain,
             $node->location,
             $node->id->value,
             null,
-            ['selection' => 'direct', 'snapshot_id' => $snapshot->id],
+            [...$attributes, 'snapshot_id' => $snapshot->id],
         );
 
         return new ChangedSymbol(
@@ -122,7 +189,7 @@ final readonly class ImpactQueryService
             $node->location?->startLine,
             $node->location?->endLine,
             $evidence,
-            ['selection' => 'direct'],
+            $attributes,
         );
     }
 
@@ -192,7 +259,7 @@ final readonly class ImpactQueryService
     {
         $symbols = new SymbolTable();
 
-        foreach ($snapshot->graph->nodes() as $node) {
+        foreach ($snapshot->graph->locatedNodes() as $node) {
             if ($node->location === null) {
                 continue;
             }

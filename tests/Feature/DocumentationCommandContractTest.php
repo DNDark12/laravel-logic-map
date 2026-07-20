@@ -14,17 +14,15 @@ final class DocumentationCommandContractTest extends TestCase
         foreach ([
             '## What 2.0 answers',
             '## Installation',
-            'ext-pdo_sqlite',
+            '`ext-pdo`',
             '## Indexing',
             '## Workflow examples',
             '## Impact examples',
             '## Evidence and certainty',
             '## HTTP viewer protection',
             '## Runtime evidence (opt-in)',
-            '## Test this package in another Laravel project',
             '## Known static-analysis limits',
             '## Requirements',
-            'composer config repositories.logic-map path',
             'DNDark\\LogicMap',
         ] as $required) {
             self::assertStringContainsString($required, $readme, $required);
@@ -61,7 +59,7 @@ final class DocumentationCommandContractTest extends TestCase
         foreach ([
             'There is no V1 API, cache, command, route, report, asset, or UI compatibility layer.',
             'Old snapshots cannot be upgraded.',
-            'ext-pdo_sqlite',
+            'logic-map.storage.connection',
             'local` and `testing',
             'Runtime collection is disabled by default.',
             'Back up any customized published V1 views/assets',
@@ -78,7 +76,7 @@ final class DocumentationCommandContractTest extends TestCase
         self::assertSame('src/', $manifest['autoload']['psr-4']['DNDark\\LogicMap\\']);
         self::assertSame('DNDark\\LogicMap\\LogicMapServiceProvider', $manifest['extra']['laravel']['providers'][0]);
         self::assertArrayHasKey('ext-pdo', $manifest['require']);
-        self::assertArrayHasKey('ext-pdo_sqlite', $manifest['require']);
+        self::assertArrayNotHasKey('ext-pdo_sqlite', $manifest['require']);
         self::assertArrayHasKey('nikic/php-parser', $manifest['require']);
     }
 

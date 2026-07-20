@@ -65,8 +65,12 @@ final class V2IndexSupportTest extends TestCase
         touch($this->root.'/app/A.php', time() + 100);
         $afterMtime = (new SourceFingerprint('2.0-core-1', 1))->calculate($forced, $files);
         $afterVersion = (new SourceFingerprint('2.0-core-2', 1))->calculate($normal, $files);
+        $afterSemanticConfig = (new SourceFingerprint('2.0-core-1', 1, [
+            'modules' => ['explicit' => ['App\\Services\\Order*' => 'Orders']],
+        ]))->calculate($normal, $files);
 
         self::assertSame($first, $afterMtime);
         self::assertNotSame($first, $afterVersion);
+        self::assertNotSame($first, $afterSemanticConfig);
     }
 }

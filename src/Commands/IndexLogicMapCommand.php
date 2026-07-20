@@ -4,6 +4,7 @@ namespace DNDark\LogicMap\Commands;
 
 use DNDark\LogicMap\Services\Indexing\IndexLogicMapService;
 use DNDark\LogicMap\Services\Indexing\IndexOptions;
+use DNDark\LogicMap\Support\MemoryLimit;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -17,6 +18,9 @@ final class IndexLogicMapCommand extends Command
 
     public function handle(IndexLogicMapService $service): int
     {
+        MemoryLimit::ensureAtLeast(config('logic-map.indexing.memory_limit', '1G'));
+        MemoryLimit::registerOomGuard('logic-map:index');
+
         try {
             $result = $service->index(new IndexOptions(
                 (array) config('logic-map.scan_paths', []),

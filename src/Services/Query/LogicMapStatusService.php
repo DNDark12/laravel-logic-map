@@ -5,8 +5,8 @@ namespace DNDark\LogicMap\Services\Query;
 use DateTimeImmutable;
 use DateTimeZone;
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteSchema;
 use DNDark\LogicMap\Support\AnalysisVersion;
+use DNDark\LogicMap\Support\SchemaVersion;
 
 final readonly class LogicMapStatusService
 {
@@ -43,13 +43,13 @@ final readonly class LogicMapStatusService
                 'fingerprint' => $snapshot->sourceFingerprint,
                 'indexed_at' => $snapshot->indexedAt->format(DATE_ATOM),
                 'age_seconds' => max(0, $now->getTimestamp() - $snapshot->indexedAt->getTimestamp()),
-                'stale' => $snapshot->schemaVersion !== SqliteSchema::VERSION
+                'stale' => $snapshot->schemaVersion !== SchemaVersion::VERSION
                     || $snapshot->analysisVersion !== AnalysisVersion::CURRENT,
             ],
             'counts' => [
-                'nodes' => count($snapshot->graph->nodes()),
-                'edges' => count($snapshot->graph->edges()),
-                'evidence' => count($snapshot->graph->evidence()),
+                'nodes' => $snapshot->graph->countNodes(),
+                'edges' => $snapshot->graph->countEdges(),
+                'evidence' => $snapshot->graph->countEvidence(),
                 'diagnostics' => count($snapshot->diagnostics),
             ],
             'diagnostic_coverage' => $diagnostics,

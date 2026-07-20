@@ -3,6 +3,7 @@
 namespace DNDark\LogicMap\Domain\Snapshot;
 
 use DateTimeImmutable;
+use DNDark\LogicMap\Domain\Graph\GraphReader;
 use DNDark\LogicMap\Domain\Graph\KnowledgeGraph;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
 use InvalidArgumentException;
@@ -25,7 +26,7 @@ final readonly class GraphSnapshot
         public DateTimeImmutable $indexedAt,
         public string $sourceFingerprint,
         array $files,
-        public KnowledgeGraph $graph,
+        public GraphReader $graph,
         array $diagnostics,
         public array $phaseMetrics,
         array $processSteps = [],
@@ -82,10 +83,17 @@ final readonly class GraphSnapshot
         });
         $this->diagnostics = array_values($diagnostics);
 
-        $nodeKinds = [];
+        // Node-reference validation requires the full node set; it runs only for
+        // the in-memory graph built at index time. Database-backed graphs are
+        // hydrated from data this validation already accepted when stored.
+        $nodeKinds = null;
 
-        foreach ($graph->nodes() as $node) {
-            $nodeKinds[$node->id->value] = $node->kind;
+        if ($graph instanceof KnowledgeGraph) {
+            $nodeKinds = [];
+
+            foreach ($graph->nodes() as $node) {
+                $nodeKinds[$node->id->value] = $node->kind;
+            }
         }
 
         $identities = [];
@@ -96,11 +104,11 @@ final readonly class GraphSnapshot
                 throw new InvalidArgumentException('Snapshot process steps must contain ProcessStepRecord values.');
             }
 
-            if (($nodeKinds[$step->processId->value] ?? null) !== NodeKind::Process) {
+            if ($nodeKinds !== null && ($nodeKinds[$step->processId->value] ?? null) !== NodeKind::Process) {
                 throw new InvalidArgumentException('Snapshot process steps must reference process graph nodes.');
             }
 
-            if ($step->nodeId !== null && ! isset($nodeKinds[$step->nodeId->value])) {
+            if ($nodeKinds !== null && $step->nodeId !== null && ! isset($nodeKinds[$step->nodeId->value])) {
                 throw new InvalidArgumentException('Snapshot process steps must reference existing graph nodes.');
             }
 

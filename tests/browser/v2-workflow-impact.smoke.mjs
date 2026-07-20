@@ -92,7 +92,8 @@ try {
         }, evidence,
     };
 
-    await page.route('**/logic-map/api/status', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(envelope({ active: true, node_count: 20, edge_count: 30 })) }));
+    await page.route('**/logic-map/api/status', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(envelope({ active: true, counts: { nodes: 20, edges: 30 } })) }));
+    await page.route('**/logic-map/api/modules', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(envelope({ modules: [] })) }));
     await page.route('**/logic-map/api/symbols/search*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(envelope({ query: 'cancel', selection: null, results: [symbol] })) }));
     await page.route('**/logic-map/api/symbols/*/context', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(envelope({ symbol, incoming: {}, outgoing: {}, processes: [], modules: [], effects: [], evidence })) }));
     await page.route('**/logic-map/api/workflows/*', (route) => {
@@ -135,6 +136,11 @@ try {
         filters: window.LogicMap.state.impactFilters.size,
     }));
     Object.entries(impactContract).forEach(([name, count]) => { if (count < 1) throw new Error(`Impact ${name} mapping missing`); });
+    const testNodeLabel = await page.evaluate(() => window.LogicMap.graph.instance
+        .nodes('[nodeId = "test:tests/Feature/CancelOrderTest.php::test_cancel"]')
+        .first()
+        .data('label'));
+    if (testNodeLabel !== 'CancelOrderTest\ncancel') throw new Error(`Impact test label is not compact: ${testNodeLabel}`);
     if (!await page.getByText('Affected modules').isVisible()) throw new Error('Affected module list missing');
     if (!await page.getByText('Selected tests').isVisible()) throw new Error('Selected test list missing');
 

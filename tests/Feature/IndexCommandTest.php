@@ -3,18 +3,16 @@
 namespace DNDark\LogicMap\Tests\Feature;
 
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteConnectionFactory;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteGraphRepository;
+use DNDark\LogicMap\Repositories\Database\DatabaseGraphRepository;
 use DNDark\LogicMap\Support\RepositoryFileDiscovery;
 use DNDark\LogicMap\Tests\TestCase;
 use Illuminate\Support\Facades\File;
-use InvalidArgumentException;
 
 final class IndexCommandTest extends TestCase
 {
     private string $repositoryRoot;
 
-    private SqliteGraphRepository $repository;
+    private DatabaseGraphRepository $repository;
 
     protected function setUp(): void
     {
@@ -32,9 +30,7 @@ final class IndexCommandTest extends TestCase
         self::assertSame(['app'], config('logic-map.scan_paths'));
         self::assertFalse(config()->has('logic-map.v2'));
 
-        $this->repository = new SqliteGraphRepository(
-            new SqliteConnectionFactory($this->repositoryRoot.'/index.sqlite'),
-        );
+        $this->repository = new DatabaseGraphRepository($this->app->make('db')->connection());
         $this->app->instance(RepositoryFileDiscovery::class, new RepositoryFileDiscovery($this->repositoryRoot));
         $this->app->instance(SemanticGraphRepository::class, $this->repository);
     }
@@ -71,10 +67,7 @@ final class IndexCommandTest extends TestCase
             $callEvidence,
         )));
         self::assertNotEmpty(config('logic-map.scan_paths'));
-        self::assertStringEndsWith(
-            'storage/framework/logic-map/index.sqlite',
-            config('logic-map.storage.sqlite_path'),
-        );
+        self::assertArrayHasKey('connection', config('logic-map.storage'));
         self::assertGreaterThan(0, config('logic-map.evidence.expression_max_length'));
     }
 
@@ -93,21 +86,6 @@ final class IndexCommandTest extends TestCase
 
         self::assertSame($activeId, $this->repository->active()?->id);
         self::assertCount(1, $this->repository->list());
-    }
-
-    public function test_rejects_storage_paths_outside_storage_root(): void
-    {
-        foreach (['../outside.sqlite', '/tmp/outside.sqlite'] as $path) {
-            config()->set('logic-map.storage.sqlite_path', $path);
-            $this->app->forgetInstance(SqliteConnectionFactory::class);
-
-            try {
-                $this->app->make(SqliteConnectionFactory::class);
-                self::fail("Storage path {$path} should be rejected.");
-            } catch (InvalidArgumentException $exception) {
-                self::assertStringContainsString('SQLite', $exception->getMessage());
-            }
-        }
     }
 
     public function test_no_boot_indexes_static_semantics_without_collecting_boot_facts(): void

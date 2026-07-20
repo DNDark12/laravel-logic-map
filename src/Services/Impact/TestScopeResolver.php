@@ -4,14 +4,14 @@ namespace DNDark\LogicMap\Services\Impact;
 
 use DNDark\LogicMap\Domain\Graph\EdgeType;
 use DNDark\LogicMap\Domain\Graph\EvidenceOrigin;
-use DNDark\LogicMap\Domain\Graph\KnowledgeGraph;
+use DNDark\LogicMap\Domain\Graph\GraphReader;
 use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
 use InvalidArgumentException;
 
 final readonly class TestScopeResolver
 {
-    public function __construct(private KnowledgeGraph $graph)
+    public function __construct(private GraphReader $graph)
     {
     }
 
@@ -23,17 +23,25 @@ final readonly class TestScopeResolver
 
         $candidates = [];
         $modules = [];
+        $affectedById = [];
 
         foreach ($affectedNodeIds as $affected) {
             if (! $affected instanceof NodeId) {
                 throw new InvalidArgumentException('Test scope requires NodeId values.');
             }
 
-            if (! $this->graph->hasNode($affected)) {
-                continue;
-            }
+            $affectedById[$affected->value] = $affected;
+        }
 
-            foreach ($this->graph->incoming($affected, [EdgeType::CoveredByTest]) as $edge) {
+        $known = $this->graph->nodesByIds(array_values($affectedById));
+        $edges = $this->graph->edgesTouching(
+            array_keys($known),
+            [EdgeType::CoveredByTest, EdgeType::MemberOfModule],
+        );
+
+        foreach ($edges as $edge) {
+            if ($edge->type === EdgeType::CoveredByTest && isset($known[$edge->target->value])) {
+                $affected = $edge->target;
                 $evidence = $edge->evidence;
                 $runtime = array_filter($evidence, static fn ($record): bool => $record->origin === EvidenceOrigin::Runtime);
                 $direct = array_filter($evidence, static fn ($record): bool => ($record->attributes['reference_kind'] ?? null) === 'direct_symbol');
@@ -46,9 +54,11 @@ final readonly class TestScopeResolver
                     "Selected by {$kind} to {$affected->value}.",
                     array_map(static fn ($record): string => $record->id(), $evidence),
                 );
+
+                continue;
             }
 
-            foreach ($this->graph->outgoing($affected, [EdgeType::MemberOfModule]) as $edge) {
+            if ($edge->type === EdgeType::MemberOfModule && isset($known[$edge->source->value])) {
                 $modules[$edge->target->value] = array_map(
                     static fn ($record): string => $record->id(),
                     $edge->evidence,
@@ -56,8 +66,10 @@ final readonly class TestScopeResolver
             }
         }
 
-        foreach ($this->graph->nodes() as $node) {
-            if ($node->kind !== NodeKind::Test || ! is_string($node->attributes['module'] ?? null)) {
+        // Only scan test nodes when at least one affected module was found;
+        // otherwise there is nothing module-scoped to match.
+        foreach ($modules === [] ? [] : $this->graph->nodesByKind(NodeKind::Test) as $node) {
+            if (! is_string($node->attributes['module'] ?? null)) {
                 continue;
             }
 

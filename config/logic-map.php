@@ -13,9 +13,27 @@ return [
     /* Additional repository-relative paths excluded from indexing. */
     'excludes' => [],
 
-    /* Package-owned SQLite snapshot and runtime-evidence store. */
+    /* Indexing runtime requirements. */
+    'indexing' => [
+        /*
+         * Minimum memory_limit for logic-map:index. Real apps easily exceed
+         * PHP CLI's 128M default (silent exit 255). Only raised, never
+         * lowered; '-1' = unlimited, null = leave php.ini untouched.
+         */
+        'memory_limit' => '1G',
+    ],
+
+    /*
+     * Snapshot and runtime-evidence store. Data lives in the lm_* tables
+     * created by the package migrations, on the application's own database
+     * connection, so any Laravel-supported driver works and query-path memory
+     * stays proportional to the response rather than the whole snapshot.
+     *
+     * 'connection' => null uses the default connection; set a name (e.g.
+     * 'logic_map') to isolate the tables on a dedicated connection.
+     */
     'storage' => [
-        'sqlite_path' => 'storage/framework/logic-map/index.sqlite',
+        'connection' => env('LOGIC_MAP_DB_CONNECTION'),
     ],
 
     'evidence' => [
@@ -27,6 +45,10 @@ return [
         'enabled' => true,
         'allowed_environments' => ['local', 'testing'],
         'middleware' => ['web'],
+
+        /* Minimum memory_limit for viewer endpoints (graph hydration). Same
+           semantics as indexing.memory_limit: only raised, never lowered. */
+        'memory_limit' => '1G',
     ],
 
     /* Shared traversal and response bounds for HTTP and CLI queries. */

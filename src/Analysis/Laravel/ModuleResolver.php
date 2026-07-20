@@ -135,11 +135,20 @@ final class ModuleResolver
 
             $pathKey = trim(str_replace('\\', '/', $key), '/');
             $namespaceKey = trim($key, '\\');
+            $usesGlob = strpbrk($key, '*?[') !== false;
+            $globMatch = $usesGlob && (
+                ($qualifiedName !== null && fnmatch(
+                    str_replace('\\', '/', $namespaceKey),
+                    str_replace('\\', '/', ltrim($qualifiedName, '\\')),
+                    FNM_NOESCAPE,
+                ))
+                || fnmatch($pathKey, $file, FNM_NOESCAPE)
+            );
             $namespaceMatch = $qualifiedName !== null
                 && ($qualifiedName === $namespaceKey || str_starts_with($qualifiedName, $namespaceKey.'\\'));
             $pathMatch = $file === $pathKey || str_starts_with($file, $pathKey.'/');
 
-            if ($namespaceMatch || $pathMatch) {
+            if ($globMatch || $namespaceMatch || $pathMatch) {
                 return $module;
             }
         }

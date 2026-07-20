@@ -3,8 +3,7 @@
 namespace DNDark\LogicMap\Tests\Feature;
 
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteConnectionFactory;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteGraphRepository;
+use DNDark\LogicMap\Repositories\Database\DatabaseGraphRepository;
 use DNDark\LogicMap\Services\Indexing\IndexLogicMapService;
 use DNDark\LogicMap\Services\Indexing\IndexOptions;
 use DNDark\LogicMap\Support\NodeIdCodec;
@@ -16,16 +15,14 @@ final class V2ApiEndpointTest extends CommerceFixtureTestCase
 {
     private string $temporaryRoot;
 
-    private SqliteGraphRepository $repository;
+    private DatabaseGraphRepository $repository;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->temporaryRoot = sys_get_temp_dir().'/logic-map-v2-api-'.bin2hex(random_bytes(6));
         File::makeDirectory($this->temporaryRoot, 0755, true);
-        $this->repository = new SqliteGraphRepository(
-            new SqliteConnectionFactory($this->temporaryRoot.'/index.sqlite'),
-        );
+        $this->repository = new DatabaseGraphRepository($this->app->make('db')->connection());
         $this->app->instance(SemanticGraphRepository::class, $this->repository);
         $this->app->instance(RepositoryFileDiscovery::class, new RepositoryFileDiscovery($this->fixtureRoot()));
         config()->set('logic-map.scan_paths', ['app', 'routes', 'tests']);
@@ -83,6 +80,15 @@ final class V2ApiEndpointTest extends CommerceFixtureTestCase
             ->assertJsonPath('data.entrypoint.encoded_id', $codec->encode($routeId))
             ->assertJsonPath('data.runtime.coverage', 'No runtime data available');
 
+        $moduleWorkflow = $this->getJson('/logic-map/api/workflows/'.$codec->encode('module:Orders'))
+            ->assertOk()
+            ->assertJsonPath('data.identity.workflow_type', 'module')
+            ->assertJsonPath('data.module.node_id', 'module:Orders')
+            ->assertJsonPath('data.module.encoded_id', $codec->encode('module:Orders'))
+            ->assertJsonPath('data.summary.entrypoint_count', fn ($value): bool => is_int($value) && $value > 0)
+            ->assertJsonPath('data.entry_workflows.0.entrypoint.node_id', fn ($value): bool => is_string($value) && $value !== '');
+        self::assertGreaterThan(0, count($moduleWorkflow->json('data.entry_workflows')));
+
         $this->getJson('/logic-map/api/modules')
             ->assertOk()
             ->assertJsonFragment(['id' => 'module:Orders', 'encoded_id' => $codec->encode('module:Orders')]);
@@ -101,6 +107,16 @@ final class V2ApiEndpointTest extends CommerceFixtureTestCase
             ->assertJsonPath('data.affected_symbols.0.encoded_id', fn ($value): bool => is_string($value) && $value !== '')
             ->assertJsonPath('data.runtime.coverage', 'No runtime data available')
             ->assertJsonPath('data.evidence.0.id', fn ($value): bool => is_string($value) && $value !== '');
+
+        $moduleImpact = $this->postJson('/logic-map/api/impact', ['symbol' => 'module:Orders'])
+            ->assertOk()
+            ->assertJsonPath('data.change_set.count', fn ($value): bool => is_int($value) && $value > 1)
+            ->assertJsonPath('data.selection.type', 'module')
+            ->assertJsonPath('data.selection.node_id', 'module:Orders');
+        self::assertNotContains(
+            'module:Orders',
+            array_column($moduleImpact->json('data.changed_symbols'), 'new_node_id'),
+        );
     }
 
     public function test_lookup_validation_ambiguity_truncation_and_environment_guards_are_explicit(): void

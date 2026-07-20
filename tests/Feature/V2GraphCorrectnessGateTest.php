@@ -16,9 +16,8 @@ use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
 use DNDark\LogicMap\Domain\Snapshot\DiagnosticCode;
 use DNDark\LogicMap\Projectors\CanonicalGraphProjector;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteConnectionFactory;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteGraphRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteSchema;
+use DNDark\LogicMap\Repositories\Database\DatabaseGraphRepository;
+use DNDark\LogicMap\Support\SchemaVersion;
 use DNDark\LogicMap\Services\Indexing\IndexLogicMapService;
 use DNDark\LogicMap\Services\Indexing\IndexOptions;
 use DNDark\LogicMap\Support\AnalysisVersion;
@@ -54,8 +53,8 @@ final class V2GraphCorrectnessGateTest extends TestCase
 
     public function test_gate_a_locks_determinism_integrity_multiedges_diagnostics_and_atomicity(): void
     {
-        [$firstService, $firstRepository] = $this->indexer('first.sqlite');
-        [$secondService] = $this->indexer('second.sqlite');
+        [$firstService, $firstRepository] = $this->indexer(null);
+        [$secondService] = $this->indexer('gate_second');
         $options = new IndexOptions(['app'], [], true);
         $first = $firstService->index($options)->snapshot;
         $second = $secondService->index($options)->snapshot;
@@ -120,12 +119,28 @@ final class V2GraphCorrectnessGateTest extends TestCase
         self::assertSame($activeId, $firstRepository->active()?->id);
     }
 
-    /** @return array{IndexLogicMapService, SqliteGraphRepository} */
-    private function indexer(string $database): array
+    /**
+     * @param null|string $connection null = default (already migrated) connection;
+     *        a name creates and migrates a second isolated in-memory store.
+     * @return array{IndexLogicMapService, DatabaseGraphRepository}
+     */
+    private function indexer(?string $connection): array
     {
-        $repository = new SqliteGraphRepository(
-            new SqliteConnectionFactory($this->fixtureRoot.'/'.$database),
-        );
+        if ($connection !== null) {
+            config()->set('database.connections.'.$connection, [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+                'foreign_key_constraints' => true,
+            ]);
+            $previous = config('logic-map.storage.connection');
+            config()->set('logic-map.storage.connection', $connection);
+            $migration = require dirname(__DIR__, 2).'/database/migrations/2026_01_01_000001_create_logic_map_tables.php';
+            $migration->up();
+            config()->set('logic-map.storage.connection', $previous);
+        }
+
+        $repository = new DatabaseGraphRepository($this->app->make('db')->connection($connection));
         $parser = new PhpFileParser();
         $pipeline = new PipelineRunner([
             new ParsePhpPhase($parser),
@@ -163,7 +178,7 @@ final class V2GraphCorrectnessGateTest extends TestCase
             new IndexLogicMapService(
                 $repository,
                 new RepositoryFileDiscovery($this->fixtureRoot),
-                new SourceFingerprint(AnalysisVersion::CURRENT, SqliteSchema::VERSION),
+                new SourceFingerprint(AnalysisVersion::CURRENT, SchemaVersion::VERSION),
                 $pipeline,
             ),
             $repository,

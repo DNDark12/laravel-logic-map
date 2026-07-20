@@ -25,10 +25,10 @@ final readonly class LogicMapRuntimeTrace
 
     public function handle(Request $request, Closure $next): Response
     {
-        $snapshot = $this->graphs->active();
+        $snapshotId = $this->graphs->activeId();
         $sampleRate = max(0.0, min(1.0, (float) config('logic-map.runtime.sample_rate', 1.0)));
 
-        if ($snapshot === null || ! $this->sampled($sampleRate)) {
+        if ($snapshotId === null || ! $this->sampled($sampleRate)) {
             return $next($request);
         }
 
@@ -39,7 +39,7 @@ final readonly class LogicMapRuntimeTrace
 
         if (! $this->repository->open(new RuntimeSession(
             $sessionId,
-            $snapshot->id,
+            $snapshotId,
             $startedAt,
             null,
             $correlationId,
@@ -47,7 +47,7 @@ final readonly class LogicMapRuntimeTrace
             return $next($request);
         }
 
-        $this->context->begin($sessionId, $snapshot->id, $correlationId, null, $startedAt);
+        $this->context->begin($sessionId, $snapshotId, $correlationId, null, $startedAt);
         $routeTemplate = $request->route()?->uri();
         $source = is_string($routeTemplate)
             ? NodeId::route($request->method(), $routeTemplate)->value

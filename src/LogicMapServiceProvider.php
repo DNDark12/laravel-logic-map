@@ -29,10 +29,8 @@ use DNDark\LogicMap\Analysis\Runtime\SqlTableObservationParser;
 use DNDark\LogicMap\Contracts\RuntimeEvidenceRepository;
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
 use DNDark\LogicMap\Http\Middleware\LogicMapRuntimeTrace;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteConnectionFactory;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteGraphRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteRuntimeEvidenceRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteSchema;
+use DNDark\LogicMap\Repositories\Database\DatabaseGraphRepository;
+use DNDark\LogicMap\Repositories\Database\DatabaseRuntimeEvidenceRepository;
 use DNDark\LogicMap\Services\Impact\ImpactQueryService;
 use DNDark\LogicMap\Services\Indexing\ClearLogicMapService;
 use DNDark\LogicMap\Services\Indexing\IndexLogicMapService;
@@ -45,31 +43,29 @@ use DNDark\LogicMap\Services\Query\SymbolSearchService;
 use DNDark\LogicMap\Services\Workflow\WorkflowQueryService;
 use DNDark\LogicMap\Support\AnalysisVersion;
 use DNDark\LogicMap\Support\NodeIdCodec;
-use DNDark\LogicMap\Support\RelativePath;
 use DNDark\LogicMap\Support\RepositoryFileDiscovery;
+use DNDark\LogicMap\Support\SchemaVersion;
 use DNDark\LogicMap\Support\SourceFingerprint;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Queue\Queue;
 use Illuminate\Support\ServiceProvider;
-use InvalidArgumentException;
 use Throwable;
 
 final class LogicMapServiceProvider extends ServiceProvider
 {
-    public const ASSET_VERSION = '2.0.0';
+    public const ASSET_VERSION = '2.0.5';
 
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/logic-map.php', 'logic-map');
 
-        $this->app->singleton(SqliteConnectionFactory::class, fn (): SqliteConnectionFactory =>
-            new SqliteConnectionFactory($this->resolveSqlitePath()));
         $this->app->singleton(SemanticGraphRepository::class, fn ($app): SemanticGraphRepository =>
-            new SqliteGraphRepository($app->make(SqliteConnectionFactory::class)));
+            new DatabaseGraphRepository($this->logicMapConnection($app)));
         $this->app->singleton(RuntimeSanitizer::class, fn (): RuntimeSanitizer =>
             new RuntimeSanitizer((int) config('logic-map.evidence.expression_max_length', 500)));
         $this->app->singleton(RuntimeEvidenceRepository::class, fn ($app): RuntimeEvidenceRepository =>
-            new SqliteRuntimeEvidenceRepository(
-                $app->make(SqliteConnectionFactory::class),
+            new DatabaseRuntimeEvidenceRepository(
+                $this->logicMapConnection($app),
                 $app->make(RuntimeSanitizer::class),
                 (int) config('logic-map.runtime.retention_days', 7),
                 (int) config('logic-map.runtime.max_sessions', 1000),
@@ -79,7 +75,10 @@ final class LogicMapServiceProvider extends ServiceProvider
         $this->app->singleton(RepositoryFileDiscovery::class, fn (): RepositoryFileDiscovery =>
             new RepositoryFileDiscovery(base_path()));
         $this->app->singleton(SourceFingerprint::class, fn (): SourceFingerprint =>
-            new SourceFingerprint(AnalysisVersion::CURRENT, SqliteSchema::VERSION));
+            new SourceFingerprint(AnalysisVersion::CURRENT, SchemaVersion::VERSION, [
+                'modules' => (array) config('logic-map.modules', []),
+                'classifier' => (array) config('logic-map.classifier', []),
+            ]));
         $this->app->singleton(PhpFileParser::class, fn (): PhpFileParser => new PhpFileParser(
             [
                 new LaravelRegistrationFactCollector(),
@@ -163,19 +162,25 @@ final class LogicMapServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
-            $assets = realpath(__DIR__.'/../resources/dist/v2') ?: __DIR__.'/../resources/dist/v2';
+            $assets = realpath(__DIR__.'/../resources/dist') ?: __DIR__.'/../resources/dist';
+            $logo = realpath(__DIR__.'/../art/logo.png') ?: __DIR__.'/../art/logo.png';
 
             $this->publishes([
                 __DIR__.'/../config/logic-map.php' => config_path('logic-map.php'),
             ], 'logic-map-config');
             $this->publishes([
+                __DIR__.'/../database/migrations' => database_path('migrations'),
+            ], 'logic-map-migrations');
+            $this->publishes([
                 __DIR__.'/../resources/views' => resource_path('views/vendor/logic-map'),
             ], 'logic-map-views');
             $this->publishes([
-                $assets => public_path('vendor/logic-map/v2'),
+                $assets => public_path('vendor/logic-map'),
+                $logo => public_path('vendor/logic-map/images/logo.png'),
             ], 'logic-map-assets');
             $this->publishes([
-                $assets => public_path('vendor/logic-map/v2'),
+                $assets => public_path('vendor/logic-map'),
+                $logo => public_path('vendor/logic-map/images/logo.png'),
             ], 'laravel-assets');
             $this->commands([
                 Commands\IndexLogicMapCommand::class,
@@ -186,6 +191,7 @@ final class LogicMapServiceProvider extends ServiceProvider
             ]);
         }
 
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'logic-map');
 
@@ -270,70 +276,10 @@ final class LogicMapServiceProvider extends ServiceProvider
         Queue::createPayloadUsing(static fn (): array => $payload->create($context));
     }
 
-    private function resolveSqlitePath(): string
+    private function logicMapConnection($app): ConnectionInterface
     {
-        $configured = config('logic-map.storage.sqlite_path');
+        $name = config('logic-map.storage.connection');
 
-        if (! is_string($configured)) {
-            throw new InvalidArgumentException('SQLite storage path must be a repository-relative string.');
-        }
-
-        try {
-            $relative = RelativePath::normalize($configured);
-        } catch (InvalidArgumentException $exception) {
-            throw new InvalidArgumentException(
-                'SQLite storage path must be repository-relative and remain under storage_path().',
-                0,
-                $exception,
-            );
-        }
-
-        $storageRoot = realpath(storage_path());
-
-        if ($storageRoot === false) {
-            throw new InvalidArgumentException('SQLite storage root does not exist.');
-        }
-
-        $storageRoot = rtrim(str_replace('\\', '/', $storageRoot), '/');
-        $candidate = str_replace('\\', '/', base_path($relative));
-
-        if (! str_starts_with($candidate, $storageRoot.'/')) {
-            throw new InvalidArgumentException('SQLite storage path must remain under storage_path().');
-        }
-
-        $directory = dirname($candidate);
-
-        if (! is_dir($directory)) {
-            $parent = realpath(dirname($directory));
-            $parent = $parent === false ? false : str_replace('\\', '/', $parent);
-
-            if ($parent === false || ! str_starts_with($parent, $storageRoot)) {
-                throw new InvalidArgumentException('SQLite parent directory must already exist under storage_path().');
-            }
-
-            if (! mkdir($directory, 0755) && ! is_dir($directory)) {
-                throw new InvalidArgumentException('SQLite storage directory could not be created.');
-            }
-        }
-
-        $realDirectory = realpath($directory);
-        $realDirectory = $realDirectory === false ? false : str_replace('\\', '/', $realDirectory);
-
-        if ($realDirectory === false || ! str_starts_with($realDirectory, $storageRoot.'/')) {
-            throw new InvalidArgumentException('SQLite storage directory resolves outside storage_path().');
-        }
-
-        if (file_exists($candidate)) {
-            $realFile = realpath($candidate);
-            $realFile = $realFile === false ? false : str_replace('\\', '/', $realFile);
-
-            if ($realFile === false || ! str_starts_with($realFile, $storageRoot.'/')) {
-                throw new InvalidArgumentException('SQLite file resolves outside storage_path().');
-            }
-
-            return $realFile;
-        }
-
-        return $realDirectory.'/'.basename($candidate);
+        return $app->make('db')->connection(is_string($name) && $name !== '' ? $name : null);
     }
 }

@@ -21,17 +21,13 @@ final readonly class SymbolContextService
 
     public function context(GraphSnapshot $snapshot, NodeId $id, ?array $selectedSessionIds = null): ?array
     {
-        $nodes = [];
+        $symbol = $snapshot->graph->findNode($id);
 
-        foreach ($snapshot->graph->nodes() as $node) {
-            $nodes[$node->id->value] = $node;
-        }
-
-        if (! isset($nodes[$id->value])) {
+        if ($symbol === null) {
             return null;
         }
 
-        $runtime = $this->runtime?->merge($snapshot, $selectedSessionIds);
+        $runtime = $this->runtime?->merge($snapshot, $selectedSessionIds, [$id->value]);
         $overlays = $runtime['overlays'] ?? [];
         $runtimeRelations = [];
 
@@ -47,6 +43,17 @@ final readonly class SymbolContextService
         $incoming = array_slice($incoming, 0, $remaining);
         $remaining -= count($incoming);
         $outgoing = array_slice($outgoing, 0, max(0, $remaining));
+
+        // Fetch only the nodes the bounded edge set references.
+        $endpointIds = [$id->value => true];
+
+        foreach ([...$incoming, ...$outgoing] as $edge) {
+            $endpointIds[$edge->source->value] = true;
+            $endpointIds[$edge->target->value] = true;
+        }
+
+        $nodes = $snapshot->graph->nodesByIds(array_keys($endpointIds));
+        $nodes[$id->value] = $symbol;
         $evidence = [];
 
         foreach ([...$incoming, ...$outgoing] as $edge) {

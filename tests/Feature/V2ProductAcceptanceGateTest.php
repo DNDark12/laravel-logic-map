@@ -4,8 +4,7 @@ namespace DNDark\LogicMap\Tests\Feature;
 
 use DNDark\LogicMap\Analysis\Php\PhpFileParser;
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteConnectionFactory;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteGraphRepository;
+use DNDark\LogicMap\Repositories\Database\DatabaseGraphRepository;
 use DNDark\LogicMap\Services\Impact\ImpactQueryService;
 use DNDark\LogicMap\Services\Indexing\IndexLogicMapService;
 use DNDark\LogicMap\Support\RepositoryFileDiscovery;
@@ -119,9 +118,10 @@ final class V2ProductAcceptanceGateTest extends CommerceFixtureTestCase
         config()->set('logic-map.scan_paths', ['app', 'routes', 'tests']);
         config()->set('logic-map.excludes', []);
 
-        $repository = new SqliteGraphRepository(
-            new SqliteConnectionFactory($storage.'/logic-map.sqlite'),
-        );
+        $repository = new DatabaseGraphRepository($this->app->make('db')->connection());
+        // Each bind previously pointed at a fresh SQLite file; the shared
+        // in-memory connection is cleared to keep the same fresh-store semantics.
+        $repository->clear();
         $this->app->instance(SemanticGraphRepository::class, $repository);
         $this->app->instance(
             RepositoryFileDiscovery::class,

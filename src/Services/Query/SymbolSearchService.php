@@ -20,7 +20,12 @@ final readonly class SymbolSearchService
         $tokens = preg_split('/[^a-z0-9_\\:-]+/i', $needle, -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $ranked = [];
 
-        foreach ($snapshot->graph->nodes() as $node) {
+        // Bounded candidate fetch (pre-ordered by approximate rank) instead of a
+        // full graph scan; exact ranking below decides the final order.
+        $candidateLimit = max($this->maxResults * 4, 200);
+        $candidates = $snapshot->graph->searchNodes($query, $candidateLimit);
+
+        foreach ($candidates as $node) {
             $fields = [
                 strtolower($node->id->value),
                 strtolower($node->qualifiedName ?? ''),
@@ -40,7 +45,9 @@ final readonly class SymbolSearchService
             $right[0],
             $right[1]->id->value,
         ]);
-        $totalMatches = count($ranked);
+        $totalMatches = count($candidates) >= $candidateLimit
+            ? $snapshot->graph->countSearchNodes($query)
+            : count($ranked);
         $truncated = $totalMatches > $this->maxResults;
         $ranked = array_slice($ranked, 0, $this->maxResults);
         $results = array_map(fn (array $match): array => $this->node($match[1]), $ranked);

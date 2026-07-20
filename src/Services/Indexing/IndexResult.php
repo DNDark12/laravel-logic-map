@@ -14,17 +14,17 @@ final readonly class IndexResult
 
     public function nodeCount(): int
     {
-        return count($this->snapshot->graph->nodes());
+        return $this->snapshot->graph->countNodes();
     }
 
     public function edgeCount(): int
     {
-        return count($this->snapshot->graph->edges());
+        return $this->snapshot->graph->countEdges();
     }
 
     public function evidenceCount(): int
     {
-        return count($this->snapshot->graph->evidence());
+        return $this->snapshot->graph->countEvidence();
     }
 
     public function diagnosticCount(): int

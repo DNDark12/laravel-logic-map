@@ -37,6 +37,32 @@ final class ModuleResolverTest extends TestCase
         }
     }
 
+    public function test_explicit_mappings_support_namespace_and_path_globs_for_domain_families(): void
+    {
+        $resolver = new ModuleResolver(
+            [
+                'App\\Services\\Order*' => 'Orders',
+                'app/Repositories/Order*.php' => 'Orders',
+            ],
+            ['App\\' => 1],
+            [],
+            'Core',
+        );
+
+        self::assertSame(
+            'Orders',
+            $resolver->resolve($this->symbol('App\\Services\\OrderPricingService', 'app/Services/OrderPricingService.php'))->module,
+        );
+        self::assertSame(
+            'Orders',
+            $resolver->resolve($this->symbol('App\\Repositories\\OrderRepository', 'app/Repositories/OrderRepository.php'))->module,
+        );
+        self::assertSame(
+            'Services',
+            $resolver->resolve($this->symbol('App\\Services\\ProductService', 'app/Services/ProductService.php'))->module,
+        );
+    }
+
     private function symbol(string $class, string $file): SymbolDefinition
     {
         return new SymbolDefinition(

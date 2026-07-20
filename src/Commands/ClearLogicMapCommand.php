@@ -20,7 +20,7 @@ final class ClearLogicMapCommand extends Command
                 return self::FAILURE;
             }
 
-            if (! $this->confirm('Clear the Laravel Logic Map V2 SQLite store?')) {
+            if (! $this->confirm('Clear the Laravel Logic Map index and runtime evidence?')) {
                 $this->warn('Clear cancelled.');
 
                 return self::FAILURE;

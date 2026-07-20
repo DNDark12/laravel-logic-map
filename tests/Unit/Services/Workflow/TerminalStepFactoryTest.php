@@ -4,6 +4,7 @@ namespace DNDark\LogicMap\Tests\Unit\Services\Workflow;
 
 use DNDark\LogicMap\Analysis\Facts\ThrowFact;
 use DNDark\LogicMap\Domain\Graph\GraphNode;
+use DNDark\LogicMap\Domain\Graph\KnowledgeGraph;
 use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
 use DNDark\LogicMap\Services\Workflow\TerminalStepFactory;
@@ -23,7 +24,7 @@ final class TerminalStepFactoryTest extends TestCase
             null,
         );
 
-        $step = (new TerminalStepFactory())->make($fact, 'Orders', []);
+        $step = (new TerminalStepFactory())->make($fact, 'Orders', new KnowledgeGraph());
 
         self::assertNull($step->nodeId);
         self::assertSame('InvalidArgumentException', $step->label);
@@ -42,8 +43,10 @@ final class TerminalStepFactoryTest extends TestCase
         );
         $nodeId = NodeId::symbol(NodeKind::ClassSymbol, 'App\Exceptions\OrderCannotBeCancelledException');
         $node = new GraphNode($nodeId, NodeKind::ClassSymbol, 'OrderCannotBeCancelledException', $nodeId->value, null);
+        $graph = new KnowledgeGraph();
+        $graph->addNode($node);
 
-        $step = (new TerminalStepFactory())->make($fact, 'Orders', [$nodeId->value => $node]);
+        $step = (new TerminalStepFactory())->make($fact, 'Orders', $graph);
 
         self::assertSame($nodeId->value, $step->nodeId?->value);
     }

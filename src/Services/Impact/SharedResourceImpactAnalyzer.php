@@ -4,7 +4,7 @@ namespace DNDark\LogicMap\Services\Impact;
 
 use DNDark\LogicMap\Domain\Graph\EdgeType;
 use DNDark\LogicMap\Domain\Graph\GraphEdge;
-use DNDark\LogicMap\Domain\Graph\KnowledgeGraph;
+use DNDark\LogicMap\Domain\Graph\GraphReader;
 use DNDark\LogicMap\Domain\Impact\ChangedSymbol;
 use DNDark\LogicMap\Domain\Impact\ChangeType;
 use DNDark\LogicMap\Domain\Impact\ImpactCategory;
@@ -14,7 +14,7 @@ use DNDark\LogicMap\Domain\Impact\ImpactReason;
 final readonly class SharedResourceImpactAnalyzer
 {
     public function __construct(
-        private KnowledgeGraph $graph,
+        private GraphReader $graph,
         private ImpactPolicy $policy,
     ) {
     }
@@ -27,6 +27,7 @@ final readonly class SharedResourceImpactAnalyzer
         $omitted = 0;
         $frontier = [];
         $maxDepth = 0;
+        $changesBySeed = [];
 
         foreach ($changes as $change) {
             if (! $change instanceof ChangedSymbol || $change->changeType === ChangeType::Added) {
@@ -37,21 +38,66 @@ final readonly class SharedResourceImpactAnalyzer
                 ? $change->oldNodeId
                 : ($change->newNodeId ?? $change->oldNodeId);
 
-            if ($seed === null || ! $this->graph->hasNode($seed) || $request->maxDepth < 2) {
+            if ($seed === null || $request->maxDepth < 2) {
                 continue;
             }
 
-            foreach ($this->graph->outgoing($seed, $this->policy->edgeTypes(ImpactCategory::SharedState)) as $resourceEdge) {
-                $matching = $this->matchingOppositeTypes($resourceEdge->type);
+            $changesBySeed[$seed->value][] = $change;
+        }
 
-                if ($matching === []) {
-                    continue;
-                }
+        $knownSeeds = $this->graph->nodesByIds(array_keys($changesBySeed));
+        $resourceEdgesBySeed = [];
+        $resourceIds = [];
+        $oppositeTypes = [];
 
-                $resourceId = $resourceEdge->target;
-                $visited[$resourceId->value] = true;
+        foreach ($this->graph->edgesTouching(
+            array_keys($knownSeeds),
+            $this->policy->edgeTypes(ImpactCategory::SharedState),
+        ) as $edge) {
+            if (! isset($knownSeeds[$edge->source->value])) {
+                continue;
+            }
 
-                foreach ($this->graph->incoming($resourceId, $matching) as $consumerEdge) {
+            $matching = $this->matchingOppositeTypes($edge->type);
+
+            if ($matching === []) {
+                continue;
+            }
+
+            $resourceEdgesBySeed[$edge->source->value][] = $edge;
+            $resourceIds[$edge->target->value] = true;
+
+            foreach ($matching as $type) {
+                $oppositeTypes[$type->value] = $type;
+            }
+        }
+
+        $consumerEdgesByResource = [];
+
+        foreach ($this->graph->edgesTouching(array_keys($resourceIds), array_values($oppositeTypes)) as $edge) {
+            if (isset($resourceIds[$edge->target->value])) {
+                $consumerEdgesByResource[$edge->target->value][] = $edge;
+            }
+        }
+
+        foreach ($changesBySeed as $seedValue => $seedChanges) {
+            if (! isset($knownSeeds[$seedValue])) {
+                continue;
+            }
+
+            $seed = $knownSeeds[$seedValue]->id;
+
+            foreach ($seedChanges as $change) {
+                foreach ($resourceEdgesBySeed[$seedValue] ?? [] as $resourceEdge) {
+                    $matching = $this->matchingOppositeTypes($resourceEdge->type);
+                    $resourceId = $resourceEdge->target;
+                    $visited[$resourceId->value] = true;
+
+                    foreach ($consumerEdgesByResource[$resourceId->value] ?? [] as $consumerEdge) {
+                        if (! in_array($consumerEdge->type, $matching, true)) {
+                            continue;
+                        }
+
                     $target = $consumerEdge->source;
 
                     if ($target->equals($seed) || isset($changedIds[$target->value])) {
@@ -80,6 +126,7 @@ final readonly class SharedResourceImpactAnalyzer
                         ),
                     ];
                 }
+            }
             }
         }
 

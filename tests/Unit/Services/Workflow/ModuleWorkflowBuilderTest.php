@@ -54,6 +54,36 @@ final class ModuleWorkflowBuilderTest extends CommerceFixtureTestCase
         }
     }
 
+    public function test_module_workflow_can_be_bounded_to_persisted_entrypoint_candidates(): void
+    {
+        $graph = new KnowledgeGraph();
+        $module = NodeId::named(NodeKind::Module, 'Orders');
+        $keptRoute = NodeId::route('GET', 'orders');
+        $ignoredRoute = NodeId::route('GET', 'orders/archive');
+        $keptHandler = NodeId::method('App\\Http\\Controllers\\OrderController', 'index');
+        $ignoredHandler = NodeId::method('App\\Http\\Controllers\\OrderController', 'archive');
+        $graph->addNode(new GraphNode($module, NodeKind::Module, 'Orders', null, null));
+        $graph->addNode(new GraphNode($keptRoute, NodeKind::Route, 'Orders', null, null));
+        $graph->addNode(new GraphNode($ignoredRoute, NodeKind::Route, 'Order archive', null, null));
+        $graph->addNode(new GraphNode($keptHandler, NodeKind::Method, 'index', 'App\\Http\\Controllers\\OrderController::index', new SourceLocation('app/Http/Controllers/OrderController.php', 10, 12)));
+        $graph->addNode(new GraphNode($ignoredHandler, NodeKind::Method, 'archive', 'App\\Http\\Controllers\\OrderController::archive', new SourceLocation('app/Http/Controllers/OrderController.php', 14, 16)));
+
+        foreach ([[$keptRoute, $keptHandler, 10], [$ignoredRoute, $ignoredHandler, 14]] as [$route, $handler, $line]) {
+            SemanticEdgeFactory::add($graph, $route, EdgeType::HandlesRoute, $handler, EvidenceOrigin::StaticAst, 'test-route', Certainty::Certain, new SourceLocation('routes/web.php', $line, $line), 'route');
+            SemanticEdgeFactory::add($graph, $handler, EdgeType::MemberOfModule, $module, EvidenceOrigin::StaticAst, 'test-module', Certainty::Certain, null, null, $handler->value, $handler->value);
+        }
+
+        $workflow = (new ModuleWorkflowBuilder($graph, [], [], [
+            'max_nodes' => 500,
+            'max_depth' => 12,
+        ], [$keptRoute->value]))->build($module);
+
+        self::assertSame([$keptRoute->value], array_map(
+            static fn ($entry): string => $entry->entrypoint->value,
+            $workflow->entryWorkflows,
+        ));
+    }
+
     public function test_cross_module_summary_uses_shared_resources_and_real_queue_edges(): void
     {
         [$graph, $diagnostics, , , , $outputs] = $this->buildSemanticGraph();

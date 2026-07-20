@@ -4,9 +4,11 @@ namespace DNDark\LogicMap\Services\Workflow;
 
 use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
+use DNDark\LogicMap\Domain\Graph\EdgeType;
 use DNDark\LogicMap\Domain\Snapshot\GraphSnapshot;
 use DNDark\LogicMap\Domain\Snapshot\ProcessStepRecord;
 use DNDark\LogicMap\Domain\Workflow\ExecutionBoundary;
+use DNDark\LogicMap\Domain\Workflow\ModuleWorkflow;
 use DNDark\LogicMap\Domain\Workflow\TransactionSegment;
 use DNDark\LogicMap\Domain\Workflow\WorkflowDefinition;
 use DNDark\LogicMap\Domain\Workflow\WorkflowGap;
@@ -32,22 +34,20 @@ final readonly class WorkflowQueryService
         $selection = trim($selection);
         $matches = [];
 
-        foreach ($snapshot->graph->nodes() as $node) {
-            if ($node->id->value === $selection || $node->qualifiedName === ltrim($selection, '\\')) {
-                $matches[$node->id->value] = $node->id;
+        try {
+            $candidate = NodeId::fromString($selection);
+
+            if ($snapshot->graph->hasNode($candidate)) {
+                $matches[$candidate->value] = $candidate;
             }
+        } catch (InvalidArgumentException) {
+        }
+
+        foreach ($snapshot->graph->nodesByQualifiedName(ltrim($selection, '\\')) as $node) {
+            $matches[$node->id->value] = $node->id;
         }
 
         if ($matches === []) {
-            try {
-                $id = NodeId::fromString($selection);
-
-                if ($snapshot->graph->hasNode($id)) {
-                    return $id;
-                }
-            } catch (InvalidArgumentException) {
-            }
-
             throw new InvalidArgumentException('Workflow symbol does not exist in the active snapshot.');
         }
 
@@ -62,9 +62,8 @@ final readonly class WorkflowQueryService
     {
         $process = null;
 
-        foreach ($snapshot->graph->nodes() as $node) {
-            if ($node->kind === NodeKind::Process
-                && ($node->attributes['entrypoint_id'] ?? null) === $entrypoint->value) {
+        foreach ($snapshot->graph->nodesByKind(NodeKind::Process) as $node) {
+            if (($node->attributes['entrypoint_id'] ?? null) === $entrypoint->value) {
                 $process = $node;
                 break;
             }
@@ -183,6 +182,122 @@ final readonly class WorkflowQueryService
         );
     }
 
+    public function buildModule(GraphSnapshot $snapshot, NodeId $moduleId): ModuleWorkflow
+    {
+        $entrypointIds = $this->moduleEntrypointIds($snapshot, $moduleId);
+        $workflows = array_map(
+            fn (string $entrypointId): WorkflowDefinition => $this->build(
+                $snapshot,
+                NodeId::fromString($entrypointId),
+            ),
+            $entrypointIds,
+        );
+
+        return (new ModuleWorkflowBuilder(
+            $snapshot->graph,
+            [],
+            [],
+            ['max_nodes' => $this->maxSteps, 'max_depth' => $this->maxDepth],
+            $entrypointIds,
+            $workflows,
+        ))->build($moduleId);
+    }
+
+    /** @return list<WorkflowDefinition> */
+    public function buildSymbolCollection(GraphSnapshot $snapshot, NodeId $selection, array $relationOverlays = []): array
+    {
+        $methodIds = [];
+
+        foreach ($snapshot->graph->outgoing($selection, [EdgeType::Defines]) as $definition) {
+            $method = $snapshot->graph->findNode($definition->target);
+
+            if ($method?->kind === NodeKind::Method) {
+                $methodIds[$method->id->value] = true;
+            }
+        }
+
+        if ($methodIds === []) {
+            return [];
+        }
+
+        $processIds = [];
+
+        foreach ($snapshot->processSteps as $step) {
+            if ($step->nodeId !== null && isset($methodIds[$step->nodeId->value])) {
+                $processIds[$step->processId->value] = true;
+            }
+        }
+
+        $entrypointIds = [];
+
+        foreach ($snapshot->graph->nodesByIds(array_keys($processIds)) as $process) {
+            $entrypointId = $process->attributes['entrypoint_id'] ?? null;
+
+            if (is_string($entrypointId) && $entrypointId !== '') {
+                $entrypointIds[$entrypointId] = true;
+            }
+        }
+
+        if ($entrypointIds === []) {
+            $entrypointIds = $methodIds;
+        }
+
+        $ids = array_keys($entrypointIds);
+        sort($ids, SORT_STRING);
+
+        return array_map(
+            fn (string $entrypointId): WorkflowDefinition => $this->build(
+                $snapshot,
+                NodeId::fromString($entrypointId),
+                $relationOverlays,
+            ),
+            $ids,
+        );
+    }
+
+    /** @return list<string> */
+    private function moduleEntrypointIds(GraphSnapshot $snapshot, NodeId $moduleId): array
+    {
+        $moduleName = substr($moduleId->value, strlen('module:'));
+        $memberIds = [];
+
+        foreach ($snapshot->graph->incoming($moduleId, [EdgeType::MemberOfModule]) as $membership) {
+            $memberIds[$membership->source->value] = true;
+        }
+
+        $processIds = [];
+
+        foreach ($snapshot->processSteps as $step) {
+            $stepModule = $step->attributes['module'] ?? null;
+
+            if (
+                $stepModule === $moduleName
+                || ($step->nodeId !== null && isset($memberIds[$step->nodeId->value]))
+            ) {
+                $processIds[$step->processId->value] = true;
+            }
+        }
+
+        if ($processIds === []) {
+            return [];
+        }
+
+        $entrypoints = [];
+
+        foreach ($snapshot->graph->nodesByIds(array_keys($processIds)) as $process) {
+            $entrypointId = $process->attributes['entrypoint_id'] ?? null;
+
+            if (is_string($entrypointId) && $entrypointId !== '') {
+                $entrypoints[$entrypointId] = true;
+            }
+        }
+
+        $entrypointIds = array_keys($entrypoints);
+        sort($entrypointIds, SORT_STRING);
+
+        return $entrypointIds;
+    }
+
     public function evidence(GraphSnapshot $snapshot, WorkflowDefinition $workflow): array
     {
         $ids = [];
@@ -199,9 +314,6 @@ final readonly class WorkflowQueryService
             }
         }
 
-        return array_values(array_filter(
-            $snapshot->graph->evidence(),
-            static fn ($record): bool => isset($ids[$record->id()]),
-        ));
+        return array_values($snapshot->graph->evidenceByIds(array_keys($ids)));
     }
 }

@@ -3,8 +3,7 @@
 namespace DNDark\LogicMap\Tests\Feature;
 
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteConnectionFactory;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteGraphRepository;
+use DNDark\LogicMap\Repositories\Database\DatabaseGraphRepository;
 use DNDark\LogicMap\Services\Indexing\IndexLogicMapService;
 use DNDark\LogicMap\Services\Indexing\IndexOptions;
 use DNDark\LogicMap\Support\RepositoryFileDiscovery;
@@ -16,16 +15,14 @@ final class V2CommandSurfaceTest extends CommerceFixtureTestCase
 {
     private string $temporaryRoot;
 
-    private SqliteGraphRepository $repository;
+    private DatabaseGraphRepository $repository;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->temporaryRoot = sys_get_temp_dir().'/logic-map-v2-commands-'.bin2hex(random_bytes(6));
         File::makeDirectory($this->temporaryRoot, 0755, true);
-        $this->repository = new SqliteGraphRepository(
-            new SqliteConnectionFactory($this->temporaryRoot.'/index.sqlite'),
-        );
+        $this->repository = new DatabaseGraphRepository($this->app->make('db')->connection());
         $this->app->instance(SemanticGraphRepository::class, $this->repository);
         $this->app->instance(RepositoryFileDiscovery::class, new RepositoryFileDiscovery($this->fixtureRoot()));
         config()->set('logic-map.scan_paths', ['app', 'routes', 'tests']);
@@ -147,7 +144,7 @@ final class V2CommandSurfaceTest extends CommerceFixtureTestCase
         $this->index();
 
         $this->artisan('logic-map:clear')
-            ->expectsConfirmation('Clear the Laravel Logic Map V2 SQLite store?', 'no')
+            ->expectsConfirmation('Clear the Laravel Logic Map index and runtime evidence?', 'no')
             ->assertExitCode(1);
         self::assertNotNull($this->repository->active());
 

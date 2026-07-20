@@ -23,7 +23,6 @@
     "require": {
         "php": "^8.2",
         "ext-pdo": "*",
-        "ext-pdo_sqlite": "*",
         "illuminate/support": "^10.0|^11.0|^12.0",
         "nikic/php-parser": "^5.0"
     },

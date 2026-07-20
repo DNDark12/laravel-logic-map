@@ -12,6 +12,9 @@ interface SemanticGraphRepository
 
     public function active(): ?GraphSnapshot;
 
+    /** Cheap lookup of the active snapshot id without hydrating the graph. */
+    public function activeId(): ?string;
+
     public function find(string $snapshotId): ?GraphSnapshot;
 
     /** @return list<GraphSnapshot> */

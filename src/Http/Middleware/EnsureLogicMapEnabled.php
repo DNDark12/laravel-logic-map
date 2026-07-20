@@ -4,6 +4,7 @@ namespace DNDark\LogicMap\Http\Middleware;
 
 use Closure;
 use DNDark\LogicMap\Services\Query\ApiResult;
+use DNDark\LogicMap\Support\MemoryLimit;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -28,6 +29,10 @@ final class EnsureLogicMapEnabled
                 403,
             )->toResponse();
         }
+
+        // Viewer endpoints hydrate the semantic graph; PHP's default 128M is
+        // not enough for real applications. Local/testing-only, so raising is safe.
+        MemoryLimit::ensureAtLeast(config('logic-map.http.memory_limit', '1G'));
 
         return $next($request);
     }

@@ -20,38 +20,24 @@ use DNDark\LogicMap\Domain\Snapshot\IndexedFile;
 use DNDark\LogicMap\Domain\Snapshot\ProcessStepRecord;
 use DNDark\LogicMap\Domain\Workflow\ExecutionBoundary;
 use DNDark\LogicMap\Domain\Workflow\WorkflowStepKind;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteConnectionFactory;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteGraphRepository;
+use DNDark\LogicMap\Repositories\Database\DatabaseGraphRepository;
 use DNDark\LogicMap\Support\CanonicalJson;
+use DNDark\LogicMap\Tests\TestCase;
+use Illuminate\Database\ConnectionInterface;
 use PDO;
 use PDOException;
-use PHPUnit\Framework\TestCase;
 
-final class SqliteGraphRepositoryTest extends TestCase
+final class DatabaseGraphRepositoryTest extends TestCase
 {
-    private string $databasePath;
+    private ConnectionInterface $connection;
 
-    private SqliteConnectionFactory $factory;
-
-    private SqliteGraphRepository $repository;
+    private DatabaseGraphRepository $repository;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $path = tempnam(sys_get_temp_dir(), 'logic-map-v2-');
-        self::assertIsString($path);
-        $this->databasePath = $path;
-        $this->factory = new SqliteConnectionFactory($path);
-        $this->repository = new SqliteGraphRepository($this->factory);
-    }
-
-    protected function tearDown(): void
-    {
-        unset($this->repository, $this->factory);
-        @unlink($this->databasePath);
-        @unlink($this->databasePath.'-shm');
-        @unlink($this->databasePath.'-wal');
-        parent::tearDown();
+        $this->connection = $this->app->make('db')->connection();
+        $this->repository = new DatabaseGraphRepository($this->connection);
     }
 
     public function test_round_trips_the_full_snapshot_and_preserves_multiedges_and_evidence_links(): void
@@ -93,39 +79,62 @@ final class SqliteGraphRepositoryTest extends TestCase
         self::assertSame($snapshot->diagnostics[0]->toArray(), $loaded->diagnostics[0]->toArray());
         self::assertSame($snapshot->diagnostics[1]->toArray(), $loaded->diagnostics[1]->toArray());
 
-        $pdo = $this->factory->connection();
-        self::assertSame(3, (int) $pdo->query('SELECT COUNT(*) FROM lm_edge_evidence')->fetchColumn());
-        self::assertSame(2, (int) $pdo->query('SELECT COUNT(*) FROM lm_process_steps')->fetchColumn());
-        self::assertContains('lm_edge_evidence_by_evidence', $this->indexNames($pdo, 'lm_edge_evidence'));
-        self::assertSame('5000', (string) $pdo->query('PRAGMA busy_timeout')->fetchColumn());
-        self::assertSame('1', (string) $pdo->query('PRAGMA foreign_keys')->fetchColumn());
+        self::assertSame(3, $this->connection->table('lm_edge_evidence')->count());
+        self::assertSame(2, $this->connection->table('lm_process_steps')->count());
+        self::assertContains(
+            'lm_edge_evidence_by_evidence',
+            $this->indexNames($this->connection->getPdo(), 'lm_edge_evidence'),
+        );
 
         $edge = $snapshot->graph->edges()[0];
         $evidence = $edge->evidence[0];
-        $statement = $pdo->prepare(
-            'INSERT INTO lm_edge_evidence (snapshot_id, edge_id, evidence_id) VALUES (?, ?, ?)',
-        );
 
         $this->expectException(PDOException::class);
-        $statement->execute([$snapshot->id, $edge->id, $evidence->id()]);
+        $this->connection->getPdo()
+            ->prepare('INSERT INTO lm_edge_evidence (snapshot_id, edge_id, evidence_id) VALUES (?, ?, ?)')
+            ->execute([$snapshot->id, $edge->id, $evidence->id()]);
     }
 
-    public function test_snapshot_delete_cascades_owned_rows_and_nullable_diagnostics_round_trip(): void
+    public function test_lazy_graph_reads_are_targeted_and_nullable_diagnostics_round_trip(): void
+    {
+        $snapshot = $this->snapshot('lazy');
+        $this->repository->store($snapshot);
+        $this->repository->activate($snapshot->id);
+        $loaded = $this->repository->active();
+
+        self::assertNotNull($loaded);
+        self::assertNull($this->connection->table('lm_diagnostics')->whereNull('file')->value('start_line'));
+
+        $source = NodeId::method('App\Services\OrderService', 'cancel');
+        self::assertTrue($loaded->graph->hasNode($source));
+        self::assertSame(3, $loaded->graph->countNodes());
+        self::assertSame(3, $loaded->graph->countEdges());
+        self::assertCount(2, $loaded->graph->outgoing($source, [EdgeType::Calls]));
+        self::assertCount(
+            2,
+            $loaded->graph->incoming(NodeId::method('App\Repositories\OrderRepository', 'save')),
+        );
+        self::assertNotNull($loaded->graph->findNode($source));
+        self::assertNull($loaded->graph->findNode(NodeId::method('App\Missing', 'gone')));
+    }
+
+    public function test_clear_removes_all_owned_rows(): void
     {
         $snapshot = $this->snapshot('cascade');
         $this->repository->store($snapshot);
-        $pdo = $this->factory->connection();
+        $this->repository->activate($snapshot->id);
 
-        self::assertNull($pdo->query(
-            'SELECT start_line FROM lm_diagnostics WHERE file IS NULL LIMIT 1',
-        )->fetchColumn());
+        $this->repository->clear();
 
-        $delete = $pdo->prepare('DELETE FROM lm_snapshots WHERE id = ?');
-        $delete->execute([$snapshot->id]);
-
-        foreach (['lm_files', 'lm_nodes', 'lm_edges', 'lm_evidence', 'lm_edge_evidence', 'lm_diagnostics', 'lm_process_steps'] as $table) {
-            self::assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM {$table}")->fetchColumn(), $table);
+        foreach ([
+            'lm_files', 'lm_nodes', 'lm_edges', 'lm_evidence', 'lm_edge_evidence',
+            'lm_diagnostics', 'lm_process_steps', 'lm_active_snapshot', 'lm_snapshots',
+        ] as $table) {
+            self::assertSame(0, $this->connection->table($table)->count(), $table);
         }
+
+        self::assertNull($this->repository->active());
+        self::assertSame([], $this->repository->list());
     }
 
     public function test_activation_is_explicit_and_failed_store_rolls_back_without_replacing_active_snapshot(): void
@@ -134,7 +143,7 @@ final class SqliteGraphRepositoryTest extends TestCase
         $second = $this->snapshot('failing');
         $this->repository->store($first);
         $this->repository->activate($first->id);
-        $pdo = $this->factory->connection();
+        $pdo = $this->connection->getPdo();
         $quotedId = $pdo->quote($second->id);
         $pdo->exec(<<<SQL
 CREATE TRIGGER lm_test_fail_nodes
@@ -148,8 +157,10 @@ SQL);
         try {
             $this->repository->store($second);
             self::fail('The forced write failure should abort store().');
-        } catch (PDOException $exception) {
+        } catch (\Illuminate\Database\QueryException|PDOException $exception) {
             self::assertStringContainsString('forced node failure', $exception->getMessage());
+        } finally {
+            $pdo->exec('DROP TRIGGER IF EXISTS lm_test_fail_nodes');
         }
 
         self::assertNull($this->repository->find($second->id));
@@ -158,10 +169,6 @@ SQL);
             static fn (GraphSnapshot $snapshot): string => $snapshot->id,
             $this->repository->list(),
         ));
-
-        $this->repository->clear();
-        self::assertNull($this->repository->active());
-        self::assertSame([], $this->repository->list());
     }
 
     public function test_process_step_evidence_must_exist_in_the_snapshot_registry(): void
@@ -173,47 +180,17 @@ SQL);
         $this->repository->store($snapshot);
     }
 
-    public function test_process_rows_are_byte_stable_and_enforce_process_and_node_foreign_keys(): void
+    public function test_process_rows_are_byte_stable_across_stores(): void
     {
         $snapshot = $this->snapshot('stable-process');
         $this->repository->store($snapshot);
-        $first = CanonicalJson::encode($this->processRows($this->factory->connection(), $snapshot->id));
-        $secondPath = tempnam(sys_get_temp_dir(), 'logic-map-v2-process-');
-        self::assertIsString($secondPath);
+        $first = CanonicalJson::encode($this->processRows($snapshot->id));
 
-        try {
-            $secondFactory = new SqliteConnectionFactory($secondPath);
-            $secondRepository = new SqliteGraphRepository($secondFactory);
-            $secondRepository->store($snapshot);
-            $second = CanonicalJson::encode($this->processRows($secondFactory->connection(), $snapshot->id));
-            self::assertSame($first, $second);
-        } finally {
-            unset($secondRepository, $secondFactory);
-            @unlink($secondPath);
-            @unlink($secondPath.'-shm');
-            @unlink($secondPath.'-wal');
-        }
+        $this->repository->clear();
+        $this->repository->store($snapshot);
+        $second = CanonicalJson::encode($this->processRows($snapshot->id));
 
-        $step = $snapshot->processSteps[0];
-        $statement = $this->factory->connection()->prepare(<<<'SQL'
-INSERT INTO lm_process_steps (
-    snapshot_id, process_id, ordinal, step_id, node_id, step_kind, boundary,
-    evidence_ids, attributes
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-SQL);
-
-        $this->expectException(PDOException::class);
-        $statement->execute([
-            $snapshot->id,
-            $step->processId->value,
-            99,
-            'step:missing-node',
-            'method:App\Missing::run',
-            WorkflowStepKind::Symbol->value,
-            ExecutionBoundary::Sync->value,
-            CanonicalJson::encode([]),
-            CanonicalJson::encode([]),
-        ]);
+        self::assertSame($first, $second);
     }
 
     private function snapshot(string $seed, bool $invalidProcessEvidence = false): GraphSnapshot
@@ -349,16 +326,17 @@ SQL);
         );
     }
 
-    private function processRows(PDO $pdo, string $snapshotId): array
+    private function processRows(string $snapshotId): array
     {
-        $statement = $pdo->prepare(<<<'SQL'
-SELECT process_id, ordinal, step_id, node_id, step_kind, boundary, evidence_ids, attributes
-FROM lm_process_steps
-WHERE snapshot_id = ?
-ORDER BY process_id, ordinal, step_id
-SQL);
-        $statement->execute([$snapshotId]);
-
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(
+            static fn (object $row): array => (array) $row,
+            $this->connection->table('lm_process_steps')
+                ->where('snapshot_id', $snapshotId)
+                ->orderBy('process_id')
+                ->orderBy('ordinal')
+                ->orderBy('step_id')
+                ->get(['process_id', 'ordinal', 'step_id', 'node_id', 'step_kind', 'boundary', 'evidence_ids', 'attributes'])
+                ->all(),
+        );
     }
 }

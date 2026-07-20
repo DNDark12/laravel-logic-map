@@ -6,8 +6,11 @@ use DateTimeImmutable;
 use DateTimeZone;
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
 use DNDark\LogicMap\Domain\Graph\NodeId;
+use DNDark\LogicMap\Domain\Graph\NodeKind;
 use DNDark\LogicMap\Http\Requests\ImpactRequest;
 use DNDark\LogicMap\Projectors\WorkflowJsonProjector;
+use DNDark\LogicMap\Projectors\ModuleWorkflowJsonProjector;
+use DNDark\LogicMap\Projectors\SymbolWorkflowCollectionJsonProjector;
 use DNDark\LogicMap\Projectors\WorkflowMarkdownProjector;
 use DNDark\LogicMap\Projectors\WorkflowMermaidProjector;
 use DNDark\LogicMap\Projectors\ImpactJsonProjector;
@@ -128,6 +131,126 @@ final readonly class LogicMapV2Controller
             $snapshot,
             $this->runtimeSessions($request->query('runtime_sessions')),
         );
+        $selectedNode = $snapshot->graph->findNode($entrypoint);
+
+        if ($selectedNode?->kind === NodeKind::Module) {
+            if (strtolower((string) $request->query('format', 'json')) !== 'json') {
+                return ApiResult::failure(
+                    'Module workflows currently support JSON projection only.',
+                    ['code' => 'validation_failed', 'fields' => ['format' => ['Use json for module workflows.']]],
+                    422,
+                )->toResponse();
+            }
+
+            $moduleWorkflow = $this->workflowService->buildModule($snapshot, $entrypoint);
+            $entryEvidence = [];
+            $workflowNodeIds = [];
+
+            foreach ($moduleWorkflow->entryWorkflows as $entryWorkflow) {
+                $entryEvidence[$entryWorkflow->id->value] = $this->workflowService->evidence($snapshot, $entryWorkflow);
+
+                foreach ($entryWorkflow->steps as $step) {
+                    if ($step->nodeId !== null) {
+                        $workflowNodeIds[] = $step->nodeId->value;
+                    }
+                }
+            }
+
+            $data = (new ModuleWorkflowJsonProjector())->project($moduleWorkflow, $snapshot->id, $entryEvidence);
+            $data['runtime'] = $this->runtimeProjection($runtime, $workflowNodeIds);
+            $data['identity']['encoded_workflow_id'] = $this->codec->encode($data['identity']['workflow_id']);
+            $data['module']['encoded_id'] = $this->codec->encode($entrypoint->value);
+
+            foreach ($data['entry_workflows'] as &$entryWorkflow) {
+                $entryWorkflow['identity']['encoded_workflow_id'] = $this->codec->encode($entryWorkflow['identity']['workflow_id']);
+                $entryWorkflow['entrypoint']['encoded_id'] = $this->codec->encode($entryWorkflow['entrypoint']['node_id']);
+
+                foreach ($entryWorkflow['steps'] as &$step) {
+                    $step['encoded_id'] = $this->codec->encode($step['id']);
+
+                    if (is_string($step['node_id'] ?? null)) {
+                        $step['encoded_node_id'] = $this->codec->encode($step['node_id']);
+                    }
+                }
+                unset($step);
+            }
+            unset($entryWorkflow);
+
+            $truncated = false;
+
+            foreach ($moduleWorkflow->entryWorkflows as $entryWorkflow) {
+                if ((bool) ($entryWorkflow->truncation['truncated'] ?? false)) {
+                    $truncated = true;
+                    break;
+                }
+            }
+
+            return $this->success($data, [
+                'truncated' => $truncated,
+            ]);
+        }
+
+        $collection = $this->workflowService->buildSymbolCollection($snapshot, $entrypoint, $runtime['overlays']);
+
+        if ($collection !== []) {
+            if (strtolower((string) $request->query('format', 'json')) !== 'json') {
+                return ApiResult::failure(
+                    'Class and container workflows currently support JSON projection only.',
+                    ['code' => 'validation_failed', 'fields' => ['format' => ['Use json for class and container workflows.']]],
+                    422,
+                )->toResponse();
+            }
+
+            $entryEvidence = [];
+            $workflowNodeIds = [];
+
+            foreach ($collection as $entryWorkflow) {
+                $entryEvidence[$entryWorkflow->id->value] = $this->workflowService->evidence($snapshot, $entryWorkflow);
+
+                foreach ($entryWorkflow->steps as $step) {
+                    if ($step->nodeId !== null) {
+                        $workflowNodeIds[] = $step->nodeId->value;
+                    }
+                }
+            }
+
+            $data = (new SymbolWorkflowCollectionJsonProjector())->project(
+                $selectedNode,
+                $collection,
+                $snapshot->id,
+                $entryEvidence,
+            );
+            $data['runtime'] = $this->runtimeProjection($runtime, $workflowNodeIds);
+            $data['identity']['encoded_workflow_id'] = $this->codec->encode($data['identity']['workflow_id']);
+            $data['selection']['encoded_id'] = $this->codec->encode($entrypoint->value);
+
+            foreach ($data['entry_workflows'] as &$entryWorkflow) {
+                $entryWorkflow['identity']['encoded_workflow_id'] = $this->codec->encode($entryWorkflow['identity']['workflow_id']);
+                $entryWorkflow['entrypoint']['encoded_id'] = $this->codec->encode($entryWorkflow['entrypoint']['node_id']);
+
+                foreach ($entryWorkflow['steps'] as &$step) {
+                    $step['encoded_id'] = $this->codec->encode($step['id']);
+
+                    if (is_string($step['node_id'] ?? null)) {
+                        $step['encoded_node_id'] = $this->codec->encode($step['node_id']);
+                    }
+                }
+                unset($step);
+            }
+            unset($entryWorkflow);
+
+            $truncated = false;
+
+            foreach ($collection as $entryWorkflow) {
+                if ((bool) ($entryWorkflow->truncation['truncated'] ?? false)) {
+                    $truncated = true;
+                    break;
+                }
+            }
+
+            return $this->success($data, ['truncated' => $truncated]);
+        }
+
         $workflow = $this->workflowService->build($snapshot, $entrypoint, $runtime['overlays']);
         $workflowNodeIds = array_values(array_filter(array_map(
             static fn ($step): ?string => $step->nodeId?->value,
@@ -196,12 +319,13 @@ final readonly class LogicMapV2Controller
 
     public function impact(ImpactRequest $request): JsonResponse
     {
-        if ($this->repository->active() === null) {
+        $snapshot = $this->repository->active();
+
+        if ($snapshot === null) {
             return $this->missingIndex();
         }
 
         try {
-            $snapshot = $this->repository->active();
             $runtime = $this->runtimeEvidence->merge(
                 $snapshot,
                 $request->validated('runtime_sessions'),
@@ -228,6 +352,31 @@ final readonly class LogicMapV2Controller
         }
 
         $data = (new ImpactJsonProjector())->project($report);
+        $selectedSymbol = $request->validated('symbol');
+
+        if (is_string($selectedSymbol)) {
+            try {
+                $selectedNode = $snapshot->graph->findNode(NodeId::fromString($selectedSymbol));
+
+                if ($selectedNode?->kind === NodeKind::Module) {
+                    $data['selection'] = [
+                        'type' => 'module',
+                        'node_id' => $selectedNode->id->value,
+                        'encoded_id' => $this->codec->encode($selectedNode->id->value),
+                        'name' => $selectedNode->name,
+                    ];
+                } elseif ($selectedNode !== null && $snapshot->graph->outgoing($selectedNode->id, [\DNDark\LogicMap\Domain\Graph\EdgeType::Defines]) !== []) {
+                    $data['selection'] = [
+                        'type' => 'container',
+                        'node_id' => $selectedNode->id->value,
+                        'encoded_id' => $this->codec->encode($selectedNode->id->value),
+                        'name' => $selectedNode->name,
+                        'kind' => $selectedNode->kind->value,
+                    ];
+                }
+            } catch (InvalidArgumentException) {
+            }
+        }
         $impactNodeIds = [];
 
         foreach ($report->changedSymbols as $change) {
@@ -252,7 +401,7 @@ final readonly class LogicMapV2Controller
                 : (($request->validated('base') ?? 'HEAD~1').'..'.($request->validated('head') ?? 'HEAD'));
             $content = (new ImpactMarkdownProjector())->project(
                 $report,
-                $this->repository->active()->id,
+                $snapshot->id,
                 $target,
                 new DateTimeImmutable('now', new DateTimeZone('UTC')),
             );

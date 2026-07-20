@@ -5,7 +5,7 @@ namespace DNDark\LogicMap\Services\Workflow;
 use DNDark\LogicMap\Domain\Graph\EdgeType;
 use DNDark\LogicMap\Domain\Graph\GraphEdge;
 use DNDark\LogicMap\Domain\Graph\GraphNode;
-use DNDark\LogicMap\Domain\Graph\KnowledgeGraph;
+use DNDark\LogicMap\Domain\Graph\GraphReader;
 use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
 use DNDark\LogicMap\Domain\Workflow\ModuleWorkflow;
@@ -24,11 +24,19 @@ final class ModuleWorkflowBuilder
 
     private int $maxDepth;
 
+    /** @var list<string> */
+    private array $entrypointIds;
+
+    /** @var list<WorkflowDefinition> */
+    private array $persistedEntryWorkflows;
+
     public function __construct(
-        private readonly KnowledgeGraph $graph,
+        private readonly GraphReader $graph,
         private readonly array $semanticOutputs,
         private readonly array $diagnostics,
         array $limits,
+        array $entrypointIds = [],
+        array $persistedEntryWorkflows = [],
     ) {
         $this->maxSteps = (int) ($limits['max_nodes'] ?? 0);
         $this->maxDepth = (int) ($limits['max_depth'] ?? 0);
@@ -36,6 +44,16 @@ final class ModuleWorkflowBuilder
         if ($this->maxSteps < 1 || $this->maxDepth < 1) {
             throw new InvalidArgumentException('Module workflow limits must define positive max_nodes and max_depth.');
         }
+
+        $this->entrypointIds = array_values(array_unique(array_filter(
+            $entrypointIds,
+            static fn (mixed $id): bool => is_string($id) && $id !== '',
+        )));
+        sort($this->entrypointIds, SORT_STRING);
+        $this->persistedEntryWorkflows = array_values(array_filter(
+            $persistedEntryWorkflows,
+            static fn (mixed $workflow): bool => $workflow instanceof WorkflowDefinition,
+        ));
 
         foreach ($graph->nodes() as $node) {
             $this->nodes[$node->id->value] = $node;
@@ -83,10 +101,18 @@ final class ModuleWorkflowBuilder
     /** @return list<WorkflowDefinition> */
     private function entryWorkflows(NodeId $moduleId): array
     {
+        if ($this->persistedEntryWorkflows !== []) {
+            return $this->persistedEntryWorkflows;
+        }
+
         $builder = new WorkflowBuilder($this->graph, $this->semanticOutputs, $this->diagnostics);
         $entries = [];
 
-        foreach ($this->graph->nodes() as $node) {
+        $candidates = $this->entrypointIds === []
+            ? $this->graph->nodes()
+            : array_values($this->graph->nodesByIds($this->entrypointIds));
+
+        foreach ($candidates as $node) {
             if (! $this->stableEntry($node)) {
                 continue;
             }

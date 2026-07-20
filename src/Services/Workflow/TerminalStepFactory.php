@@ -4,15 +4,14 @@ namespace DNDark\LogicMap\Services\Workflow;
 
 use DNDark\LogicMap\Analysis\Facts\EarlyReturnFact;
 use DNDark\LogicMap\Analysis\Facts\ThrowFact;
-use DNDark\LogicMap\Domain\Graph\GraphNode;
+use DNDark\LogicMap\Domain\Graph\GraphReader;
 use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Workflow\WorkflowStep;
 use DNDark\LogicMap\Domain\Workflow\WorkflowStepKind;
 
 final class TerminalStepFactory
 {
-    /** @param array<string, GraphNode> $nodes */
-    public function make(ThrowFact|EarlyReturnFact $fact, ?string $module, array $nodes): WorkflowStep
+    public function make(ThrowFact|EarlyReturnFact $fact, ?string $module, GraphReader $graph): WorkflowStep
     {
         $exception = $fact instanceof ThrowFact ? $fact->exceptionClass : null;
         $nodeId = null;
@@ -20,7 +19,7 @@ final class TerminalStepFactory
         if ($exception !== null) {
             $candidate = NodeId::fromString('class:'.ltrim($exception, '\\'));
 
-            if (isset($nodes[$candidate->value])) {
+            if ($graph->hasNode($candidate)) {
                 $nodeId = $candidate;
             }
         }

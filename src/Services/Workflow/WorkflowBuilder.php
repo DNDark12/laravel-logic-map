@@ -9,7 +9,7 @@ use DNDark\LogicMap\Analysis\Facts\ThrowFact;
 use DNDark\LogicMap\Domain\Graph\EdgeType;
 use DNDark\LogicMap\Domain\Graph\GraphEdge;
 use DNDark\LogicMap\Domain\Graph\GraphNode;
-use DNDark\LogicMap\Domain\Graph\KnowledgeGraph;
+use DNDark\LogicMap\Domain\Graph\GraphReader;
 use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
 use DNDark\LogicMap\Domain\Snapshot\DiagnosticCode;
@@ -24,9 +24,11 @@ use InvalidArgumentException;
 
 final class WorkflowBuilder
 {
-    private array $nodes = [];
+    /** @var array<string, GraphNode|null> memoized node lookups */
+    private array $nodeCache = [];
 
-    private array $modules = [];
+    /** @var array<string, string|null> memoized module membership by node id */
+    private array $moduleCache = [];
 
     private array $steps = [];
 
@@ -43,22 +45,12 @@ final class WorkflowBuilder
     private WorkflowRequest $request;
 
     public function __construct(
-        private readonly KnowledgeGraph $graph,
+        private readonly GraphReader $graph,
         private readonly array $semanticOutputs = [],
         private readonly array $diagnostics = [],
         private readonly EdgeDirectionPolicy $directions = new EdgeDirectionPolicy(),
         private readonly array $relationOverlays = [],
     ) {
-        foreach ($graph->nodes() as $node) {
-            $this->nodes[$node->id->value] = $node;
-        }
-
-        foreach ($graph->edges() as $edge) {
-            if ($edge->type === EdgeType::MemberOfModule) {
-                $this->modules[$edge->source->value] = substr($edge->target->value, strlen('module:'));
-            }
-        }
-
         foreach ($relationOverlays as $key => $edge) {
             if (! is_string($key) || ! $edge instanceof GraphEdge) {
                 throw new InvalidArgumentException('Workflow runtime overlays must be relation-keyed graph edges.');
@@ -66,9 +58,36 @@ final class WorkflowBuilder
         }
     }
 
+    private function node(string $value): ?GraphNode
+    {
+        if (! array_key_exists($value, $this->nodeCache)) {
+            try {
+                $this->nodeCache[$value] = $this->graph->findNode(NodeId::fromString($value));
+            } catch (InvalidArgumentException) {
+                $this->nodeCache[$value] = null;
+            }
+        }
+
+        return $this->nodeCache[$value];
+    }
+
+    private function moduleOf(string $value): ?string
+    {
+        if (! array_key_exists($value, $this->moduleCache)) {
+            $membership = $this->graph->membershipsOf([$value])[$value] ?? null;
+            $this->moduleCache[$value] = $membership === null
+                ? null
+                : substr($membership, strlen('module:'));
+        }
+
+        return $this->moduleCache[$value];
+    }
+
     public function build(WorkflowRequest $request): WorkflowDefinition
     {
-        if (! isset($this->nodes[$request->entrypoint->value])) {
+        $entrypointNode = $this->node($request->entrypoint->value);
+
+        if ($entrypointNode === null) {
             throw new InvalidArgumentException("Unknown workflow entrypoint {$request->entrypoint->value}.");
         }
 
@@ -79,7 +98,7 @@ final class WorkflowBuilder
         $this->transactionMemberships = [];
         $this->gaps = [];
         $this->truncation = ['truncated' => false, 'omitted_count' => 0, 'frontier' => []];
-        $entry = $this->nodeStep($this->nodes[$request->entrypoint->value], null, WorkflowStepKind::Entry);
+        $entry = $this->nodeStep($entrypointNode, null, WorkflowStepKind::Entry);
         $this->steps[$entry->id] = $entry;
         $this->expand($request->entrypoint, $entry->id, 0, [$request->entrypoint->value]);
         ksort($this->steps, SORT_STRING);
@@ -148,7 +167,7 @@ final class WorkflowBuilder
                 WorkflowStepKind::Cycle,
                 'Cycle to '.$target->value,
                 null,
-                $this->modules[$source->value] ?? null,
+                $this->moduleOf($source->value),
                 $evidence,
             );
             $this->transition($fromStep, $cycleId, ExecutionBoundary::Sync, null, null, true, $evidence);
@@ -156,12 +175,14 @@ final class WorkflowBuilder
             return;
         }
 
-        if (! isset($this->nodes[$target->value])) {
+        $targetNode = $this->node($target->value);
+
+        if ($targetNode === null) {
             return;
         }
 
         $boundary = $this->boundary($edge);
-        $targetStep = $this->stepForTarget($this->nodes[$target->value], $edge, $source);
+        $targetStep = $this->stepForTarget($targetNode, $edge, $source);
 
         if ($boundary !== ExecutionBoundary::Sync && $boundary !== ExecutionBoundary::Scheduled) {
             $boundaryId = 'boundary:'.hash('sha256', ($edge?->id ?? '')."\0".$target->value);
@@ -289,15 +310,16 @@ final class WorkflowBuilder
 
     private function specialTargets(NodeId $nodeId): array
     {
-        $node = $this->nodes[$nodeId->value];
+        $node = $this->node($nodeId->value);
         $targets = [];
 
-        if (in_array($node->kind, [NodeKind::Command, NodeKind::Job, NodeKind::Listener], true)
+        if ($node !== null
+            && in_array($node->kind, [NodeKind::Command, NodeKind::Job, NodeKind::Listener], true)
             && ! str_starts_with($nodeId->value, 'command:')
             && is_string($node->qualifiedName)) {
             $method = NodeId::method($node->qualifiedName, 'handle');
 
-            if (isset($this->nodes[$method->value])) {
+            if ($this->node($method->value) !== null) {
                 $targets[] = $method;
             }
         }
@@ -309,7 +331,7 @@ final class WorkflowBuilder
 
     private function attachTerminals(NodeId $nodeId, string $fromStep): string
     {
-        $module = $this->modules[$nodeId->value] ?? null;
+        $module = $this->moduleOf($nodeId->value);
 
         foreach ([...($this->semanticOutputs['throws'] ?? []), ...($this->semanticOutputs['early_returns'] ?? [])] as $terminal) {
             if (! $terminal instanceof ThrowFact && ! $terminal instanceof EarlyReturnFact) {
@@ -323,7 +345,7 @@ final class WorkflowBuilder
             $decision = (new DecisionStepFactory())->make($terminal->guard, $module);
             $this->steps[$decision->id] ??= $decision;
             $this->transition($fromStep, $decision->id, ExecutionBoundary::Sync, null, null, false, []);
-            $terminalStep = (new TerminalStepFactory())->make($terminal, $module, $this->nodes);
+            $terminalStep = (new TerminalStepFactory())->make($terminal, $module, $this->graph);
             $this->steps[$terminalStep->id] ??= $terminalStep;
             $this->transition(
                 $decision->id,
@@ -365,7 +387,7 @@ final class WorkflowBuilder
                 WorkflowStepKind::Gap,
                 $diagnostic->message,
                 null,
-                $this->modules[$nodeId->value] ?? null,
+                $this->moduleOf($nodeId->value),
                 [],
                 ['diagnostic' => $diagnostic->toArray()],
             );
@@ -382,7 +404,7 @@ final class WorkflowBuilder
             NodeKind::ConfigKey, NodeKind::StoragePath, NodeKind::ExternalEndpoint, NodeKind::View,
             NodeKind::Notification, NodeKind::Mailable,
         ], true)) {
-            return (new EffectStepFactory())->make($node, $edge, $this->modules[$source->value] ?? null);
+            return (new EffectStepFactory())->make($node, $edge, $this->moduleOf($source->value));
         }
 
         return $this->nodeStep($node, $edge);
@@ -395,7 +417,7 @@ final class WorkflowBuilder
             $kind,
             $node->name,
             $node->id,
-            $this->modules[$node->id->value] ?? null,
+            $this->moduleOf($node->id->value),
             $edge === null ? [] : array_map(static fn ($record): string => $record->id(), $edge->evidence),
             ['node_kind' => $node->kind->value],
         );

@@ -15,10 +15,9 @@ use DNDark\LogicMap\Domain\Snapshot\GraphSnapshot;
 use DNDark\LogicMap\Domain\Snapshot\RuntimeSession;
 use DNDark\LogicMap\Http\Middleware\LogicMapRuntimeTrace;
 use DNDark\LogicMap\LogicMapServiceProvider;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteConnectionFactory;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteGraphRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteRuntimeEvidenceRepository;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteSchema;
+use DNDark\LogicMap\Repositories\Database\DatabaseGraphRepository;
+use DNDark\LogicMap\Repositories\Database\DatabaseRuntimeEvidenceRepository;
+use DNDark\LogicMap\Support\SchemaVersion;
 use DNDark\LogicMap\Tests\TestCase;
 use GuzzleHttp\Psr7\Request as PsrRequest;
 use GuzzleHttp\Psr7\Response as PsrResponse;
@@ -38,22 +37,17 @@ use RuntimeException;
 
 final class V2RuntimeObservationTest extends TestCase
 {
-    private string $databasePath;
-    private SqliteConnectionFactory $factory;
-    private SqliteRuntimeEvidenceRepository $runtime;
-    private SqliteGraphRepository $graph;
+    private DatabaseRuntimeEvidenceRepository $runtime;
+    private DatabaseGraphRepository $graph;
     private RuntimeTraceContext $context;
     private string $snapshotId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $path = tempnam(sys_get_temp_dir(), 'logic-map-runtime-feature-');
-        self::assertIsString($path);
-        $this->databasePath = $path;
-        $this->factory = new SqliteConnectionFactory($path);
-        $this->graph = new SqliteGraphRepository($this->factory);
-        $this->runtime = new SqliteRuntimeEvidenceRepository($this->factory, new RuntimeSanitizer());
+        $connection = $this->app->make('db')->connection();
+        $this->graph = new DatabaseGraphRepository($connection);
+        $this->runtime = new DatabaseRuntimeEvidenceRepository($connection, new RuntimeSanitizer());
         $this->context = new RuntimeTraceContext();
         $this->app->instance(SemanticGraphRepository::class, $this->graph);
         $this->app->instance(RuntimeEvidenceRepository::class, $this->runtime);
@@ -65,10 +59,6 @@ final class V2RuntimeObservationTest extends TestCase
     protected function tearDown(): void
     {
         Queue::createPayloadUsing(null);
-        unset($this->runtime, $this->graph, $this->factory);
-        @unlink($this->databasePath);
-        @unlink($this->databasePath.'-shm');
-        @unlink($this->databasePath.'-wal');
         parent::tearDown();
     }
 
@@ -212,10 +202,10 @@ final class V2RuntimeObservationTest extends TestCase
     private function activateSnapshot(): string
     {
         $fingerprint = hash('sha256', 'runtime-feature');
-        $id = hash('sha256', SqliteSchema::VERSION."\0".$fingerprint);
+        $id = hash('sha256', SchemaVersion::VERSION."\0".$fingerprint);
         $snapshot = new GraphSnapshot(
             $id,
-            SqliteSchema::VERSION,
+            SchemaVersion::VERSION,
             '2.0-runtime-test',
             new DateTimeImmutable('2026-07-17T00:00:00+00:00'),
             $fingerprint,

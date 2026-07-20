@@ -24,6 +24,8 @@ final readonly class RuntimeEvidenceMerger
      * Runtime evidence is a query-time overlay. It never mutates the immutable snapshot graph.
      *
      * @param null|list<string> $selectedSessionIds Null selects all sessions for this snapshot.
+     * @param null|list<string> $scopeNodeIds When given, static relations are limited to
+     *        edges touching these nodes instead of the whole graph (query-path memory bound).
      * @return array{
      *     coverage:string,
      *     available_session_count:int,
@@ -33,12 +35,49 @@ final readonly class RuntimeEvidenceMerger
      *     evidence:list<EvidenceRecord>
      * }
      */
-    public function merge(GraphSnapshot $snapshot, ?array $selectedSessionIds = null): array
+    public function merge(GraphSnapshot $snapshot, ?array $selectedSessionIds = null, ?array $scopeNodeIds = null): array
     {
         $available = $this->sessionsForSnapshot($snapshot);
         $selected = $this->selectSessions($available, $selectedSessionIds);
         $observations = $this->relationObservations($snapshot, $selected);
-        $static = $this->staticRelations($snapshot);
+
+        // No runtime observations means no overlays and nothing to annotate, so
+        // skip materializing static relations entirely. Runtime collection is
+        // opt-in and off by default, so this is the common (and cheap) path.
+        if ($observations === [] && $scopeNodeIds === null) {
+            $selectedIds = array_keys($selected);
+            sort($selectedIds, SORT_STRING);
+
+            return [
+                'coverage' => $selected === []
+                    ? 'No runtime data available'
+                    : 'Observed in '.count($selected).' selected runtime sessions',
+                'available_session_count' => count($available),
+                'selected_session_ids' => $selectedIds,
+                'relations' => [],
+                'overlays' => [],
+                'evidence' => [],
+            ];
+        }
+
+        $static = $this->staticRelations($snapshot, $scopeNodeIds);
+
+        // Resolve static edges for observed relations individually so the
+        // whole edge set is never enumerated, and runtime_only stays accurate
+        // for observations outside the requested scope.
+        foreach (array_keys($observations) as $observedKey) {
+            if (isset($static[$observedKey])) {
+                continue;
+            }
+
+            $edges = $this->staticEdgesForKey($snapshot, $observedKey);
+
+            if ($edges !== []) {
+                $static[$observedKey] = $edges;
+            }
+        }
+
+        ksort($static, SORT_STRING);
         $keys = array_values(array_unique([...array_keys($static), ...array_keys($observations)]));
         sort($keys, SORT_STRING);
         $relations = [];
@@ -237,12 +276,23 @@ final readonly class RuntimeEvidenceMerger
         return $snapshot->graph->hasNode($source) && $snapshot->graph->hasNode($target);
     }
 
-    /** @return array<string,list<GraphEdge>> */
-    private function staticRelations(GraphSnapshot $snapshot): array
+    /**
+     * Static relations touching the scope nodes. A null scope yields nothing:
+     * unscoped callers only need static edges for observed relation keys,
+     * which merge() resolves individually — never the whole edge set.
+     *
+     * @param null|list<string> $scopeNodeIds
+     * @return array<string,list<GraphEdge>>
+     */
+    private function staticRelations(GraphSnapshot $snapshot, ?array $scopeNodeIds = null): array
     {
+        if ($scopeNodeIds === null) {
+            return [];
+        }
+
         $relations = [];
 
-        foreach ($snapshot->graph->edges() as $edge) {
+        foreach ($snapshot->graph->edgesTouching($scopeNodeIds) as $edge) {
             $relations[self::relationKey($edge->source->value, $edge->target->value, $edge->type)][] = $edge;
         }
 
@@ -253,6 +303,31 @@ final readonly class RuntimeEvidenceMerger
         ksort($relations, SORT_STRING);
 
         return $relations;
+    }
+
+    /** @return list<GraphEdge> */
+    private function staticEdgesForKey(GraphSnapshot $snapshot, string $relationKey): array
+    {
+        [$source, $target, $type] = explode("\0", $relationKey, 3);
+        $edgeType = EdgeType::tryFrom($type);
+
+        if ($edgeType === null) {
+            return [];
+        }
+
+        try {
+            $edges = $snapshot->graph->edgesBetween(
+                NodeId::fromString($source),
+                NodeId::fromString($target),
+                $edgeType,
+            );
+        } catch (InvalidArgumentException) {
+            return [];
+        }
+
+        usort($edges, static fn (GraphEdge $left, GraphEdge $right): int => $left->id <=> $right->id);
+
+        return $edges;
     }
 
     /** @param list<RuntimeObservation> $observations */

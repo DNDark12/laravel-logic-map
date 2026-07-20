@@ -3,9 +3,10 @@
 namespace DNDark\LogicMap\Domain\Graph;
 
 use DNDark\LogicMap\Support\CanonicalJson;
+use DNDark\LogicMap\Support\SymbolSearchTerms;
 use InvalidArgumentException;
 
-final class KnowledgeGraph
+final class KnowledgeGraph implements GraphReader
 {
     /** @var array<string, GraphNode> */
     private array $nodes = [];
@@ -63,6 +64,185 @@ final class KnowledgeGraph
     public function hasNode(NodeId $id): bool
     {
         return isset($this->nodes[$id->value]);
+    }
+
+    public function findNode(NodeId $id): ?GraphNode
+    {
+        return $this->nodes[$id->value] ?? null;
+    }
+
+    public function nodesByIds(array $ids): array
+    {
+        $found = [];
+
+        foreach ($ids as $id) {
+            $value = $id instanceof NodeId ? $id->value : $id;
+
+            if (isset($this->nodes[$value])) {
+                $found[$value] = $this->nodes[$value];
+            }
+        }
+
+        ksort($found, SORT_STRING);
+
+        return $found;
+    }
+
+    public function nodesByKind(NodeKind $kind): array
+    {
+        return array_values(array_filter(
+            $this->nodes(),
+            static fn (GraphNode $node): bool => $node->kind === $kind,
+        ));
+    }
+
+    public function nodesByQualifiedName(string $qualifiedName): array
+    {
+        return array_values(array_filter(
+            $this->nodes(),
+            static fn (GraphNode $node): bool => $node->qualifiedName === $qualifiedName,
+        ));
+    }
+
+    public function locatedNodes(): array
+    {
+        return array_values(array_filter(
+            $this->nodes(),
+            static fn (GraphNode $node): bool => $node->location !== null
+                && preg_match('/^(class|interface|trait|enum|method):/', $node->id->value) === 1,
+        ));
+    }
+
+    public function searchNodes(string $term, int $limit): array
+    {
+        $terms = new SymbolSearchTerms($term);
+        $matches = [];
+
+        foreach ($this->nodes() as $node) {
+            if (count($matches) >= $limit) {
+                break;
+            }
+
+            if ($terms->matches(self::searchFields($node))) {
+                $matches[] = $node;
+            }
+        }
+
+        return $matches;
+    }
+
+    public function countSearchNodes(string $term): int
+    {
+        $terms = new SymbolSearchTerms($term);
+        $count = 0;
+
+        foreach ($this->nodes as $node) {
+            if ($terms->matches(self::searchFields($node))) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    public function edgesBetween(NodeId $source, NodeId $target, ?EdgeType $type = null): array
+    {
+        return array_values(array_filter(
+            $this->edges(),
+            static fn (GraphEdge $edge): bool => $edge->source->value === $source->value
+                && $edge->target->value === $target->value
+                && ($type === null || $edge->type === $type),
+        ));
+    }
+
+    public function edgesTouching(array $nodeIds, ?array $types = null, ?array $excludeTypes = null): array
+    {
+        $ids = [];
+
+        foreach ($nodeIds as $id) {
+            $ids[$id instanceof NodeId ? $id->value : $id] = true;
+        }
+
+        return array_values(array_filter(
+            $this->edges(),
+            static fn (GraphEdge $edge): bool => (isset($ids[$edge->source->value]) || isset($ids[$edge->target->value]))
+                && ($types === null || in_array($edge->type, $types, true))
+                && ($excludeTypes === null || ! in_array($edge->type, $excludeTypes, true)),
+        ));
+    }
+
+    public function membershipsOf(array $nodeIds): array
+    {
+        $ids = [];
+
+        foreach ($nodeIds as $id) {
+            $ids[$id instanceof NodeId ? $id->value : $id] = true;
+        }
+
+        $memberships = [];
+
+        foreach ($this->edges() as $edge) {
+            if ($edge->type === EdgeType::MemberOfModule && isset($ids[$edge->source->value])) {
+                $memberships[$edge->source->value] = $edge->target->value;
+            }
+        }
+
+        return $memberships;
+    }
+
+    public function moduleMemberCounts(): array
+    {
+        $counts = [];
+
+        foreach ($this->edges as $edge) {
+            if ($edge->type === EdgeType::MemberOfModule) {
+                $counts[$edge->target->value] = ($counts[$edge->target->value] ?? 0) + 1;
+            }
+        }
+
+        ksort($counts, SORT_STRING);
+
+        return $counts;
+    }
+
+    public function evidenceByIds(array $ids): array
+    {
+        $found = [];
+
+        foreach ($ids as $id) {
+            if (isset($this->evidence[$id])) {
+                $found[$id] = $this->evidence[$id];
+            }
+        }
+
+        ksort($found, SORT_STRING);
+
+        return $found;
+    }
+
+    public function countNodes(): int
+    {
+        return count($this->nodes);
+    }
+
+    public function countEdges(): int
+    {
+        return count($this->edges);
+    }
+
+    public function countEvidence(): int
+    {
+        return count($this->evidence);
+    }
+
+    /** @return list<string> */
+    private static function searchFields(GraphNode $node): array
+    {
+        return [
+            strtolower($node->id->value),
+            strtolower($node->qualifiedName ?? ''),
+            strtolower($node->name),
+        ];
     }
 
     public function applyClassification(

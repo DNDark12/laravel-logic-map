@@ -7,7 +7,8 @@ use DNDark\LogicMap\Domain\Graph\EdgeType;
 use DNDark\LogicMap\Domain\Graph\EvidenceOrigin;
 use DNDark\LogicMap\Domain\Graph\EvidenceRecord;
 use DNDark\LogicMap\Domain\Graph\GraphEdge;
-use DNDark\LogicMap\Domain\Graph\KnowledgeGraph;
+use DNDark\LogicMap\Domain\Graph\GraphNode;
+use DNDark\LogicMap\Domain\Graph\GraphReader;
 use DNDark\LogicMap\Domain\Graph\NodeId;
 use DNDark\LogicMap\Domain\Graph\SourceLocation;
 use DNDark\LogicMap\Domain\Impact\AffectedSymbol;
@@ -25,29 +26,40 @@ final class ImpactAnalyzer
     /** @var array<string, EvidenceRecord> */
     private array $queryEvidence = [];
 
-    /** @var array<string, bool> */
-    private array $nodeIds = [];
-
-    private array $nodes = [];
+    /** @var array<string, GraphNode|null> memoized node lookups */
+    private array $nodeCache = [];
 
     public function __construct(
-        private readonly KnowledgeGraph $graph,
+        private readonly GraphReader $graph,
         private readonly array $diagnostics,
         private readonly ImpactPolicy $policy,
         private readonly SharedResourceImpactAnalyzer $sharedResources,
         private readonly TestScopeResolver $testScope,
         private readonly array $relationOverlays = [],
     ) {
-        foreach ($graph->nodes() as $node) {
-            $this->nodeIds[$node->id->value] = true;
-            $this->nodes[$node->id->value] = $node;
-        }
-
         foreach ($relationOverlays as $key => $edge) {
             if (! is_string($key) || ! $edge instanceof GraphEdge) {
                 throw new \InvalidArgumentException('Impact runtime overlays must be relation-keyed graph edges.');
             }
         }
+    }
+
+    private function node(string $value): ?GraphNode
+    {
+        if (! array_key_exists($value, $this->nodeCache)) {
+            try {
+                $this->nodeCache[$value] = $this->graph->findNode(NodeId::fromString($value));
+            } catch (\InvalidArgumentException) {
+                $this->nodeCache[$value] = null;
+            }
+        }
+
+        return $this->nodeCache[$value];
+    }
+
+    private function hasNodeId(string $value): bool
+    {
+        return $this->node($value) !== null;
     }
 
     public function analyze(ImpactRequest $request): ImpactReport
@@ -153,7 +165,8 @@ final class ImpactAnalyzer
             $referencedEvidence[$change->evidence->id()] = true;
         }
 
-        foreach ([...$this->graph->evidence(), ...array_map(
+        // Only the referenced static evidence is fetched, not the whole store.
+        foreach ([...array_values($this->graph->evidenceByIds(array_keys($referencedEvidence))), ...array_map(
             static fn (ChangedSymbol $change): EvidenceRecord => $change->evidence,
             $request->changedSymbols,
         ), ...array_values($this->queryEvidence)] as $record) {
@@ -180,6 +193,8 @@ final class ImpactAnalyzer
         $omitted = 0;
         $frontier = [];
         $maxDepth = 0;
+        $queue = [];
+        $diagnosticChanges = [];
 
         foreach ($request->changedSymbols as $change) {
             if ($change->changeType === ChangeType::Added) {
@@ -194,37 +209,37 @@ final class ImpactAnalyzer
                 continue;
             }
 
-            if (! isset($this->nodeIds[$seed->value])) {
-                if ($category === ImpactCategory::HardDependency) {
-                    $this->appendDiagnosticCallers(
-                        $results,
-                        $change,
-                        $request,
-                        $changedIds,
-                        $visited,
-                        $edgeCount,
-                        $omitted,
-                        $frontier,
-                        $maxDepth,
-                    );
-                }
+            $diagnosticChanges[] = $change;
 
+            if (! $this->hasNodeId($seed->value)) {
                 continue;
             }
 
-            $queue = [[
+            $queue[] = [
                 'node' => $seed,
+                'seed' => $seed,
+                'change' => $change,
                 'nodes' => [$seed->value],
                 'edges' => [],
                 'evidence' => [$change->evidence->id()],
                 'depth' => 0,
-            ]];
+            ];
             $seen[$seed->value][$seed->value] = 0;
+        }
 
-            while ($queue !== []) {
-                $state = array_shift($queue);
+        while ($queue !== []) {
+            $states = $queue;
+            $queue = [];
+            $adjacentByNode = $this->adjacentMany(
+                array_map(static fn (array $state): NodeId => $state['node'], $states),
+                $category,
+            );
 
-                foreach ($this->adjacent($state['node'], $category) as [$edge, $next]) {
+            foreach ($states as $state) {
+                $seed = $state['seed'];
+                $change = $state['change'];
+
+                foreach ($adjacentByNode[$state['node']->value] ?? [] as [$edge, $next]) {
                     $depth = $state['depth'] + 1;
 
                     if ($depth > $request->maxDepth) {
@@ -276,6 +291,8 @@ final class ImpactAnalyzer
                     $maxDepth = max($maxDepth, $depth);
                     $queue[] = [
                         'node' => $next,
+                        'seed' => $seed,
+                        'change' => $change,
                         'nodes' => $nodeChain,
                         'edges' => $edgeChain,
                         'evidence' => $evidenceIds,
@@ -283,8 +300,10 @@ final class ImpactAnalyzer
                     ];
                 }
             }
+        }
 
-            if ($category === ImpactCategory::HardDependency) {
+        if ($category === ImpactCategory::HardDependency) {
+            foreach ($diagnosticChanges as $change) {
                 $this->appendDiagnosticCallers(
                     $results,
                     $change,
@@ -324,6 +343,71 @@ final class ImpactAnalyzer
                 'frontier' => $frontier,
             ],
         ];
+    }
+
+    /**
+     * @param list<NodeId> $nodes
+     * @return array<string, list<array{GraphEdge, NodeId}>>
+     */
+    private function adjacentMany(array $nodes, ImpactCategory $category): array
+    {
+        $nodeIds = [];
+
+        foreach ($nodes as $node) {
+            $nodeIds[$node->value] = true;
+        }
+
+        if ($nodeIds === []) {
+            return [];
+        }
+
+        $types = $this->policy->edgeTypes($category);
+        $relations = [];
+
+        foreach ($this->graph->edgesTouching(array_keys($nodeIds), $types) as $edge) {
+            $relationKey = $this->relationKey($edge);
+
+            if (isset($this->relationOverlays[$relationKey])) {
+                $relations['relation:'.$relationKey] = $this->relationOverlays[$relationKey];
+            } else {
+                $relations['edge:'.$edge->id] = $edge;
+            }
+        }
+
+        foreach ($this->relationOverlays as $key => $edge) {
+            if (in_array($edge->type, $types, true)
+                && (isset($nodeIds[$edge->source->value]) || isset($nodeIds[$edge->target->value]))) {
+                $relations['relation:'.$key] = $edge;
+            }
+        }
+
+        ksort($relations, SORT_STRING);
+        $adjacent = [];
+        $nextIds = [];
+
+        foreach ($relations as $edge) {
+            $direction = $this->policy->traversalDirection($category, $edge->type);
+
+            if (in_array($direction, ['forward', 'both'], true) && isset($nodeIds[$edge->source->value])) {
+                $adjacent[$edge->source->value][$edge->id.'|'.$edge->target->value] = [$edge, $edge->target];
+                $nextIds[$edge->target->value] = true;
+            }
+
+            if (in_array($direction, ['reverse', 'both'], true) && isset($nodeIds[$edge->target->value])) {
+                $adjacent[$edge->target->value][$edge->id.'|'.$edge->source->value] = [$edge, $edge->source];
+                $nextIds[$edge->source->value] = true;
+            }
+        }
+
+        $this->graph->nodesByIds(array_keys($nextIds));
+
+        foreach ($adjacent as &$rows) {
+            ksort($rows, SORT_STRING);
+            $rows = array_values($rows);
+        }
+        unset($rows);
+
+        return $adjacent;
     }
 
     /** @return list<array{GraphEdge, NodeId}> */
@@ -403,7 +487,7 @@ final class ImpactAnalyzer
         $frontier = [];
 
         foreach ($existingReasons as $nodeId => $reasons) {
-            if (! isset($this->nodeIds[$nodeId])) {
+            if (! $this->hasNodeId($nodeId)) {
                 continue;
             }
 
@@ -422,7 +506,7 @@ final class ImpactAnalyzer
 
                     if ($handler !== null) {
                         $handlerEdge = 'operational-handler:'.hash('sha256', $source->value."\0".$handler->value);
-                        $handlerNode = $this->nodes[$handler->value];
+                        $handlerNode = $this->node($handler->value);
                         $handlerEvidence = new EvidenceRecord(
                             EvidenceOrigin::StaticAst,
                             'operational-handler-resolution',
@@ -491,7 +575,7 @@ final class ImpactAnalyzer
 
     private function operationalHandler(NodeId $source): ?NodeId
     {
-        $node = $this->nodes[$source->value] ?? null;
+        $node = $this->node($source->value);
 
         if ($node === null
             || ! in_array($node->kind->value, ['command', 'job', 'listener'], true)
@@ -501,7 +585,7 @@ final class ImpactAnalyzer
 
         $handler = NodeId::method($node->qualifiedName, 'handle');
 
-        return isset($this->nodes[$handler->value]) ? $handler : null;
+        return $this->hasNodeId($handler->value) ? $handler : null;
     }
 
     private function mergeStats(array $left, array $right): array
@@ -611,7 +695,7 @@ final class ImpactAnalyzer
 
         $interfaceId = 'interface:'.$matches[1];
 
-        if (! isset($this->nodeIds[$interfaceId])) {
+        if (! $this->hasNodeId($interfaceId)) {
             return;
         }
 
@@ -788,13 +872,25 @@ final class ImpactAnalyzer
         $edgeCount = 0;
         $omitted = 0;
         $frontier = [];
+        $sourceIds = array_values(array_unique(array_map(
+            static fn (array $source): string => $source['node']->value,
+            $sources,
+        )));
+        $knownSources = $this->graph->nodesByIds($sourceIds);
+        $moduleEdges = [];
+
+        foreach ($this->graph->edgesTouching($sourceIds, [EdgeType::MemberOfModule]) as $edge) {
+            if (isset($knownSources[$edge->source->value])) {
+                $moduleEdges[$edge->source->value][] = $edge;
+            }
+        }
 
         foreach ($sources as $source) {
-            if (! isset($this->nodeIds[$source['node']->value])) {
+            if (! isset($knownSources[$source['node']->value])) {
                 continue;
             }
 
-            foreach ($this->graph->outgoing($source['node'], [EdgeType::MemberOfModule]) as $edge) {
+            foreach ($moduleEdges[$source['node']->value] ?? [] as $edge) {
                 $module = $edge->target;
 
                 if (isset($changedIds[$module->value])) {
@@ -886,7 +982,7 @@ final class ImpactAnalyzer
 
     private function isTestNode(NodeId $id): bool
     {
-        $node = $this->nodes[$id->value] ?? null;
+        $node = $this->node($id->value);
 
         return $node !== null && ($node->kind->value === 'test'
             || str_starts_with($node->location?->file ?? '', 'tests/'));

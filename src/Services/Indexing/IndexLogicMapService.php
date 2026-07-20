@@ -11,8 +11,8 @@ use DNDark\LogicMap\Domain\Graph\KnowledgeGraph;
 use DNDark\LogicMap\Domain\Snapshot\DiagnosticCode;
 use DNDark\LogicMap\Domain\Snapshot\GraphSnapshot;
 use DNDark\LogicMap\Domain\Snapshot\IndexedFile;
-use DNDark\LogicMap\Repositories\Sqlite\SqliteSchema;
 use DNDark\LogicMap\Support\AnalysisVersion;
+use DNDark\LogicMap\Support\SchemaVersion;
 use DNDark\LogicMap\Support\CanonicalJson;
 use DNDark\LogicMap\Support\RepositoryFileDiscovery;
 use DNDark\LogicMap\Support\SourceFingerprint;
@@ -80,10 +80,10 @@ final readonly class IndexLogicMapService
             throw new RuntimeException('Process membership phase must return process step records.');
         }
 
-        $id = hash('sha256', SqliteSchema::VERSION."\0".$fingerprint);
+        $id = hash('sha256', SchemaVersion::VERSION."\0".$fingerprint);
         $snapshot = new GraphSnapshot(
             $id,
-            SqliteSchema::VERSION,
+            SchemaVersion::VERSION,
             AnalysisVersion::CURRENT,
             new DateTimeImmutable('now', new DateTimeZone('UTC')),
             $fingerprint,

@@ -7,8 +7,9 @@ use InvalidArgumentException;
 final readonly class ResponseLimiter
 {
     private const TRIMMABLE_KEYS = [
-        'evidence', 'affected_symbols', 'uncertainty', 'tests', 'external_contracts',
-        'shared_resources', 'workflows', 'modules', 'transitions', 'steps', 'members',
+        'diagnostics', 'evidence', 'uncertainty', 'shared_resources', 'external_contracts',
+        'inbound_relations', 'outbound_relations', 'affected_symbols', 'entry_workflows',
+        'transitions', 'steps', 'members', 'tests', 'modules', 'workflows',
         'entrypoints', 'incoming', 'outgoing', 'effects', 'processes', 'results',
     ];
 
