@@ -6,24 +6,31 @@ use DateTimeImmutable;
 use DateTimeZone;
 use DNDark\LogicMap\Contracts\SemanticGraphRepository;
 use DNDark\LogicMap\Domain\Graph\NodeKind;
+use DNDark\LogicMap\Domain\Snapshot\GraphSnapshot;
+use DNDark\LogicMap\Domain\Workflow\WorkflowDefinition;
 use DNDark\LogicMap\Projectors\ModuleWorkflowMarkdownProjector;
 use DNDark\LogicMap\Projectors\WorkflowDossierMarkdownProjector;
 use DNDark\LogicMap\Services\Workflow\WorkflowQueryService;
-use DNDark\LogicMap\Support\RelativePath;
 use DNDark\LogicMap\Support\SafeOutputWriter;
-use Illuminate\Console\Command;
-use RuntimeException;
 use Throwable;
+use Illuminate\Console\Command;
 
+/**
+ * V2-native batch documentation export. Orchestration only: it reads the active
+ * snapshot, enumerates module nodes, builds each module through
+ * WorkflowQueryService::buildModule() (never modelling members as changed
+ * symbols), and writes deterministic, repository-relative Markdown through
+ * SafeOutputWriter. It never invokes impact analysis for baseline docs.
+ */
 final class ExportDocsCommand extends Command
 {
     protected $signature = 'logic-map:export-docs
-                            {--output= : Repository-relative documentation directory}
-                            {--force : Overwrite managed documentation files}';
+                            {--output= : Repository-relative output directory (defaults to logic-map.doc_export.output)}
+                            {--force : Overwrite existing files}';
 
-    protected $description = 'Export V2 module and workflow dossiers for engineers and AI tools';
+    protected $description = 'Export the active Laravel Logic Map V2 snapshot as AI-readable module and workflow dossiers';
 
-    public function handle(SemanticGraphRepository $repository, WorkflowQueryService $workflowService): int
+    public function handle(SemanticGraphRepository $repository, WorkflowQueryService $service): int
     {
         $snapshot = $repository->active();
 
@@ -33,43 +40,45 @@ final class ExportDocsCommand extends Command
             return self::FAILURE;
         }
 
+        $outputRoot = $this->option('output');
+        $outputRoot = is_string($outputRoot) && trim($outputRoot) !== ''
+            ? trim($outputRoot)
+            : (string) config('logic-map.doc_export.output', 'docs/logic-map');
+        $outputRoot = rtrim($outputRoot, '/');
+
+        $writer = new SafeOutputWriter(
+            base_path(),
+            (bool) config('logic-map.export.allow_absolute_paths', false),
+        );
+        $force = (bool) $this->option('force');
+        $generatedAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+
         try {
-            $output = $this->outputDirectory();
-            $absoluteOutput = $this->absoluteOutputDirectory($output);
-            $force = (bool) $this->option('force');
-
-            if (is_dir($absoluteOutput) && ! $force) {
-                throw new RuntimeException('Documentation directory already exists; pass --force to overwrite it.');
-            }
-
-            $writer = new SafeOutputWriter(
-                base_path(),
-                (bool) config('logic-map.export.allow_absolute_paths', false),
-            );
-            $generatedAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
             $modules = array_slice(
                 $snapshot->graph->nodesByKind(NodeKind::Module),
                 0,
-                max(1, (int) config('logic-map.doc_export.max_modules', 100)),
+                max(0, (int) config('logic-map.doc_export.max_modules', 100)),
             );
-            $moduleRows = [];
-            $workflowRows = [];
-            $workflowIds = [];
-            $moduleSlugs = [];
-            $workflowLimit = max(1, (int) config('logic-map.doc_export.max_workflows', 500));
+            $maxWorkflows = max(0, (int) config('logic-map.doc_export.max_workflows', 500));
+
+            $moduleEntries = [];
+            $workflowFiles = [];
+            $usedModuleSlugs = [];
+            $usedWorkflowSlugs = [];
+            $seenWorkflows = [];
+            $workflowCount = 0;
 
             foreach ($modules as $module) {
-                $moduleWorkflow = $workflowService->buildModule($snapshot, $module->id);
+                $moduleWorkflow = $service->buildModule($snapshot, $module->id);
                 $evidence = [];
 
                 foreach ($moduleWorkflow->entryWorkflows as $workflow) {
-                    $evidence[$workflow->id->value] = $workflowService->evidence($snapshot, $workflow);
+                    $evidence[$workflow->id->value] = $service->evidence($snapshot, $workflow);
                 }
 
-                $moduleSlug = $this->uniqueSlug($module->name, $module->id->value, $moduleSlugs);
-                $modulePath = 'modules/'.$moduleSlug.'.md';
+                $slug = $this->uniqueSlug($this->slug($moduleWorkflow->name), $usedModuleSlugs);
                 $writer->write(
-                    $this->join($output, $modulePath),
+                    $outputRoot.'/modules/'.$slug.'.md',
                     (new ModuleWorkflowMarkdownProjector())->project(
                         $moduleWorkflow,
                         $snapshot->id,
@@ -78,166 +87,123 @@ final class ExportDocsCommand extends Command
                     ),
                     $force,
                 );
-                $moduleRows[] = [
-                    'id' => $module->id->value,
-                    'name' => $module->name,
-                    'path' => $modulePath,
-                    'entrypoint_count' => count($moduleWorkflow->entryWorkflows),
-                ];
+                $moduleEntries[] = ['name' => $moduleWorkflow->name, 'id' => $module->id->value, 'slug' => $slug];
 
                 foreach ($moduleWorkflow->entryWorkflows as $workflow) {
-                    if (isset($workflowIds[$workflow->entrypoint->value]) || count($workflowRows) >= $workflowLimit) {
+                    if ($workflowCount >= $maxWorkflows || isset($seenWorkflows[$workflow->entrypoint->value])) {
                         continue;
                     }
 
-                    $workflowIds[$workflow->entrypoint->value] = true;
-                    $workflowSlug = $this->slug($workflow->entrypoint->value).'-'.substr(
-                        hash('sha256', $workflow->entrypoint->value),
-                        0,
-                        8,
-                    );
-                    $workflowPath = 'workflows/'.$workflowSlug.'.md';
-                    $writer->write(
-                        $this->join($output, $workflowPath),
-                        (new WorkflowDossierMarkdownProjector())->project(
-                            $workflow,
-                            $snapshot->id,
-                            $generatedAt,
-                            $evidence[$workflow->id->value] ?? [],
-                        ),
-                        $force,
-                    );
-                    $workflowRows[] = [
-                        'entrypoint_id' => $workflow->entrypoint->value,
-                        'path' => $workflowPath,
-                        'step_count' => count($workflow->steps),
-                    ];
+                    $seenWorkflows[$workflow->entrypoint->value] = true;
+                    $workflowFiles[] = [$workflow, $evidence[$workflow->id->value] ?? []];
+                    $workflowCount++;
                 }
             }
 
+            foreach ($workflowFiles as [$workflow, $workflowEvidence]) {
+                /** @var WorkflowDefinition $workflow */
+                $slug = $this->uniqueSlug($this->slug($workflow->entrypoint->value), $usedWorkflowSlugs);
+                $writer->write(
+                    $outputRoot.'/workflows/'.$slug.'.md',
+                    (new WorkflowDossierMarkdownProjector())->project(
+                        $workflow,
+                        $snapshot->id,
+                        $generatedAt,
+                        $workflowEvidence,
+                    ),
+                    $force,
+                );
+            }
+
             $writer->write(
-                $this->join($output, 'overview.md'),
-                $this->overview($snapshot->id, $generatedAt, $moduleRows, $workflowRows, [
-                    'nodes' => $snapshot->graph->countNodes(),
-                    'edges' => $snapshot->graph->countEdges(),
-                    'evidence' => $snapshot->graph->countEvidence(),
-                ]),
+                $outputRoot.'/overview.md',
+                $this->overview($snapshot, $moduleEntries, count($workflowFiles), $generatedAt),
                 $force,
             );
-
-            $this->info('Documentation exported to '.$absoluteOutput);
-            $this->line('Modules: '.count($moduleRows));
-            $this->line('Workflows: '.count($workflowRows));
-
-            return self::SUCCESS;
         } catch (Throwable $throwable) {
-            $this->error('Documentation export failed: '.$throwable->getMessage());
+            $this->error('Export failed: '.$throwable->getMessage());
 
             return self::FAILURE;
         }
+
+        $this->info('Documentation exported to '.$outputRoot);
+
+        return self::SUCCESS;
     }
 
-    private function outputDirectory(): string
-    {
-        $option = $this->option('output');
-        $output = is_string($option) && trim($option) !== ''
-            ? trim($option)
-            : (string) config('logic-map.doc_export.output', 'docs/logic-map');
-
-        if ($this->isAbsolute($output)) {
-            if (! (bool) config('logic-map.export.allow_absolute_paths', false)) {
-                throw new \InvalidArgumentException('Absolute output paths are disabled.');
-            }
-
-            return rtrim(str_replace('\\', '/', $output), '/');
-        }
-
-        return RelativePath::normalize($output);
-    }
-
-    private function absoluteOutputDirectory(string $output): string
-    {
-        return $this->isAbsolute($output)
-            ? $output
-            : rtrim(str_replace('\\', '/', base_path()), '/').'/'.$output;
-    }
-
-    private function join(string $directory, string $file): string
-    {
-        return rtrim($directory, '/').'/'.$file;
-    }
-
-    private function isAbsolute(string $path): bool
-    {
-        return str_starts_with($path, '/') || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
-    }
-
-    private function uniqueSlug(string $name, string $id, array &$used): string
-    {
-        $base = $this->slug($name);
-        $slug = $base;
-
-        if (isset($used[$slug])) {
-            $slug .= '-'.substr(hash('sha256', $id), 0, 8);
-        }
-
-        $used[$slug] = true;
-
-        return $slug;
-    }
-
-    private function slug(string $value): string
-    {
-        $slug = strtolower((string) preg_replace('/[^A-Za-z0-9]+/', '-', $value));
-        $slug = trim($slug, '-');
-
-        return $slug !== '' ? substr($slug, 0, 100) : 'artifact';
-    }
-
+    /** @param list<array{name:string,id:string,slug:string}> $modules */
     private function overview(
-        string $snapshotId,
-        DateTimeImmutable $generatedAt,
+        GraphSnapshot $snapshot,
         array $modules,
-        array $workflows,
-        array $counts,
+        int $workflowCount,
+        DateTimeImmutable $generatedAt,
     ): string {
         $lines = [
             '---',
             'schema_version: 2',
-            'snapshot_id: '.json_encode($snapshotId, JSON_THROW_ON_ERROR),
-            'generated_at: '.json_encode($generatedAt->format(DATE_ATOM), JSON_THROW_ON_ERROR),
+            'snapshot_id: '.$this->yaml($snapshot->id),
+            'analysis_version: '.$this->yaml($snapshot->analysisVersion),
+            'generated_at: '.$this->yaml($generatedAt->format(DATE_ATOM)),
             '---',
             '',
-            '# Laravel Logic Map',
+            '# Logic Map overview',
             '',
-            '## Index summary',
+            '## Counts',
             '',
-            '| Symbols | Relations | Evidence | Modules | Workflows |',
-            '| ---: | ---: | ---: | ---: | ---: |',
-            '| '.$counts['nodes'].' | '.$counts['edges'].' | '.$counts['evidence'].' | '.count($modules).' | '.count($workflows).' |',
+            '| Metric | Value |',
+            '| --- | ---: |',
+            '| nodes | '.$snapshot->graph->countNodes().' |',
+            '| edges | '.$snapshot->graph->countEdges().' |',
+            '| modules | '.count($modules).' |',
+            '| workflow dossiers | '.$workflowCount.' |',
             '',
             '## Modules',
             '',
         ];
 
         foreach ($modules as $module) {
-            $lines[] = '- ['.$module['name'].']('.$module['path'].') — `'.$module['id'].'`, '.$module['entrypoint_count'].' entry workflows';
+            $lines[] = '- ['.$this->inline($module['name']).'](modules/'.$module['slug'].'.md) — `'
+                .$this->inline($module['id']).'`';
         }
 
         if ($modules === []) {
             $lines[] = '- None';
         }
 
-        $lines = [...$lines, '', '## Workflows', ''];
+        return rtrim(implode("\n", $lines))."\n";
+    }
 
-        foreach ($workflows as $workflow) {
-            $lines[] = '- [`'.$workflow['entrypoint_id'].'`]('.$workflow['path'].') — '.$workflow['step_count'].' steps';
+    private function slug(string $value): string
+    {
+        $slug = strtolower($value);
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug) ?? '';
+
+        return trim($slug, '-') ?: 'item';
+    }
+
+    /** @param array<string,bool> $used */
+    private function uniqueSlug(string $slug, array &$used): string
+    {
+        $candidate = $slug;
+        $suffix = 2;
+
+        while (isset($used[$candidate])) {
+            $candidate = $slug.'-'.$suffix;
+            $suffix++;
         }
 
-        if ($workflows === []) {
-            $lines[] = '- None';
-        }
+        $used[$candidate] = true;
 
-        return implode("\n", $lines)."\n";
+        return $candidate;
+    }
+
+    private function yaml(string $value): string
+    {
+        return json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    private function inline(string $value): string
+    {
+        return str_replace(["\r", "\n", '|'], ['', ' ', '\\|'], $value);
     }
 }
