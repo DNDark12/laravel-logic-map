@@ -1,0 +1,66 @@
+diff --git a/app/Listeners/SendCancellationWebhook.php b/app/Listeners/SendOrderCancellationWebhook.php
+similarity index 82%
+rename from app/Listeners/SendCancellationWebhook.php
+rename to app/Listeners/SendOrderCancellationWebhook.php
+--- a/app/Listeners/SendCancellationWebhook.php
++++ b/app/Listeners/SendOrderCancellationWebhook.php
+@@ -6,7 +6,7 @@ use Fixtures\CommerceApp\Events\OrderCancelled;
+ use Illuminate\Contracts\Queue\ShouldQueue;
+ use Illuminate\Support\Facades\Http;
+ 
+-final class SendCancellationWebhook implements ShouldQueue
++final class SendOrderCancellationWebhook implements ShouldQueue
+ {
+     public function handle(OrderCancelled $event): void
+     {
+diff --git a/app/Models/Order.php b/app/Models/Order.php
+--- a/app/Models/Order.php
++++ b/app/Models/Order.php
+@@ -13,9 +13,4 @@ final class Order extends Model
+     protected $casts = [
+         'status' => 'string',
+     ];
+-
+-    public function canBeCancelled(): bool
+-    {
+-        return $this->status !== 'cancelled';
+-    }
+ }
+diff --git a/app/Providers/CommerceServiceProvider.php b/app/Providers/CommerceServiceProvider.php
+--- a/app/Providers/CommerceServiceProvider.php
++++ b/app/Providers/CommerceServiceProvider.php
+@@ -5,8 +5,8 @@ namespace Fixtures\CommerceApp\Providers;
+ use Fixtures\CommerceApp\Console\Commands\ReconcileInventory;
+ use Fixtures\CommerceApp\Contracts\OrderGateway;
+ use Fixtures\CommerceApp\Events\OrderCancelled;
+ use Fixtures\CommerceApp\Listeners\RestockInventory;
+-use Fixtures\CommerceApp\Listeners\SendCancellationWebhook;
++use Fixtures\CommerceApp\Listeners\SendOrderCancellationWebhook;
+ use Fixtures\CommerceApp\Models\Order;
+ use Fixtures\CommerceApp\Policies\OrderPolicy;
+ use Fixtures\CommerceApp\Repositories\DatabaseOrderGateway;
+@@ -30,7 +30,7 @@ final class CommerceServiceProvider extends ServiceProvider
+     public function boot(): void
+     {
+         Gate::policy(Order::class, OrderPolicy::class);
+         Event::listen(OrderCancelled::class, RestockInventory::class);
+-        Event::listen(OrderCancelled::class, SendCancellationWebhook::class);
++        Event::listen(OrderCancelled::class, SendOrderCancellationWebhook::class);
+     }
+ }
+diff --git a/app/Services/UnreferencedHelper.php b/app/Services/UnreferencedHelper.php
+new file mode 100644
+--- /dev/null
++++ b/app/Services/UnreferencedHelper.php
+@@ -0,0 +1,11 @@
++<?php
++
++namespace Fixtures\CommerceApp\Services;
++
++final class UnreferencedHelper
++{
++    public function format(string $value): string
++    {
++        return trim($value);
++    }
++}

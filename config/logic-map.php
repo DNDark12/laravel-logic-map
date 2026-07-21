@@ -1,284 +1,149 @@
 <?php
 
 return [
-    /*
-     * Which directories should be scanned by default?
-     */
+    /* Repository-relative paths scanned by the semantic indexer. */
     'scan_paths' => [
-        base_path('app'),
-        base_path('routes'),
-        base_path('packages/dndark'),
+        'app',
+        'routes',
+        'database',
+        'config',
+        'tests',
+    ],
+
+    /* Additional repository-relative paths excluded from indexing. */
+    'excludes' => [],
+
+    /* Indexing runtime requirements. */
+    'indexing' => [
+        /*
+         * Minimum memory_limit for logic-map:index. Real apps easily exceed
+         * PHP CLI's 128M default (silent exit 255). Only raised, never
+         * lowered; '-1' = unlimited, null = leave php.ini untouched.
+         */
+        'memory_limit' => '1G',
     ],
 
     /*
-     * Fully Qualified Namespaces or Classes to ignore
+     * Snapshot and runtime-evidence store. Data lives in the lm_* tables
+     * created by the package migrations, on the application's own database
+     * connection, so any Laravel-supported driver works and query-path memory
+     * stays proportional to the response rather than the whole snapshot.
+     *
+     * 'connection' => null uses the default connection; set a name (e.g.
+     * 'logic_map') to isolate the tables on a dedicated connection.
      */
-    'ignore_namespaces' => [
-        //
+    'storage' => [
+        'connection' => env('LOGIC_MAP_DB_CONNECTION'),
     ],
 
-    /*
-     * The cache key used to store the snapshot
-     */
-    'cache_key' => 'logic_map.snapshot',
-
-    /*
-     * The cache key used to store the fingerprint
-     */
-    'fingerprint_key' => 'logic_map.fingerprint',
-
-    /*
-     * Cache key prefix for analysis reports (stored separately from graph)
-     */
-    'analysis_cache_key' => 'logic_map.analysis',
-
-    /*
-     * How long should the snapshot be cached? (in seconds)
-     */
-    'cache_ttl' => 24 * 60 * 60,
-
-    /*
-     * Node limits for projections
-     */
-    'overview_node_limit' => 100,
-    'subgraph_node_limit' => 50,
-
-    /*
-     * Diff payload limits (graph-to-graph comparison)
-     */
-    'diff' => [
-        'max_node_changes' => 200,
-        'max_edge_changes' => 300,
+    'evidence' => [
+        'expression_max_length' => 500,
     ],
 
-    /*
-     * Default filters for projections
-     */
-    'filters' => [
-        'min_confidence' => 'low',
-        'excluded_kinds' => [],
-    ],
-
-    'analysis' => [
+    /* The viewer is local/testing-only unless the consumer explicitly widens this list. */
+    'http' => [
         'enabled' => true,
+        'allowed_environments' => ['local', 'testing'],
+        'middleware' => ['web'],
 
-        /*
-         * Violation thresholds
-         */
-        'thresholds' => [
-            'fat_controller_fan_out' => 10,
-            'high_instability' => 0.9,
-            'high_coupling' => 20,
-        ],
-
-        /*
-         * Display labels for analyzers
-         */
-        'labels' => [
-            'circular_dependency' => 'Circular Dependency',
-            'fat_controller' => 'Fat Controller',
-            'orphan' => 'Orphan Node',
-            'dead_code' => 'Dead Code',
-            'high_instability' => 'High Instability',
-            'high_coupling' => 'High Coupling',
-        ],
-
-        /*
-         * Descriptions for analyzers (shown in UI)
-         */
-        'descriptions' => [
-            'circular_dependency' => 'Recursive dependency chain found (A → B → A). Fix by extracting shared logic to a lower-level service or interface.',
-            'fat_controller' => 'Controller exceeds dependency threshold. Refactor by delegating business logic to Services or Actions.',
-            'orphan' => 'Module is not called by or connected to any other parts. May be dead code or incomplete integration.',
-            'dead_code' => 'Node is unreachable from configured route entrypoints (depth = null). Candidate for cleanup or wiring.',
-            'high_instability' => 'Fragile component that depends on many changing parts but is not depended upon by others.',
-            'high_coupling' => 'Tightly coupled module with high connectivity. Hard to test and isolate.',
-        ],
-
-        /*
-         * Descriptions for severity levels (shown in Scoring Guide)
-         */
-        'severity_descriptions' => [
-            'critical' => 'Circular deps, breaking issues',
-            'high' => 'Fat controllers, structural debt',
-            'medium' => 'High instability / coupling',
-            'low' => 'Orphan / dead-code signals, minor issues',
-        ],
-
-        /*
-         * Enable/disable individual analyzers
-         */
-        'analyzers' => [
-            'fat_controller' => true,
-            'circular_dependency' => true,
-            'orphan' => true,
-            'dead_code' => true,
-            'high_instability' => false,
-            'high_coupling' => false,
-        ],
-
-        /*
-         * OrphanAnalyzer scoping (ADR-014)
-         * Only these kinds will be considered for orphan detection.
-         * Framework-resolved kinds (command, event, listener, etc.) are excluded.
-         */
-        'orphan' => [
-            'eligible_kinds' => ['controller', 'service', 'model'],
-            'ignore_node_ids' => [],
-        ],
-
-        /*
-         * DeadCodeAnalyzer scoping (ADR-015)
-         * Flags nodes with depth = null (unreachable from route entrypoints).
-         */
-        'dead_code' => [
-            'eligible_kinds' => ['controller', 'service', 'repository', 'model', 'job', 'component'],
-            'ignore_node_ids' => [],
-        ],
-
-        /*
-         * Depth calculation settings (ADR-012)
-         * depth: ?int — null if unreachable from any entrypoint
-         */
-        'depth' => [
-            'entrypoint_kinds' => ['route'],
-            'traversal_edge_types' => ['handles', 'calls', 'dispatches', 'queries', 'resolves'],
-        ],
-
-        /*
-         * Scoring weights for health score calculation
-         */
-        'weights' => [
-            'critical' => 10,
-            'high' => 5,
-            'medium' => 2,
-            'low' => 1,
-        ],
-
-        /*
-         * Health grade scales (min_score => grade)
-         */
-        'grade_scales' => [
-            100 => 'S',
-            90 => 'A',
-            80 => 'B',
-            70 => 'C',
-            60 => 'D',
-            0  => 'F',
-        ],
-
-        /*
-         * Labels for node kinds
-         */
-        'kind_labels' => [
-            'route' => 'Routes',
-            'controller' => 'Controllers',
-            'service' => 'Services',
-            'repository' => 'Repositories',
-            'model' => 'Models',
-            'event' => 'Events',
-            'job' => 'Jobs',
-            'listener' => 'Listeners',
-            'command' => 'Commands',
-            'component' => 'Components',
-            'unknown' => 'Other',
-        ],
-
-        /*
-         * Colors for UI elements
-         */
-        'colors' => [
-            'grades' => [
-                'S' => '#16a34a',
-                'A' => '#22c55e',
-                'B' => '#84cc16',
-                'C' => '#eab308',
-                'D' => '#f97316',
-                'F' => '#ef4444',
-            ],
-            'severities' => [
-                'critical' => ['bg' => 'rgba(239,68,68,.12)', 'bd' => '#ef4444', 'tx' => '#ef4444'],
-                'high' => ['bg' => 'rgba(249,115,22,.1)', 'bd' => '#f97316', 'tx' => '#f97316'],
-                'medium' => ['bg' => 'rgba(234,179,8,.1)', 'bd' => '#eab308', 'tx' => '#ca8a04'],
-                'low' => ['bg' => 'rgba(34,197,94,.1)', 'bd' => '#22c55e', 'tx' => '#16a34a'],
-            ],
-        ],
-
-        /*
-         * Performance thresholds for UI warnings
-         */
-        'ui_thresholds' => [
-            'large_graph' => 150,
-            'hub_utility_fan_in' => 5,
-        ],
+        /* Minimum memory_limit for viewer endpoints (graph hydration). Same
+           semantics as indexing.memory_limit: only raised, never lowered. */
+        'memory_limit' => '1G',
     ],
 
-    /*
-     * Test coverage correlation (Clover XML)
-     */
-    'coverage' => [
-        'enabled' => env('LOGIC_MAP_COVERAGE_ENABLED', true),
-        'clover_path' => env('LOGIC_MAP_COVERAGE_CLOVER_PATH', base_path('coverage/clover.xml')),
-        'assume_uncovered_when_missing' => false,
-        'low_threshold' => 0.5,
-        'high_threshold' => 0.8,
-        'correlation_kinds' => ['controller', 'service', 'repository', 'model', 'job', 'component'],
-        'correlation_risk_levels' => ['critical', 'high'],
-    ],
-
-    /*
-     * Query-time snapshot resolution policy
-     */
+    /* Shared traversal and response bounds for HTTP and CLI queries. */
     'query' => [
-        'resolver' => [
-            'strict_resolution' => false,
-            'fallback_on_missing_pointer' => true,
-            'fallback_on_corrupted_pointer' => true,
-        ],
+        'max_depth' => 12,
+        'max_nodes' => 500,
+        'max_edges' => 1000,
+        'max_response_bytes' => 2_000_000,
+        'max_search_results' => 50,
     ],
 
-    /*
-     * Export Settings
-     */
     'export' => [
-        'csv_delimiter' => ',',
-        'include_metrics' => true,
+        'allow_absolute_paths' => false,
     ],
 
-    /*
-     * Change Intelligence: Reports, Markdown artifacts, Browser Save
-     */
-    'change_intelligence' => [
-        'viewer_preview_enabled'  => true,
-        'report_pages_enabled'    => true,
-        'markdown' => [
-            'enabled'               => true,
-            'save_to_project_docs'  => env('LOGIC_MAP_SAVE_TO_DOCS', false),
-            'base_path'             => base_path('docs/logic-map'),
-            'include_json_appendix' => true,
+    'doc_export' => [
+        'output' => 'docs/logic-map',
+        'max_modules' => 100,
+        'max_workflows' => 500,
+
+        /*
+         * Machine-readable AI bundle (logic-map:export-ai). Weights turn each
+         * ImpactReason into an explainable 0..1 score via
+         * score = category x confidence x level_decay x runtime_factor.
+         * Every value below is safe to override individually; missing keys
+         * fall back to these defaults. See docs/ai-bundle.md.
+         */
+        'ai' => [
+            'output' => 'docs/logic-map-ai',
+            'max_impact_symbols' => 200,
+        ],
+
+        'weights' => [
+            /* Strength of the relation kind that connects the changed and affected symbol. */
+            'category' => [
+                'hard_dependency' => 1.0,
+                'workflow' => 0.8,
+                'external_contract' => 0.8,
+                'async' => 0.7,
+                'shared_state' => 0.6,
+                'module' => 0.4,
+                'test_scope' => 0.4,
+                'uncertainty' => 0.3,
+            ],
+            /* Strongest static evidence Certainty backing the relation. */
+            'confidence' => [
+                'certain' => 1.0,
+                'probable' => 0.6,
+                'possible' => 0.3,
+            ],
+            /* Decay by ImpactLevel / traversal depth ("breaks"/"direct" never decay). */
+            'level' => [
+                'breaks' => 1.0,
+                'direct' => 1.0,
+                'shared_resource' => 0.7,
+                'possible' => 0.3,
+                'transitive_decay_base' => 0.5,
+            ],
+            /* Whether the relation was also (or only) seen in opt-in runtime traces. */
+            'runtime' => [
+                'observed' => 1.0,
+                'static_only' => 0.9,
+                'runtime_only' => 0.7,
+            ],
+            /* Score thresholds mapping to ImpactBand (Critical/High/Medium/Low). */
+            'bands' => [
+                'critical' => 0.70,
+                'high' => 0.45,
+                'medium' => 0.20,
+            ],
         ],
     ],
 
-    /*
-     * Documentation Export Settings (logic-map:export-docs)
-     */
-    'doc_export' => [
-        /*
-         * Minimum number of segments a workflow must have to generate a dossier.
-         * Filters out trivial 0-1 step routes (CRUD read-only, etc.)
-         */
-        'workflow_min_segments' => 2,
+    /* Opt-in sanitized observations; disabled by default. */
+    'runtime' => [
+        'enabled' => false,
+        'sample_rate' => 1.0,
+        'retention_days' => 7,
+        'max_sessions' => 1000,
+        'max_observations_per_session' => 5000,
+        'collect_cache_events' => false,
+        'middleware_groups' => ['web', 'api'],
+    ],
 
-        /*
-         * Maximum number of workflow dossiers to export.
-         * Workflows are sorted by risk desc → segments desc → slug asc before capping.
-         */
-        'max_workflows' => 50,
+    'modules' => [
+        'explicit' => [],
+        'namespace_roots' => ['App\\' => 1],
+        'directory_roots' => ['app/Modules', 'app/Domain'],
+        'fallback' => 'Core',
+    ],
 
-        /*
-         * If node_count exceeds this threshold, the node catalog is written to nodes.md
-         * instead of being inlined into llms.txt.
-         */
-        'inline_catalog_max_nodes' => 200,
+    'classifier' => [
+        'namespace_conventions' => [
+            'Services' => 'service',
+            'Repositories' => 'repository',
+        ],
     ],
 ];

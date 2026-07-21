@@ -1,0 +1,1778 @@
+{
+    "identity": {
+        "schema_version": 2,
+        "snapshot_id": "commerce-fixture",
+        "workflow_id": "workflow:1803a527b29308bd2af81e83475d0c0b4cd33f6c2631712cfede974fe9e7909c"
+    },
+    "entrypoint": {
+        "node_id": "route:POST:orders/{order}/cancel",
+        "step_id": "step:1803a527b29308bd2af81e83475d0c0b4cd33f6c2631712cfede974fe9e7909c"
+    },
+    "summary": {
+        "step_count": 35,
+        "module_count": 3,
+        "branch_count": 1,
+        "async_boundary_count": 2,
+        "transaction_count": 1,
+        "effect_count": 12,
+        "gap_count": 4
+    },
+    "steps": [
+        {
+            "id": "boundary:03e03d73ed490ee8ef9285593ae663efb582c602ae0ea396e992f508d6383cfa",
+            "kind": "async_boundary",
+            "label": "async",
+            "node_id": null,
+            "module": "Orders",
+            "evidence_ids": [
+                "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be"
+            ],
+            "attributes": {
+                "boundary": "async"
+            }
+        },
+        {
+            "id": "boundary:9b670e543f73d1f49abb846446dbe3991d17f33a24bbcdcede5c2d68690c3eb0",
+            "kind": "async_boundary",
+            "label": "async",
+            "node_id": null,
+            "module": "Integration",
+            "evidence_ids": [
+                "78bde343c58068538f5af85131a6d3ea949fff961ce7354a975f9f7375eedd65"
+            ],
+            "attributes": {
+                "boundary": "async"
+            }
+        },
+        {
+            "id": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "kind": "decision",
+            "label": "!$order->canBeCancelled()",
+            "node_id": null,
+            "module": "Orders",
+            "evidence_ids": [],
+            "attributes": {
+                "branch": "truthy",
+                "control_contexts": [
+                    {
+                        "boundary_id": "control:acc57d9a6c849ba9ed668a4b12415a7f40be25fd989a64507d05693398ae9f13",
+                        "kind": "branch",
+                        "predicate": "!$order->canBeCancelled()",
+                        "branch": "true",
+                        "start_line": 23,
+                        "end_line": 23
+                    }
+                ]
+            }
+        },
+        {
+            "id": "gap:ab04bbcf676994319e77c00823a8a78e270ebdf4867de92555f715044637f8bb",
+            "kind": "gap",
+            "label": "Receiver type could not be resolved.",
+            "node_id": null,
+            "module": "Inventory",
+            "evidence_ids": [],
+            "attributes": {
+                "diagnostic": {
+                    "code": "unresolved_receiver",
+                    "phase": "resolve",
+                    "file": "app/Listeners/RestockInventory.php",
+                    "start_line": 11,
+                    "end_line": 11,
+                    "message": "Receiver type could not be resolved.",
+                    "attributes": {
+                        "receiver_expression": "$event->order",
+                        "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Listeners\\RestockInventory::handle",
+                        "expression": "$event->order->getKey()",
+                        "nullsafe": false,
+                        "first_class_callable": false
+                    }
+                }
+            }
+        },
+        {
+            "id": "gap:b5b51cad6f23ca681738d2e277860745edd3635ed54bb58f8907d80c190a1192",
+            "kind": "gap",
+            "label": "No canonical target Illuminate\\Support\\Facades\\Http::post was found.",
+            "node_id": null,
+            "module": "Integration",
+            "evidence_ids": [],
+            "attributes": {
+                "diagnostic": {
+                    "code": "ambiguous_target",
+                    "phase": "resolve",
+                    "file": "app/Listeners/SendCancellationWebhook.php",
+                    "start_line": 13,
+                    "end_line": 15,
+                    "message": "No canonical target Illuminate\\Support\\Facades\\Http::post was found.",
+                    "attributes": {
+                        "receiver_type": "Illuminate\\Support\\Facades\\Http",
+                        "target_name": "post",
+                        "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Listeners\\SendCancellationWebhook::handle",
+                        "expression": "Http::post(config('services.erp.base_url') . '/orders/' . $event->order->getKey() . '/cancel')",
+                        "nullsafe": false,
+                        "first_class_callable": false
+                    }
+                }
+            }
+        },
+        {
+            "id": "gap:de7fd26416660669d9f1afc2ceea54e29924c97bcb42ee395816fc8450f65ec6",
+            "kind": "gap",
+            "label": "No canonical target Illuminate\\Support\\Facades\\DB::transaction was found.",
+            "node_id": null,
+            "module": "Orders",
+            "evidence_ids": [],
+            "attributes": {
+                "diagnostic": {
+                    "code": "ambiguous_target",
+                    "phase": "resolve",
+                    "file": "app/Services/OrderService.php",
+                    "start_line": 26,
+                    "end_line": 34,
+                    "message": "No canonical target Illuminate\\Support\\Facades\\DB::transaction was found.",
+                    "attributes": {
+                        "receiver_type": "Illuminate\\Support\\Facades\\DB",
+                        "target_name": "transaction",
+                        "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                        "expression": "DB::transaction(function () use ($order, $reason): void {\n    $order->status = 'cancelled';\n    $order->cancellation_reason = $reason;\n    $this->orders->save($order);\n    InventoryStock::query()->where('order_id', $order->getKey())->increment('quantity');\n})",
+                        "nullsafe": false,
+                        "first_class_callable": false
+                    }
+                }
+            }
+        },
+        {
+            "id": "gap:ec2bc0c1da01527cce98f950404809a0b233022682c4b0d45adc9529da02a051",
+            "kind": "gap",
+            "label": "No canonical target Illuminate\\Support\\Facades\\Gate::authorize was found.",
+            "node_id": null,
+            "module": "Orders",
+            "evidence_ids": [],
+            "attributes": {
+                "diagnostic": {
+                    "code": "ambiguous_target",
+                    "phase": "resolve",
+                    "file": "app/Http/Controllers/OrderController.php",
+                    "start_line": 24,
+                    "end_line": 24,
+                    "message": "No canonical target Illuminate\\Support\\Facades\\Gate::authorize was found.",
+                    "attributes": {
+                        "receiver_type": "Illuminate\\Support\\Facades\\Gate",
+                        "target_name": "authorize",
+                        "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Http\\Controllers\\OrderController::cancel",
+                        "expression": "Gate::authorize('cancel', $order)",
+                        "nullsafe": false,
+                        "first_class_callable": false
+                    }
+                }
+            }
+        },
+        {
+            "id": "step:022e655c03e13eb64066cdbf2c0e17a285cb6008d078ed2f1f74a97c31114d1d",
+            "kind": "symbol",
+            "label": "save",
+            "node_id": "method:Fixtures\\CommerceApp\\Repositories\\DatabaseOrderGateway::save",
+            "module": "Orders",
+            "evidence_ids": [
+                "b5dda0d3193224a158a287b21b498f4bcccc771742f1bd3a9b8e5aadc76db332"
+            ],
+            "attributes": {
+                "node_kind": "method"
+            }
+        },
+        {
+            "id": "step:03c082a14be6c0f9a721788bfcb9718e4e2891caffd294bf2b33632ebde5f523",
+            "kind": "symbol",
+            "label": "OrderCannotBeCancelledException",
+            "node_id": "class:Fixtures\\CommerceApp\\Exceptions\\OrderCannotBeCancelledException",
+            "module": "Orders",
+            "evidence_ids": [
+                "b2615a6b948c1b48356b30921f60731ac075cd6734830ad417defd1af90f7af8"
+            ],
+            "attributes": {
+                "node_kind": "class"
+            }
+        },
+        {
+            "id": "step:076836d2b7fb02105da774b9881420b997569a872e5b8b08ed33511a2391e481",
+            "kind": "symbol",
+            "label": "OrderCancelled",
+            "node_id": "class:Fixtures\\CommerceApp\\Events\\OrderCancelled",
+            "module": "Orders",
+            "evidence_ids": [
+                "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce"
+            ],
+            "attributes": {
+                "node_kind": "event"
+            }
+        },
+        {
+            "id": "step:14e64766e33242c5dd2e6ee25eb593b4e1c2980cb2dc202fe07fc9e425a46b8f",
+            "kind": "symbol",
+            "label": "auth",
+            "node_id": "middleware:auth",
+            "module": null,
+            "evidence_ids": [
+                "aaaeecca61a5d43fce2732944468f103182c67953acf452cafd80aafd89afebd"
+            ],
+            "attributes": {
+                "node_kind": "middleware"
+            }
+        },
+        {
+            "id": "step:16b6a17dc82b6eb9442b059f92391f0066231bd6d790c5a2b5db2286a9eae8a0",
+            "kind": "effect",
+            "label": "Order",
+            "node_id": "class:Fixtures\\CommerceApp\\Models\\Order",
+            "module": "Orders",
+            "evidence_ids": [
+                "bde3f64310f878f5a8e4e7344fb1ba85c8c0a6eac437476757ac035bbb936487"
+            ],
+            "attributes": {
+                "edge_type": "writes_model"
+            }
+        },
+        {
+            "id": "step:1803a527b29308bd2af81e83475d0c0b4cd33f6c2631712cfede974fe9e7909c",
+            "kind": "entry",
+            "label": "orders.cancel",
+            "node_id": "route:POST:orders/{order}/cancel",
+            "module": null,
+            "evidence_ids": [],
+            "attributes": {
+                "node_kind": "route"
+            }
+        },
+        {
+            "id": "step:1c763cba75a022eceb569cd588c977aaa537619bf33590fbde9e787509e5922f",
+            "kind": "symbol",
+            "label": "cancel",
+            "node_id": "method:Fixtures\\CommerceApp\\Policies\\OrderPolicy::cancel",
+            "module": "Orders",
+            "evidence_ids": [
+                "5434c9183f3fbc3cca1cacd8f1358a44517f89676446d35585864935b4ab76e8"
+            ],
+            "attributes": {
+                "node_kind": "method"
+            }
+        },
+        {
+            "id": "step:20ea7caaaf6e401141234f767c0211a2e54cc298b51d07610013fb0d9025b4df",
+            "kind": "symbol",
+            "label": "RestockInventory",
+            "node_id": "class:Fixtures\\CommerceApp\\Listeners\\RestockInventory",
+            "module": "Inventory",
+            "evidence_ids": [
+                "83451a34ac7ff5ba58398b240595ce2240f51e27ffbcf0c550cc075e64ddb9f9"
+            ],
+            "attributes": {
+                "node_kind": "listener"
+            }
+        },
+        {
+            "id": "step:286ce18d8e527eff46afcab8dbcb81b6a8aac9afaa14c1f135d70ada7d8c241d",
+            "kind": "symbol",
+            "label": "SendCancellationWebhook",
+            "node_id": "class:Fixtures\\CommerceApp\\Listeners\\SendCancellationWebhook",
+            "module": "Integration",
+            "evidence_ids": [
+                "78bde343c58068538f5af85131a6d3ea949fff961ce7354a975f9f7375eedd65"
+            ],
+            "attributes": {
+                "node_kind": "listener"
+            }
+        },
+        {
+            "id": "step:2bb21b2ec92af9bb4b6407f937a8b7f93048eb7381021ff066da2f33143bf994",
+            "kind": "effect",
+            "label": "inventory_stocks",
+            "node_id": "table:inventory_stocks",
+            "module": "Orders",
+            "evidence_ids": [
+                "6448c7c323a0bf37c4d46869ce55d3a118a7d4fda88a59db542dcf041aa0c088"
+            ],
+            "attributes": {
+                "edge_type": "writes_table"
+            }
+        },
+        {
+            "id": "step:2c9fa3e7e3ca05d7cd50a62079042cbd150020523faff12e1823ec0dfcd00345",
+            "kind": "symbol",
+            "label": "handle",
+            "node_id": "method:Fixtures\\CommerceApp\\Listeners\\SendCancellationWebhook::handle",
+            "module": "Integration",
+            "evidence_ids": [],
+            "attributes": {
+                "node_kind": "method"
+            }
+        },
+        {
+            "id": "step:4589d0e6064acae22c0a2c082750f0092f32400b95cdee75061a9f9405dc3860",
+            "kind": "symbol",
+            "label": "cancel",
+            "node_id": "method:Fixtures\\CommerceApp\\Http\\Controllers\\OrderController::cancel",
+            "module": "Orders",
+            "evidence_ids": [
+                "7eaf5b3bbc0d1895463c4b22747913319b799149659eb6a16ecbfb78eac3b12c"
+            ],
+            "attributes": {
+                "node_kind": "method"
+            }
+        },
+        {
+            "id": "step:6ef4d733a0db6e2091a28541434aa130376991501a96b5b7a6ca8927a27b06ee",
+            "kind": "effect",
+            "label": "orders",
+            "node_id": "table:orders",
+            "module": "Orders",
+            "evidence_ids": [
+                "23fe55b66d3993cabcbc209c2e788374f2ff6f12a28f8fce1d44967d54fc4919"
+            ],
+            "attributes": {
+                "edge_type": "writes_table"
+            }
+        },
+        {
+            "id": "step:796bfc66e840635afcf9077c09f6f4d398e64825b76fe0f680bcb4ce18a22da6",
+            "kind": "symbol",
+            "label": "canBeCancelled",
+            "node_id": "method:Fixtures\\CommerceApp\\Models\\Order::canBeCancelled",
+            "module": "Orders",
+            "evidence_ids": [
+                "eeeb673d2485e4090e0197352bdaa37b11248232cce23847232949053fb468f0"
+            ],
+            "attributes": {
+                "node_kind": "method"
+            }
+        },
+        {
+            "id": "step:86711870c1ed88987c149418b41dcf61720423752587dd4ec48ada2ff6f8a032",
+            "kind": "symbol",
+            "label": "throttle:orders",
+            "node_id": "middleware:throttle:orders",
+            "module": null,
+            "evidence_ids": [
+                "243161b34999b29cb4a4bc9ed16c870aa7d0918071c79e3d8b1dcf7dc612a24a"
+            ],
+            "attributes": {
+                "node_kind": "middleware"
+            }
+        },
+        {
+            "id": "step:8d432deaeddbd26ba5fcb521c801a9481f4b2135d6c3a746fb689ee30b51dabf",
+            "kind": "effect",
+            "label": "cancellation_reason",
+            "node_id": "column:orders.cancellation_reason",
+            "module": "Orders",
+            "evidence_ids": [
+                "e505b98ef6aed79700cb4eae724ab99f2cd3a695458dbc818cc5965796cf704d"
+            ],
+            "attributes": {
+                "edge_type": "writes_column"
+            }
+        },
+        {
+            "id": "step:90465adfcaf6a98e31bb04bfd6a0c8193263c94845110d5148d8fb292a7d76ce",
+            "kind": "symbol",
+            "label": "handle",
+            "node_id": "method:Fixtures\\CommerceApp\\Listeners\\RestockInventory::handle",
+            "module": "Inventory",
+            "evidence_ids": [],
+            "attributes": {
+                "node_kind": "method"
+            }
+        },
+        {
+            "id": "step:9d069bd1c9584e7d3436bd225b8cc9e2da4f62a34d92e19ed5661fa352767cac",
+            "kind": "effect",
+            "label": "OrderWasCancelled",
+            "node_id": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+            "module": "Orders",
+            "evidence_ids": [
+                "27a5030b29472f9bc70b1a15e4aed20c0dd809f243e21c4c6adfdf67c136788f"
+            ],
+            "attributes": {
+                "edge_type": "instantiates"
+            }
+        },
+        {
+            "id": "step:b3a1d669aff3d46edbd2798414b49f6613d12d06b5de0ae26509dfee7e4ff50d",
+            "kind": "effect",
+            "label": "services.erp.base_url",
+            "node_id": "config:services.erp.base_url",
+            "module": "Integration",
+            "evidence_ids": [
+                "44fc174061e8a11b8bbcaec0b103cee05757e26d8d06601d58e918ae3f9b64bb"
+            ],
+            "attributes": {
+                "edge_type": "reads_config"
+            }
+        },
+        {
+            "id": "step:b4b8ae2e1434868029cc1c765b5942eb766d45d40e5dca86ff352e36670b9775",
+            "kind": "symbol",
+            "label": "cancel",
+            "node_id": "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+            "module": "Orders",
+            "evidence_ids": [
+                "77cb55bb00b33de615d2162177656dc2940b881c82567c94e5822756dd64af8c"
+            ],
+            "attributes": {
+                "node_kind": "method"
+            }
+        },
+        {
+            "id": "step:b64096b75228822a161d2d6f103a0a3ca549d4d9fda45a985f0d7df3d863b033",
+            "kind": "effect",
+            "label": "quantity",
+            "node_id": "column:inventory_stocks.quantity",
+            "module": "Orders",
+            "evidence_ids": [
+                "c076efccf4f692f0eb43c84a66ce51fbd5e1d56f5ad2abf2b96c7f58b7e90c38"
+            ],
+            "attributes": {
+                "edge_type": "writes_column"
+            }
+        },
+        {
+            "id": "step:c071a6dde1dff9993aa2c10f69cdf76b4e76a747041b54e840a700e0224d47c1",
+            "kind": "effect",
+            "label": "user",
+            "node_id": "column:orders.user",
+            "module": "Orders",
+            "evidence_ids": [
+                "26642382f3310289b0fbbfcd3b4ea328b52fb97b621be0f333287f4c02bb5d14"
+            ],
+            "attributes": {
+                "edge_type": "reads_column"
+            }
+        },
+        {
+            "id": "step:d15a4d5a8f1081fc51cade0fabb68fe65428e01970fcc60ec9efe5df42ac74e7",
+            "kind": "effect",
+            "label": "{config:services.erp.base_url}/orders/{id}/cancel",
+            "node_id": "external:{config:services.erp.base_url}/orders/{id}/cancel",
+            "module": "Integration",
+            "evidence_ids": [
+                "b659a221b824aeec45eb32ce38277d76d87b3b5ce6cfde564263e969097b46ba"
+            ],
+            "attributes": {
+                "edge_type": "calls_external"
+            }
+        },
+        {
+            "id": "step:e23e4c09567a66c44fd912db1de6a1a41b4d9469e5ba7bb3bd888730c09f643d",
+            "kind": "effect",
+            "label": "order-summary:{id}",
+            "node_id": "cache:order-summary:{id}",
+            "module": "Orders",
+            "evidence_ids": [
+                "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e"
+            ],
+            "attributes": {
+                "edge_type": "invalidates_cache"
+            }
+        },
+        {
+            "id": "step:e767a0f3e147b1472e69a9645546d009545f9403787b2b1118fcc46c6889dcb3",
+            "kind": "effect",
+            "label": "InventoryStock",
+            "node_id": "class:Fixtures\\CommerceApp\\Models\\InventoryStock",
+            "module": "Orders",
+            "evidence_ids": [
+                "e51f9ca670861deb09ed2471a9c090fe63199bc3e93c9639dac48c514171358c"
+            ],
+            "attributes": {
+                "edge_type": "writes_model"
+            }
+        },
+        {
+            "id": "step:f23201cc21e0713394d549dea719adbe8c1b77e5f30dfaa8a2b3fd81089ef05a",
+            "kind": "effect",
+            "label": "status",
+            "node_id": "column:orders.status",
+            "module": "Orders",
+            "evidence_ids": [
+                "e1df1fadb3922c0fdf1e8ae2f4337e24d5db268288db7db2640cc5b09dd23142"
+            ],
+            "attributes": {
+                "edge_type": "writes_column"
+            }
+        },
+        {
+            "id": "step:f247c9de0b1b890ba0761db8128b277c49bca3010d325867e908b9599a6dde95",
+            "kind": "symbol",
+            "label": "CancelOrderRequest",
+            "node_id": "class:Fixtures\\CommerceApp\\Http\\Requests\\CancelOrderRequest",
+            "module": "Orders",
+            "evidence_ids": [
+                "e4ed516e89209288bf73fb38f3abb78ca807794504f3305c5ac981beb0287f62"
+            ],
+            "attributes": {
+                "node_kind": "form_request"
+            }
+        },
+        {
+            "id": "terminal:b246d6c0cd3a77eeba6e6146ca54e46f307b4d045275f29c14ad54634bb2e701",
+            "kind": "terminal",
+            "label": "Fixtures\\CommerceApp\\Exceptions\\OrderCannotBeCancelledException",
+            "node_id": "class:Fixtures\\CommerceApp\\Exceptions\\OrderCannotBeCancelledException",
+            "module": "Orders",
+            "evidence_ids": [],
+            "attributes": {
+                "control_contexts": [
+                    {
+                        "boundary_id": "control:acc57d9a6c849ba9ed668a4b12415a7f40be25fd989a64507d05693398ae9f13",
+                        "kind": "branch",
+                        "predicate": "!$order->canBeCancelled()",
+                        "branch": "true",
+                        "start_line": 23,
+                        "end_line": 23
+                    }
+                ]
+            }
+        }
+    ],
+    "transitions": [
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "boundary:03e03d73ed490ee8ef9285593ae663efb582c602ae0ea396e992f508d6383cfa",
+            "boundary": "async",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be"
+            ]
+        },
+        {
+            "from": "boundary:9b670e543f73d1f49abb846446dbe3991d17f33a24bbcdcede5c2d68690c3eb0",
+            "to": "step:286ce18d8e527eff46afcab8dbcb81b6a8aac9afaa14c1f135d70ada7d8c241d",
+            "boundary": "async",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "78bde343c58068538f5af85131a6d3ea949fff961ce7354a975f9f7375eedd65"
+            ]
+        },
+        {
+            "from": "step:076836d2b7fb02105da774b9881420b997569a872e5b8b08ed33511a2391e481",
+            "to": "boundary:9b670e543f73d1f49abb846446dbe3991d17f33a24bbcdcede5c2d68690c3eb0",
+            "boundary": "async",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "78bde343c58068538f5af85131a6d3ea949fff961ce7354a975f9f7375eedd65"
+            ]
+        },
+        {
+            "from": "boundary:03e03d73ed490ee8ef9285593ae663efb582c602ae0ea396e992f508d6383cfa",
+            "to": "step:9d069bd1c9584e7d3436bd225b8cc9e2da4f62a34d92e19ed5661fa352767cac",
+            "boundary": "async",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:796bfc66e840635afcf9077c09f6f4d398e64825b76fe0f680bcb4ce18a22da6",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "19174e800f779fc5726a3ef71a3cc5564245f69100c37d64328d3e874323db50"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:c071a6dde1dff9993aa2c10f69cdf76b4e76a747041b54e840a700e0224d47c1",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "26642382f3310289b0fbbfcd3b4ea328b52fb97b621be0f333287f4c02bb5d14"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:9d069bd1c9584e7d3436bd225b8cc9e2da4f62a34d92e19ed5661fa352767cac",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "27a5030b29472f9bc70b1a15e4aed20c0dd809f243e21c4c6adfdf67c136788f"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:2bb21b2ec92af9bb4b6407f937a8b7f93048eb7381021ff066da2f33143bf994",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "6448c7c323a0bf37c4d46869ce55d3a118a7d4fda88a59db542dcf041aa0c088"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:076836d2b7fb02105da774b9881420b997569a872e5b8b08ed33511a2391e481",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:16b6a17dc82b6eb9442b059f92391f0066231bd6d790c5a2b5db2286a9eae8a0",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "9ae98a078615c425ba2117d53a2fd9e4660b94f0f85e6f122e5642daf3ab8aa0"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:03c082a14be6c0f9a721788bfcb9718e4e2891caffd294bf2b33632ebde5f523",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "b2615a6b948c1b48356b30921f60731ac075cd6734830ad417defd1af90f7af8"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:022e655c03e13eb64066cdbf2c0e17a285cb6008d078ed2f1f74a97c31114d1d",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "b5dda0d3193224a158a287b21b498f4bcccc771742f1bd3a9b8e5aadc76db332"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:b64096b75228822a161d2d6f103a0a3ca549d4d9fda45a985f0d7df3d863b033",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "c076efccf4f692f0eb43c84a66ce51fbd5e1d56f5ad2abf2b96c7f58b7e90c38"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:6ef4d733a0db6e2091a28541434aa130376991501a96b5b7a6ca8927a27b06ee",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "d5d741204a7892acb4015479d88bcca741524435ad7049a407eab8de1b71f7ee"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:f23201cc21e0713394d549dea719adbe8c1b77e5f30dfaa8a2b3fd81089ef05a",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "e1df1fadb3922c0fdf1e8ae2f4337e24d5db268288db7db2640cc5b09dd23142"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:e23e4c09567a66c44fd912db1de6a1a41b4d9469e5ba7bb3bd888730c09f643d",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:8d432deaeddbd26ba5fcb521c801a9481f4b2135d6c3a746fb689ee30b51dabf",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "e505b98ef6aed79700cb4eae724ab99f2cd3a695458dbc818cc5965796cf704d"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "step:e767a0f3e147b1472e69a9645546d009545f9403787b2b1118fcc46c6889dcb3",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": [
+                "e51f9ca670861deb09ed2471a9c090fe63199bc3e93c9639dac48c514171358c"
+            ]
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "gap:de7fd26416660669d9f1afc2ceea54e29924c97bcb42ee395816fc8450f65ec6",
+            "boundary": "sync",
+            "condition": "not(!$order->canBeCancelled())",
+            "branch": "falsy",
+            "is_cycle": false,
+            "evidence_ids": []
+        },
+        {
+            "from": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "to": "terminal:b246d6c0cd3a77eeba6e6146ca54e46f307b4d045275f29c14ad54634bb2e701",
+            "boundary": "sync",
+            "condition": "!$order->canBeCancelled()",
+            "branch": "truthy",
+            "is_cycle": false,
+            "evidence_ids": []
+        },
+        {
+            "from": "step:022e655c03e13eb64066cdbf2c0e17a285cb6008d078ed2f1f74a97c31114d1d",
+            "to": "step:6ef4d733a0db6e2091a28541434aa130376991501a96b5b7a6ca8927a27b06ee",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "23fe55b66d3993cabcbc209c2e788374f2ff6f12a28f8fce1d44967d54fc4919"
+            ]
+        },
+        {
+            "from": "step:1803a527b29308bd2af81e83475d0c0b4cd33f6c2631712cfede974fe9e7909c",
+            "to": "step:86711870c1ed88987c149418b41dcf61720423752587dd4ec48ada2ff6f8a032",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "243161b34999b29cb4a4bc9ed16c870aa7d0918071c79e3d8b1dcf7dc612a24a"
+            ]
+        },
+        {
+            "from": "step:2c9fa3e7e3ca05d7cd50a62079042cbd150020523faff12e1823ec0dfcd00345",
+            "to": "step:b3a1d669aff3d46edbd2798414b49f6613d12d06b5de0ae26509dfee7e4ff50d",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "44fc174061e8a11b8bbcaec0b103cee05757e26d8d06601d58e918ae3f9b64bb"
+            ]
+        },
+        {
+            "from": "step:4589d0e6064acae22c0a2c082750f0092f32400b95cdee75061a9f9405dc3860",
+            "to": "step:1c763cba75a022eceb569cd588c977aaa537619bf33590fbde9e787509e5922f",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "5434c9183f3fbc3cca1cacd8f1358a44517f89676446d35585864935b4ab76e8"
+            ]
+        },
+        {
+            "from": "step:4589d0e6064acae22c0a2c082750f0092f32400b95cdee75061a9f9405dc3860",
+            "to": "step:b4b8ae2e1434868029cc1c765b5942eb766d45d40e5dca86ff352e36670b9775",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "77cb55bb00b33de615d2162177656dc2940b881c82567c94e5822756dd64af8c"
+            ]
+        },
+        {
+            "from": "step:1803a527b29308bd2af81e83475d0c0b4cd33f6c2631712cfede974fe9e7909c",
+            "to": "step:4589d0e6064acae22c0a2c082750f0092f32400b95cdee75061a9f9405dc3860",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "7eaf5b3bbc0d1895463c4b22747913319b799149659eb6a16ecbfb78eac3b12c"
+            ]
+        },
+        {
+            "from": "step:076836d2b7fb02105da774b9881420b997569a872e5b8b08ed33511a2391e481",
+            "to": "step:20ea7caaaf6e401141234f767c0211a2e54cc298b51d07610013fb0d9025b4df",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "83451a34ac7ff5ba58398b240595ce2240f51e27ffbcf0c550cc075e64ddb9f9"
+            ]
+        },
+        {
+            "from": "step:1803a527b29308bd2af81e83475d0c0b4cd33f6c2631712cfede974fe9e7909c",
+            "to": "step:14e64766e33242c5dd2e6ee25eb593b4e1c2980cb2dc202fe07fc9e425a46b8f",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "aaaeecca61a5d43fce2732944468f103182c67953acf452cafd80aafd89afebd"
+            ]
+        },
+        {
+            "from": "step:2c9fa3e7e3ca05d7cd50a62079042cbd150020523faff12e1823ec0dfcd00345",
+            "to": "step:d15a4d5a8f1081fc51cade0fabb68fe65428e01970fcc60ec9efe5df42ac74e7",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "b659a221b824aeec45eb32ce38277d76d87b3b5ce6cfde564263e969097b46ba"
+            ]
+        },
+        {
+            "from": "step:022e655c03e13eb64066cdbf2c0e17a285cb6008d078ed2f1f74a97c31114d1d",
+            "to": "step:16b6a17dc82b6eb9442b059f92391f0066231bd6d790c5a2b5db2286a9eae8a0",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "bde3f64310f878f5a8e4e7344fb1ba85c8c0a6eac437476757ac035bbb936487"
+            ]
+        },
+        {
+            "from": "step:4589d0e6064acae22c0a2c082750f0092f32400b95cdee75061a9f9405dc3860",
+            "to": "step:f247c9de0b1b890ba0761db8128b277c49bca3010d325867e908b9599a6dde95",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "e4ed516e89209288bf73fb38f3abb78ca807794504f3305c5ac981beb0287f62"
+            ]
+        },
+        {
+            "from": "step:1c763cba75a022eceb569cd588c977aaa537619bf33590fbde9e787509e5922f",
+            "to": "step:796bfc66e840635afcf9077c09f6f4d398e64825b76fe0f680bcb4ce18a22da6",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": [
+                "eeeb673d2485e4090e0197352bdaa37b11248232cce23847232949053fb468f0"
+            ]
+        },
+        {
+            "from": "step:20ea7caaaf6e401141234f767c0211a2e54cc298b51d07610013fb0d9025b4df",
+            "to": "step:90465adfcaf6a98e31bb04bfd6a0c8193263c94845110d5148d8fb292a7d76ce",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": []
+        },
+        {
+            "from": "step:286ce18d8e527eff46afcab8dbcb81b6a8aac9afaa14c1f135d70ada7d8c241d",
+            "to": "step:2c9fa3e7e3ca05d7cd50a62079042cbd150020523faff12e1823ec0dfcd00345",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": []
+        },
+        {
+            "from": "step:2c9fa3e7e3ca05d7cd50a62079042cbd150020523faff12e1823ec0dfcd00345",
+            "to": "gap:b5b51cad6f23ca681738d2e277860745edd3635ed54bb58f8907d80c190a1192",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": []
+        },
+        {
+            "from": "step:4589d0e6064acae22c0a2c082750f0092f32400b95cdee75061a9f9405dc3860",
+            "to": "gap:ec2bc0c1da01527cce98f950404809a0b233022682c4b0d45adc9529da02a051",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": []
+        },
+        {
+            "from": "step:90465adfcaf6a98e31bb04bfd6a0c8193263c94845110d5148d8fb292a7d76ce",
+            "to": "gap:ab04bbcf676994319e77c00823a8a78e270ebdf4867de92555f715044637f8bb",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": []
+        },
+        {
+            "from": "step:b4b8ae2e1434868029cc1c765b5942eb766d45d40e5dca86ff352e36670b9775",
+            "to": "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+            "boundary": "sync",
+            "condition": null,
+            "branch": null,
+            "is_cycle": false,
+            "evidence_ids": []
+        }
+    ],
+    "transactions": [
+        {
+            "id": "control:4a4878671514cac0d569e616346108473f81849f7332b4562fd120246a606d0c",
+            "step_ids": [
+                "step:f23201cc21e0713394d549dea719adbe8c1b77e5f30dfaa8a2b3fd81089ef05a",
+                "step:8d432deaeddbd26ba5fcb521c801a9481f4b2135d6c3a746fb689ee30b51dabf",
+                "step:e767a0f3e147b1472e69a9645546d009545f9403787b2b1118fcc46c6889dcb3",
+                "step:b64096b75228822a161d2d6f103a0a3ca549d4d9fda45a985f0d7df3d863b033",
+                "step:2bb21b2ec92af9bb4b6407f937a8b7f93048eb7381021ff066da2f33143bf994"
+            ],
+            "evidence_ids": [
+                "e1df1fadb3922c0fdf1e8ae2f4337e24d5db268288db7db2640cc5b09dd23142",
+                "e505b98ef6aed79700cb4eae724ab99f2cd3a695458dbc818cc5965796cf704d",
+                "e51f9ca670861deb09ed2471a9c090fe63199bc3e93c9639dac48c514171358c",
+                "c076efccf4f692f0eb43c84a66ce51fbd5e1d56f5ad2abf2b96c7f58b7e90c38",
+                "6448c7c323a0bf37c4d46869ce55d3a118a7d4fda88a59db542dcf041aa0c088"
+            ]
+        }
+    ],
+    "modules": [
+        {
+            "name": "Integration",
+            "step_ids": [
+                "boundary:9b670e543f73d1f49abb846446dbe3991d17f33a24bbcdcede5c2d68690c3eb0",
+                "gap:b5b51cad6f23ca681738d2e277860745edd3635ed54bb58f8907d80c190a1192",
+                "step:286ce18d8e527eff46afcab8dbcb81b6a8aac9afaa14c1f135d70ada7d8c241d",
+                "step:2c9fa3e7e3ca05d7cd50a62079042cbd150020523faff12e1823ec0dfcd00345",
+                "step:b3a1d669aff3d46edbd2798414b49f6613d12d06b5de0ae26509dfee7e4ff50d",
+                "step:d15a4d5a8f1081fc51cade0fabb68fe65428e01970fcc60ec9efe5df42ac74e7"
+            ]
+        },
+        {
+            "name": "Inventory",
+            "step_ids": [
+                "gap:ab04bbcf676994319e77c00823a8a78e270ebdf4867de92555f715044637f8bb",
+                "step:20ea7caaaf6e401141234f767c0211a2e54cc298b51d07610013fb0d9025b4df",
+                "step:90465adfcaf6a98e31bb04bfd6a0c8193263c94845110d5148d8fb292a7d76ce"
+            ]
+        },
+        {
+            "name": "Orders",
+            "step_ids": [
+                "boundary:03e03d73ed490ee8ef9285593ae663efb582c602ae0ea396e992f508d6383cfa",
+                "decision:c25146d8c82e42bde5596b0941724b3add8d96dedb6513e906bcafc3a2792e8c",
+                "gap:de7fd26416660669d9f1afc2ceea54e29924c97bcb42ee395816fc8450f65ec6",
+                "gap:ec2bc0c1da01527cce98f950404809a0b233022682c4b0d45adc9529da02a051",
+                "step:022e655c03e13eb64066cdbf2c0e17a285cb6008d078ed2f1f74a97c31114d1d",
+                "step:03c082a14be6c0f9a721788bfcb9718e4e2891caffd294bf2b33632ebde5f523",
+                "step:076836d2b7fb02105da774b9881420b997569a872e5b8b08ed33511a2391e481",
+                "step:16b6a17dc82b6eb9442b059f92391f0066231bd6d790c5a2b5db2286a9eae8a0",
+                "step:1c763cba75a022eceb569cd588c977aaa537619bf33590fbde9e787509e5922f",
+                "step:2bb21b2ec92af9bb4b6407f937a8b7f93048eb7381021ff066da2f33143bf994",
+                "step:4589d0e6064acae22c0a2c082750f0092f32400b95cdee75061a9f9405dc3860",
+                "step:6ef4d733a0db6e2091a28541434aa130376991501a96b5b7a6ca8927a27b06ee",
+                "step:796bfc66e840635afcf9077c09f6f4d398e64825b76fe0f680bcb4ce18a22da6",
+                "step:8d432deaeddbd26ba5fcb521c801a9481f4b2135d6c3a746fb689ee30b51dabf",
+                "step:9d069bd1c9584e7d3436bd225b8cc9e2da4f62a34d92e19ed5661fa352767cac",
+                "step:b4b8ae2e1434868029cc1c765b5942eb766d45d40e5dca86ff352e36670b9775",
+                "step:b64096b75228822a161d2d6f103a0a3ca549d4d9fda45a985f0d7df3d863b033",
+                "step:c071a6dde1dff9993aa2c10f69cdf76b4e76a747041b54e840a700e0224d47c1",
+                "step:e23e4c09567a66c44fd912db1de6a1a41b4d9469e5ba7bb3bd888730c09f643d",
+                "step:e767a0f3e147b1472e69a9645546d009545f9403787b2b1118fcc46c6889dcb3",
+                "step:f23201cc21e0713394d549dea719adbe8c1b77e5f30dfaa8a2b3fd81089ef05a",
+                "step:f247c9de0b1b890ba0761db8128b277c49bca3010d325867e908b9599a6dde95",
+                "terminal:b246d6c0cd3a77eeba6e6146ca54e46f307b4d045275f29c14ad54634bb2e701"
+            ]
+        },
+        {
+            "name": "Unassigned",
+            "step_ids": [
+                "step:14e64766e33242c5dd2e6ee25eb593b4e1c2980cb2dc202fe07fc9e425a46b8f",
+                "step:1803a527b29308bd2af81e83475d0c0b4cd33f6c2631712cfede974fe9e7909c",
+                "step:86711870c1ed88987c149418b41dcf61720423752587dd4ec48ada2ff6f8a032"
+            ]
+        }
+    ],
+    "effects": [
+        {
+            "id": "step:16b6a17dc82b6eb9442b059f92391f0066231bd6d790c5a2b5db2286a9eae8a0",
+            "kind": "effect",
+            "label": "Order",
+            "node_id": "class:Fixtures\\CommerceApp\\Models\\Order",
+            "module": "Orders",
+            "evidence_ids": [
+                "bde3f64310f878f5a8e4e7344fb1ba85c8c0a6eac437476757ac035bbb936487"
+            ],
+            "attributes": {
+                "edge_type": "writes_model"
+            }
+        },
+        {
+            "id": "step:2bb21b2ec92af9bb4b6407f937a8b7f93048eb7381021ff066da2f33143bf994",
+            "kind": "effect",
+            "label": "inventory_stocks",
+            "node_id": "table:inventory_stocks",
+            "module": "Orders",
+            "evidence_ids": [
+                "6448c7c323a0bf37c4d46869ce55d3a118a7d4fda88a59db542dcf041aa0c088"
+            ],
+            "attributes": {
+                "edge_type": "writes_table"
+            }
+        },
+        {
+            "id": "step:6ef4d733a0db6e2091a28541434aa130376991501a96b5b7a6ca8927a27b06ee",
+            "kind": "effect",
+            "label": "orders",
+            "node_id": "table:orders",
+            "module": "Orders",
+            "evidence_ids": [
+                "23fe55b66d3993cabcbc209c2e788374f2ff6f12a28f8fce1d44967d54fc4919"
+            ],
+            "attributes": {
+                "edge_type": "writes_table"
+            }
+        },
+        {
+            "id": "step:8d432deaeddbd26ba5fcb521c801a9481f4b2135d6c3a746fb689ee30b51dabf",
+            "kind": "effect",
+            "label": "cancellation_reason",
+            "node_id": "column:orders.cancellation_reason",
+            "module": "Orders",
+            "evidence_ids": [
+                "e505b98ef6aed79700cb4eae724ab99f2cd3a695458dbc818cc5965796cf704d"
+            ],
+            "attributes": {
+                "edge_type": "writes_column"
+            }
+        },
+        {
+            "id": "step:9d069bd1c9584e7d3436bd225b8cc9e2da4f62a34d92e19ed5661fa352767cac",
+            "kind": "effect",
+            "label": "OrderWasCancelled",
+            "node_id": "class:Fixtures\\CommerceApp\\Notifications\\OrderWasCancelled",
+            "module": "Orders",
+            "evidence_ids": [
+                "27a5030b29472f9bc70b1a15e4aed20c0dd809f243e21c4c6adfdf67c136788f"
+            ],
+            "attributes": {
+                "edge_type": "instantiates"
+            }
+        },
+        {
+            "id": "step:b3a1d669aff3d46edbd2798414b49f6613d12d06b5de0ae26509dfee7e4ff50d",
+            "kind": "effect",
+            "label": "services.erp.base_url",
+            "node_id": "config:services.erp.base_url",
+            "module": "Integration",
+            "evidence_ids": [
+                "44fc174061e8a11b8bbcaec0b103cee05757e26d8d06601d58e918ae3f9b64bb"
+            ],
+            "attributes": {
+                "edge_type": "reads_config"
+            }
+        },
+        {
+            "id": "step:b64096b75228822a161d2d6f103a0a3ca549d4d9fda45a985f0d7df3d863b033",
+            "kind": "effect",
+            "label": "quantity",
+            "node_id": "column:inventory_stocks.quantity",
+            "module": "Orders",
+            "evidence_ids": [
+                "c076efccf4f692f0eb43c84a66ce51fbd5e1d56f5ad2abf2b96c7f58b7e90c38"
+            ],
+            "attributes": {
+                "edge_type": "writes_column"
+            }
+        },
+        {
+            "id": "step:c071a6dde1dff9993aa2c10f69cdf76b4e76a747041b54e840a700e0224d47c1",
+            "kind": "effect",
+            "label": "user",
+            "node_id": "column:orders.user",
+            "module": "Orders",
+            "evidence_ids": [
+                "26642382f3310289b0fbbfcd3b4ea328b52fb97b621be0f333287f4c02bb5d14"
+            ],
+            "attributes": {
+                "edge_type": "reads_column"
+            }
+        },
+        {
+            "id": "step:d15a4d5a8f1081fc51cade0fabb68fe65428e01970fcc60ec9efe5df42ac74e7",
+            "kind": "effect",
+            "label": "{config:services.erp.base_url}/orders/{id}/cancel",
+            "node_id": "external:{config:services.erp.base_url}/orders/{id}/cancel",
+            "module": "Integration",
+            "evidence_ids": [
+                "b659a221b824aeec45eb32ce38277d76d87b3b5ce6cfde564263e969097b46ba"
+            ],
+            "attributes": {
+                "edge_type": "calls_external"
+            }
+        },
+        {
+            "id": "step:e23e4c09567a66c44fd912db1de6a1a41b4d9469e5ba7bb3bd888730c09f643d",
+            "kind": "effect",
+            "label": "order-summary:{id}",
+            "node_id": "cache:order-summary:{id}",
+            "module": "Orders",
+            "evidence_ids": [
+                "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e"
+            ],
+            "attributes": {
+                "edge_type": "invalidates_cache"
+            }
+        },
+        {
+            "id": "step:e767a0f3e147b1472e69a9645546d009545f9403787b2b1118fcc46c6889dcb3",
+            "kind": "effect",
+            "label": "InventoryStock",
+            "node_id": "class:Fixtures\\CommerceApp\\Models\\InventoryStock",
+            "module": "Orders",
+            "evidence_ids": [
+                "e51f9ca670861deb09ed2471a9c090fe63199bc3e93c9639dac48c514171358c"
+            ],
+            "attributes": {
+                "edge_type": "writes_model"
+            }
+        },
+        {
+            "id": "step:f23201cc21e0713394d549dea719adbe8c1b77e5f30dfaa8a2b3fd81089ef05a",
+            "kind": "effect",
+            "label": "status",
+            "node_id": "column:orders.status",
+            "module": "Orders",
+            "evidence_ids": [
+                "e1df1fadb3922c0fdf1e8ae2f4337e24d5db268288db7db2640cc5b09dd23142"
+            ],
+            "attributes": {
+                "edge_type": "writes_column"
+            }
+        }
+    ],
+    "gaps": [
+        {
+            "step_id": "gap:ab04bbcf676994319e77c00823a8a78e270ebdf4867de92555f715044637f8bb",
+            "reason": "Receiver type could not be resolved.",
+            "evidence_ids": [],
+            "attributes": {
+                "receiver_expression": "$event->order",
+                "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Listeners\\RestockInventory::handle",
+                "expression": "$event->order->getKey()",
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        },
+        {
+            "step_id": "gap:b5b51cad6f23ca681738d2e277860745edd3635ed54bb58f8907d80c190a1192",
+            "reason": "No canonical target Illuminate\\Support\\Facades\\Http::post was found.",
+            "evidence_ids": [],
+            "attributes": {
+                "receiver_type": "Illuminate\\Support\\Facades\\Http",
+                "target_name": "post",
+                "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Listeners\\SendCancellationWebhook::handle",
+                "expression": "Http::post(config('services.erp.base_url') . '/orders/' . $event->order->getKey() . '/cancel')",
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        },
+        {
+            "step_id": "gap:de7fd26416660669d9f1afc2ceea54e29924c97bcb42ee395816fc8450f65ec6",
+            "reason": "No canonical target Illuminate\\Support\\Facades\\DB::transaction was found.",
+            "evidence_ids": [],
+            "attributes": {
+                "receiver_type": "Illuminate\\Support\\Facades\\DB",
+                "target_name": "transaction",
+                "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Services\\OrderService::cancel",
+                "expression": "DB::transaction(function () use ($order, $reason): void {\n    $order->status = 'cancelled';\n    $order->cancellation_reason = $reason;\n    $this->orders->save($order);\n    InventoryStock::query()->where('order_id', $order->getKey())->increment('quantity');\n})",
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        },
+        {
+            "step_id": "gap:ec2bc0c1da01527cce98f950404809a0b233022682c4b0d45adc9529da02a051",
+            "reason": "No canonical target Illuminate\\Support\\Facades\\Gate::authorize was found.",
+            "evidence_ids": [],
+            "attributes": {
+                "receiver_type": "Illuminate\\Support\\Facades\\Gate",
+                "target_name": "authorize",
+                "enclosing_symbol_id": "method:Fixtures\\CommerceApp\\Http\\Controllers\\OrderController::cancel",
+                "expression": "Gate::authorize('cancel', $order)",
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        }
+    ],
+    "truncation": {
+        "truncated": false,
+        "omitted_count": 0,
+        "frontier": []
+    },
+    "evidence": [
+        {
+            "id": "19174e800f779fc5726a3ef71a3cc5564245f69100c37d64328d3e874323db50",
+            "origin": "static_ast",
+            "detector": "call-target-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 22,
+                "end_line": 22
+            },
+            "expression": "$order->canBeCancelled()",
+            "condition": null,
+            "attributes": {
+                "receiver_resolution": "exact_receiver_type",
+                "receiver_expression": "$order",
+                "receiver_type": "Fixtures\\CommerceApp\\Models\\Order",
+                "arguments": [],
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        },
+        {
+            "id": "23fe55b66d3993cabcbc209c2e788374f2ff6f12a28f8fce1d44967d54fc4919",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Repositories/DatabaseOrderGateway.php",
+                "start_line": 12,
+                "end_line": 12
+            },
+            "expression": "$order->save()",
+            "condition": null,
+            "attributes": {
+                "resource_type": "table",
+                "resource": "orders",
+                "operation": "save",
+                "table_source": "property_default"
+            }
+        },
+        {
+            "id": "243161b34999b29cb4a4bc9ed16c870aa7d0918071c79e3d8b1dcf7dc612a24a",
+            "origin": "static_ast",
+            "detector": "route_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "routes/web.php",
+                "start_line": 11,
+                "end_line": 11
+            },
+            "expression": "Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])",
+            "condition": null,
+            "attributes": {
+                "middleware": "throttle:orders",
+                "effective": false,
+                "registration_key": "route:routes/web.php:11:11",
+                "semantic_relation_key": "5dc1ce7c5152432990ca66778d194c5b5b3a0c0fb82febb05f7dadb07147cd76"
+            }
+        },
+        {
+            "id": "26642382f3310289b0fbbfcd3b4ea328b52fb97b621be0f333287f4c02bb5d14",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 38,
+                "end_line": 38
+            },
+            "expression": "$order->user",
+            "condition": null,
+            "attributes": {
+                "resource_type": "column",
+                "resource": "orders.user",
+                "operation": "property_read"
+            }
+        },
+        {
+            "id": "27a5030b29472f9bc70b1a15e4aed20c0dd809f243e21c4c6adfdf67c136788f",
+            "origin": "static_ast",
+            "detector": "instantiation-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 38,
+                "end_line": 38
+            },
+            "expression": "new OrderWasCancelled($order)",
+            "condition": null,
+            "attributes": {
+                "arguments": [
+                    {
+                        "expression": "$order"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "44fc174061e8a11b8bbcaec0b103cee05757e26d8d06601d58e918ae3f9b64bb",
+            "origin": "static_ast",
+            "detector": "config_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Listeners/SendCancellationWebhook.php",
+                "start_line": 14,
+                "end_line": 14
+            },
+            "expression": "reads_config(services.erp.base_url)",
+            "condition": null,
+            "attributes": {
+                "resource_type": "config_key",
+                "resource": "services.erp.base_url",
+                "operation": "get"
+            }
+        },
+        {
+            "id": "5434c9183f3fbc3cca1cacd8f1358a44517f89676446d35585864935b4ab76e8",
+            "origin": "static_ast",
+            "detector": "authorization_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Http/Controllers/OrderController.php",
+                "start_line": 24,
+                "end_line": 24
+            },
+            "expression": "Gate::authorize('cancel', $order)",
+            "condition": null,
+            "attributes": {
+                "ability": "cancel",
+                "model": "Fixtures\\CommerceApp\\Models\\Order",
+                "policy": "Fixtures\\CommerceApp\\Policies\\OrderPolicy",
+                "policy_registration_file": "app/Providers/CommerceServiceProvider.php",
+                "policy_registration_line": 31,
+                "effective": false,
+                "registration_key": "policy:Fixtures\\CommerceApp\\Models\\Order=>Fixtures\\CommerceApp\\Policies\\OrderPolicy",
+                "semantic_relation_key": "f96c4732915d456fd39381418cbdfbcd947263e857e5300bf0cdb23ffd60bde5"
+            }
+        },
+        {
+            "id": "6448c7c323a0bf37c4d46869ce55d3a118a7d4fda88a59db542dcf041aa0c088",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 31,
+                "end_line": 33
+            },
+            "expression": "InventoryStock::query()->where('order_id', $order->getKey())->increment('quantity')",
+            "condition": null,
+            "attributes": {
+                "resource_type": "table",
+                "resource": "inventory_stocks",
+                "operation": "increment",
+                "table_source": "property_default"
+            }
+        },
+        {
+            "id": "77cb55bb00b33de615d2162177656dc2940b881c82567c94e5822756dd64af8c",
+            "origin": "static_ast",
+            "detector": "call-target-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Http/Controllers/OrderController.php",
+                "start_line": 25,
+                "end_line": 25
+            },
+            "expression": "$orders->cancel($order, $request->string('reason')->toString())",
+            "condition": null,
+            "attributes": {
+                "receiver_resolution": "exact_receiver_type",
+                "receiver_expression": "$orders",
+                "receiver_type": "Fixtures\\CommerceApp\\Services\\OrderService",
+                "arguments": [
+                    {
+                        "expression": "$order"
+                    },
+                    {
+                        "expression": "$request->string('reason')->toString()"
+                    }
+                ],
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        },
+        {
+            "id": "78bde343c58068538f5af85131a6d3ea949fff961ce7354a975f9f7375eedd65",
+            "origin": "static_ast",
+            "detector": "listener_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 33,
+                "end_line": 33
+            },
+            "expression": "Event::listen(OrderCancelled::class, SendCancellationWebhook::class)",
+            "condition": null,
+            "attributes": {
+                "execution": "async",
+                "effective": false,
+                "registration_key": "listener:app/Providers/CommerceServiceProvider.php:33:33",
+                "semantic_relation_key": "9bea99f0b635610d2eee1a66197dc3e732dbdd8b0eceac7c98f93aae47ce155c"
+            }
+        },
+        {
+            "id": "7ab69b3ec4a15513050387928a12e97aaf52d5a58d2894c76e21febfcac3e4ce",
+            "origin": "static_ast",
+            "detector": "event_dispatch_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 36,
+                "end_line": 36
+            },
+            "expression": "OrderCancelled::dispatch($order)",
+            "condition": null,
+            "attributes": {
+                "execution": "sync",
+                "syntax": "dispatch"
+            }
+        },
+        {
+            "id": "7eaf5b3bbc0d1895463c4b22747913319b799149659eb6a16ecbfb78eac3b12c",
+            "origin": "static_ast",
+            "detector": "route_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "routes/web.php",
+                "start_line": 11,
+                "end_line": 11
+            },
+            "expression": "Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])",
+            "condition": null,
+            "attributes": {
+                "effective": false,
+                "registration_key": "route:routes/web.php:11:11",
+                "semantic_relation_key": "1b58779533cd6ab5a3acc8e6ff6da413f778d43debab66a076f0a0209e03d2b8"
+            }
+        },
+        {
+            "id": "83451a34ac7ff5ba58398b240595ce2240f51e27ffbcf0c550cc075e64ddb9f9",
+            "origin": "static_ast",
+            "detector": "listener_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Providers/CommerceServiceProvider.php",
+                "start_line": 32,
+                "end_line": 32
+            },
+            "expression": "Event::listen(OrderCancelled::class, RestockInventory::class)",
+            "condition": null,
+            "attributes": {
+                "execution": "sync",
+                "effective": false,
+                "registration_key": "listener:app/Providers/CommerceServiceProvider.php:32:32",
+                "semantic_relation_key": "eb7ab6f61cb46b4b491588849d88bdf99e0d0e9c1c7473c0d9ffd1561909f12a"
+            }
+        },
+        {
+            "id": "9ae98a078615c425ba2117d53a2fd9e4660b94f0f85e6f122e5642daf3ab8aa0",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 38,
+                "end_line": 38
+            },
+            "expression": "$order->user",
+            "condition": null,
+            "attributes": {
+                "resource_type": "model",
+                "resource": "Fixtures\\CommerceApp\\Models\\Order",
+                "operation": "property_read"
+            }
+        },
+        {
+            "id": "aaaeecca61a5d43fce2732944468f103182c67953acf452cafd80aafd89afebd",
+            "origin": "static_ast",
+            "detector": "route_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "routes/web.php",
+                "start_line": 11,
+                "end_line": 11
+            },
+            "expression": "Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])",
+            "condition": null,
+            "attributes": {
+                "middleware": "auth",
+                "effective": false,
+                "registration_key": "route:routes/web.php:11:11",
+                "semantic_relation_key": "3f805b71cbbe6343317f888be60f9c1a19ef9e37c5384e8746c0b57b6ca184a1"
+            }
+        },
+        {
+            "id": "b2615a6b948c1b48356b30921f60731ac075cd6734830ad417defd1af90f7af8",
+            "origin": "static_ast",
+            "detector": "instantiation-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 23,
+                "end_line": 23
+            },
+            "expression": "new OrderCannotBeCancelledException($order)",
+            "condition": null,
+            "attributes": {
+                "arguments": [
+                    {
+                        "expression": "$order"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "b5dda0d3193224a158a287b21b498f4bcccc771742f1bd3a9b8e5aadc76db332",
+            "origin": "static_ast",
+            "detector": "call-target-resolver",
+            "certainty": "probable",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 29,
+                "end_line": 29
+            },
+            "expression": "$this->orders->save($order)",
+            "condition": null,
+            "attributes": {
+                "receiver_resolution": "interface_implementation",
+                "receiver_expression": "$this->orders",
+                "receiver_type": "Fixtures\\CommerceApp\\Contracts\\OrderGateway",
+                "arguments": [
+                    {
+                        "expression": "$order"
+                    }
+                ],
+                "nullsafe": false,
+                "first_class_callable": false,
+                "interface": "Fixtures\\CommerceApp\\Contracts\\OrderGateway",
+                "implementation": "Fixtures\\CommerceApp\\Repositories\\DatabaseOrderGateway",
+                "implementation_count": 1
+            }
+        },
+        {
+            "id": "b659a221b824aeec45eb32ce38277d76d87b3b5ce6cfde564263e969097b46ba",
+            "origin": "static_ast",
+            "detector": "http_client_effect_detector",
+            "certainty": "probable",
+            "location": {
+                "file": "app/Listeners/SendCancellationWebhook.php",
+                "start_line": 13,
+                "end_line": 15
+            },
+            "expression": "calls_external({config:services.erp.base_url}/orders/{id}/cancel)",
+            "condition": null,
+            "attributes": {
+                "resource_type": "external_endpoint",
+                "resource": "{config:services.erp.base_url}/orders/{id}/cancel",
+                "method": "POST"
+            }
+        },
+        {
+            "id": "bde3f64310f878f5a8e4e7344fb1ba85c8c0a6eac437476757ac035bbb936487",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Repositories/DatabaseOrderGateway.php",
+                "start_line": 12,
+                "end_line": 12
+            },
+            "expression": "$order->save()",
+            "condition": null,
+            "attributes": {
+                "resource_type": "model",
+                "resource": "Fixtures\\CommerceApp\\Models\\Order",
+                "operation": "save"
+            }
+        },
+        {
+            "id": "beddaa757f99b11eb51a41b49c184740a6998022e4c9df9469e266bd227142be",
+            "origin": "static_ast",
+            "detector": "notification_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 38,
+                "end_line": 38
+            },
+            "expression": "$order->user->notify(new OrderWasCancelled($order))",
+            "condition": null,
+            "attributes": {
+                "execution": "async",
+                "recipient_type": null
+            }
+        },
+        {
+            "id": "c076efccf4f692f0eb43c84a66ce51fbd5e1d56f5ad2abf2b96c7f58b7e90c38",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 31,
+                "end_line": 33
+            },
+            "expression": "InventoryStock::query()->where('order_id', $order->getKey())->increment('quantity')",
+            "condition": null,
+            "attributes": {
+                "resource_type": "column",
+                "resource": "inventory_stocks.quantity",
+                "operation": "increment"
+            }
+        },
+        {
+            "id": "d5d741204a7892acb4015479d88bcca741524435ad7049a407eab8de1b71f7ee",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 38,
+                "end_line": 38
+            },
+            "expression": "$order->user",
+            "condition": null,
+            "attributes": {
+                "resource_type": "table",
+                "resource": "orders",
+                "operation": "property_read"
+            }
+        },
+        {
+            "id": "e1df1fadb3922c0fdf1e8ae2f4337e24d5db268288db7db2640cc5b09dd23142",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 27,
+                "end_line": 27
+            },
+            "expression": "$order->status = 'cancelled'",
+            "condition": null,
+            "attributes": {
+                "resource_type": "column",
+                "resource": "orders.status",
+                "operation": "save",
+                "persistence_confirmed_by": "Fixtures\\CommerceApp\\Contracts\\OrderGateway::save"
+            }
+        },
+        {
+            "id": "e22ca164dac2aad1889ddabd083602294d9ba787c97866de691c9fbf44c80a1e",
+            "origin": "static_ast",
+            "detector": "cache_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 37,
+                "end_line": 37
+            },
+            "expression": "invalidates_cache(order-summary:{id})",
+            "condition": null,
+            "attributes": {
+                "resource_type": "cache_key",
+                "resource": "order-summary:{id}",
+                "operation": "forget"
+            }
+        },
+        {
+            "id": "e4ed516e89209288bf73fb38f3abb78ca807794504f3305c5ac981beb0287f62",
+            "origin": "static_ast",
+            "detector": "form_request_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Http/Controllers/OrderController.php",
+                "start_line": 19,
+                "end_line": 28
+            },
+            "expression": "$request:Fixtures\\CommerceApp\\Http\\Requests\\CancelOrderRequest",
+            "condition": null,
+            "attributes": {
+                "parameter": "request"
+            }
+        },
+        {
+            "id": "e505b98ef6aed79700cb4eae724ab99f2cd3a695458dbc818cc5965796cf704d",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 28,
+                "end_line": 28
+            },
+            "expression": "$order->cancellation_reason = $reason",
+            "condition": null,
+            "attributes": {
+                "resource_type": "column",
+                "resource": "orders.cancellation_reason",
+                "operation": "save",
+                "persistence_confirmed_by": "Fixtures\\CommerceApp\\Contracts\\OrderGateway::save"
+            }
+        },
+        {
+            "id": "e51f9ca670861deb09ed2471a9c090fe63199bc3e93c9639dac48c514171358c",
+            "origin": "static_ast",
+            "detector": "eloquent_effect_detector",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Services/OrderService.php",
+                "start_line": 31,
+                "end_line": 33
+            },
+            "expression": "InventoryStock::query()->where('order_id', $order->getKey())->increment('quantity')",
+            "condition": null,
+            "attributes": {
+                "resource_type": "model",
+                "resource": "Fixtures\\CommerceApp\\Models\\InventoryStock",
+                "operation": "increment"
+            }
+        },
+        {
+            "id": "eeeb673d2485e4090e0197352bdaa37b11248232cce23847232949053fb468f0",
+            "origin": "static_ast",
+            "detector": "call-target-resolver",
+            "certainty": "certain",
+            "location": {
+                "file": "app/Policies/OrderPolicy.php",
+                "start_line": 12,
+                "end_line": 12
+            },
+            "expression": "$order->canBeCancelled()",
+            "condition": null,
+            "attributes": {
+                "receiver_resolution": "exact_receiver_type",
+                "receiver_expression": "$order",
+                "receiver_type": "Fixtures\\CommerceApp\\Models\\Order",
+                "arguments": [],
+                "nullsafe": false,
+                "first_class_callable": false
+            }
+        }
+    ]
+}

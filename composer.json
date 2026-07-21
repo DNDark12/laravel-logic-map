@@ -1,14 +1,16 @@
 {
     "name": "dndark/laravel-logic-map",
-    "description": "Understand, audit, and visualize your Laravel application's workflows, change impact, and architectural risk.",
+    "description": "Evidence-backed Laravel semantic workflows, dependency impact analysis, and interactive logic maps.",
     "keywords": [
         "laravel",
+        "semantic-analysis",
+        "change-impact",
+        "workflow",
         "architecture",
         "static-analysis",
         "graph",
         "visualization",
-        "code-quality",
-        "metrics"
+        "code-intelligence"
     ],
     "homepage": "https://github.com/DNDark12/laravel-logic-map",
     "type": "library",
@@ -20,22 +22,27 @@
     ],
     "require": {
         "php": "^8.2",
+        "ext-pdo": "*",
         "illuminate/support": "^10.0|^11.0|^12.0",
         "nikic/php-parser": "^5.0"
     },
     "require-dev": {
+        "guzzlehttp/guzzle": "^7.5",
         "orchestra/testbench": "^8.0|^9.0|^10.0",
         "phpunit/phpunit": "^10.0|^11.0"
     },
     "autoload": {
         "psr-4": {
-            "dndark\\LogicMap\\": "src/"
+            "DNDark\\LogicMap\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "dndark\\LogicMap\\Tests\\": "tests/"
-        }
+            "DNDark\\LogicMap\\Tests\\": "tests/"
+        },
+        "exclude-from-classmap": [
+            "/tests/Fixtures/"
+        ]
     },
     "scripts": {
         "test": "phpunit",
@@ -45,7 +52,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "dndark\\LogicMap\\LogicMapServiceProvider"
+                "DNDark\\LogicMap\\LogicMapServiceProvider"
             ]
         }
     },

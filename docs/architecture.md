@@ -1,18 +1,63 @@
 # Architecture
 
-Laravel Logic Map uses a two-phase architecture to separate heavy static analysis from fast UI queries:
+Laravel Logic Map 2.0 separates immutable indexing from bounded query-time projections.
 
-## 1. Build Pipeline (`logic-map:build` & `logic-map:analyze`)
-- Extracts graph data using `nikic/php-parser` (AST).
-- Computes structural metrics (coupling, instability, fat controllers).
-- Caches the immutable graph snapshot and analysis results using a deterministic file fingerprint.
+## Index pipeline
 
-## 2. Query Pipeline (API & HTTP Reports)
-- Resolves the active (or requested) snapshot without reparsing code.
-- Serves localized projections (Overview, Subgraph, Search).
-- Computes advanced traversals (**Impact Blast Radius** and **Workflow Trace**) on-the-fly from the cached graph.
+```text
+RepositoryFileDiscovery
+  -> ParsePhpPhase
+  -> ResolvePhpPhase
+  -> CollectLaravelBootFactsPhase
+  -> ExtractLaravelSemanticsPhase
+  -> BuildProcessMembershipPhase
+  -> GraphSnapshot
+  -> SqliteGraphRepository
+```
 
-## 3. Artifact Generation (`logic-map:export-docs` & `logic-map:export-note`)
-- Consumes the Query Pipeline to generate static Markdown representations of the logic.
-- Generates `llms.txt` and **Workflow Dossiers** optimized for AI context limits.
-- Generates node-specific Markdown reports for deep-dive human and machine analysis.
+The parser emits structural PHP facts and Laravel-specific facts. Resolvers turn those facts into stable nodes, typed edges, diagnostics, process steps, and evidence records. After symbol classification, the command detector reconciles effective Artisan names with a unique in-scope `$signature`/`$name` declaration and emits `command:* -> resolves_to -> class:*`; ambiguous matches remain diagnostics rather than false-positive workflow edges. The source fingerprint includes the analysis and schema versions, so detector/process semantic changes invalidate stale snapshots even when source files did not change.
+
+## Stable identities
+
+Canonical node IDs use closed prefixes such as:
+
+```text
+route:POST:orders/{order}/cancel
+method:App\Services\OrderService::cancel
+class:App\Jobs\CancelOrder
+table:orders
+column:orders.status
+module:Orders
+process:route:POST:orders/{order}/cancel
+```
+
+Edges are typed (`calls`, `dispatches`, `writes_table`, `calls_external`, and others) and reference one or more evidence records. Node/edge IDs and canonical JSON order are deterministic.
+
+## Query layer
+
+- `SymbolContextService` returns bounded incoming/outgoing relations, processes, modules, effects, and evidence.
+- `WorkflowBuilder` traverses execution-relevant directions and preserves decisions, terminals, cycles, transactions, async boundaries, gaps, and frontier truncation.
+- `ImpactAnalyzer` maps a direct symbol or Git diff into reason-grouped affected symbols, shared resources, modules, uncertainty, and selected tests.
+- Projectors produce JSON, Markdown, or Mermaid without reparsing source.
+
+## Runtime overlay
+
+Runtime sessions and observations live beside snapshots in SQLite but do not mutate them. `RuntimeEvidenceMerger` accepts a runtime relation only when:
+
+1. the session snapshot matches the queried snapshot;
+2. source and target are valid stable node IDs present in that snapshot;
+3. observation kind exactly maps to a supported edge type;
+4. the session is in the selected session set.
+
+Matching evidence augments a query-time relation. Runtime-only evidence remains explicitly `runtime_only` with no `static_certainty`. Temporal adjacency is never promoted into a dependency.
+
+## Storage and bounds
+
+SQLite owns snapshots, nodes, edges, evidence, diagnostics, process steps, runtime sessions, and runtime observations. Query depth, node/edge count, response bytes, session retention, session capacity, and observations per session are bounded by config. Oversized list projections retain the largest prefix that fits the byte envelope and report `meta.truncated`; trimming uses binary search to avoid request-time work proportional to every removed item. `logic-map:clear --force` removes only the configured package database.
+
+## Security boundaries
+
+- HTTP access is environment- and middleware-gated.
+- Git refs and output paths are validated.
+- Runtime attributes are allowlisted, bounded, and secret-redacted.
+- SQL bindings, request bodies, response bodies, cache values, and arbitrary event payloads are not stored.
