@@ -28,6 +28,10 @@ Snapshot storage moved from a package-owned SQLite file (`storage/framework/logi
 - `RuntimeEvidenceMerger::merge()` gained an optional `$scopeNodeIds` parameter, and `runtime.relations` in API responses now lists only observed and scope-adjacent relations instead of every static edge.
 - `SqliteSchema::VERSION` moved to `DNDark\LogicMap\Support\SchemaVersion::VERSION` (value unchanged, so snapshot ids and fingerprints are stable).
 
+## New: AI documentation bundle (additive, no action required)
+
+`php artisan logic-map:export-ai` exports a machine-readable, impact-weighted bundle (`graph.json`, `impact/*.json`, `modules/*.json`, `llms.txt`, `index.md`) so an AI agent can determine the blast radius and severity of a prospective change without running the application. It is purely additive: no config keys were renamed, and `logic-map:export-docs` (human dossiers) is unaffected.
+
 # Upgrade to 2.0
 
 Version 2.0 is a deliberate breaking replacement of V1. There is no V1 API, cache, command, route, report, asset, or UI compatibility layer.
@@ -52,7 +56,7 @@ logic-map:export-note
 logic-map:clear-cache
 ```
 
-All V1 `/logic-map/*` overview/subgraph/trace/report/export endpoints and cache-backed snapshots are removed.
+All V1 `/logic-map/*` overview/subgraph/trace/report/export endpoints and cache-backed snapshots are deprecated.
 
 ## New surface
 

@@ -68,6 +68,58 @@ return [
         'output' => 'docs/logic-map',
         'max_modules' => 100,
         'max_workflows' => 500,
+
+        /*
+         * Machine-readable AI bundle (logic-map:export-ai). Weights turn each
+         * ImpactReason into an explainable 0..1 score via
+         * score = category x confidence x level_decay x runtime_factor.
+         * Every value below is safe to override individually; missing keys
+         * fall back to these defaults. See docs/ai-bundle.md.
+         */
+        'ai' => [
+            'output' => 'docs/logic-map-ai',
+            'max_impact_symbols' => 200,
+        ],
+
+        'weights' => [
+            /* Strength of the relation kind that connects the changed and affected symbol. */
+            'category' => [
+                'hard_dependency' => 1.0,
+                'workflow' => 0.8,
+                'external_contract' => 0.8,
+                'async' => 0.7,
+                'shared_state' => 0.6,
+                'module' => 0.4,
+                'test_scope' => 0.4,
+                'uncertainty' => 0.3,
+            ],
+            /* Strongest static evidence Certainty backing the relation. */
+            'confidence' => [
+                'certain' => 1.0,
+                'probable' => 0.6,
+                'possible' => 0.3,
+            ],
+            /* Decay by ImpactLevel / traversal depth ("breaks"/"direct" never decay). */
+            'level' => [
+                'breaks' => 1.0,
+                'direct' => 1.0,
+                'shared_resource' => 0.7,
+                'possible' => 0.3,
+                'transitive_decay_base' => 0.5,
+            ],
+            /* Whether the relation was also (or only) seen in opt-in runtime traces. */
+            'runtime' => [
+                'observed' => 1.0,
+                'static_only' => 0.9,
+                'runtime_only' => 0.7,
+            ],
+            /* Score thresholds mapping to ImpactBand (Critical/High/Medium/Low). */
+            'bands' => [
+                'critical' => 0.70,
+                'high' => 0.45,
+                'medium' => 0.20,
+            ],
+        ],
     ],
 
     /* Opt-in sanitized observations; disabled by default. */

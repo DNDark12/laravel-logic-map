@@ -79,6 +79,15 @@ php artisan logic-map:export-docs --output=docs/architecture-map --force
 
 The command writes `overview.md`, `modules/*.md`, and `workflows/*.md`. Module dossiers use the module workflow projection rather than treating every module member as a changed symbol. Workflow dossiers embed Mermaid diagrams together with ordered steps, effects, gaps, and evidence.
 
+Export a machine-readable, impact-weighted bundle for AI agents:
+
+```bash
+php artisan logic-map:export-ai
+php artisan logic-map:export-ai --symbols='method:App\Services\OrderService::cancel' --force
+```
+
+The command writes `graph.json` (full node/edge/module inventory), `impact/<symbol-slug>.json` (per-symbol affected-symbol list with an explainable `score`/`band`/`factors` weight), `modules/<slug>.json` (membership and entrypoints), `llms.txt` (agent preamble and weight legend), and `index.md`. The bundle is a pure function of the active snapshot — byte-identical across repeated exports — so it is safe to commit or serve as a build artifact.
+
 ## HTTP API
 
 ```text
@@ -91,13 +100,11 @@ GET  /logic-map/api/modules
 GET  /logic-map/api/modules/{encoded-id}
 ```
 
-Canonical IDs in URL path segments use base64url encoding. See [docs/api-v2.md](docs/api-v2.md) for complete envelopes and examples.
+Canonical IDs in URL path segments use base64url encoding. Complete envelopes and examples are published on the developer docs site.
 
 ## Evidence and certainty
 
 Every graph relation references evidence records with an origin (`static_ast`, `laravel_boot`, `runtime`, or `git_diff`), detector, certainty (`certain`, `probable`, or `possible`), source location when available, and bounded attributes. Missing evidence remains unknown; it is never reported as proof that code did not execute.
-
-See [docs/evidence-and-certainty.md](docs/evidence-and-certainty.md).
 
 ## HTTP viewer protection
 
@@ -129,8 +136,6 @@ Runtime collection is disabled by default. Enable it only in an environment wher
 
 Only observations with stable source and target node IDs, a compatible relation kind, and the same snapshot ID can overlay static queries. Coverage uses only these phrases: `Observed in N selected runtime sessions`, `Not observed in selected sessions`, and `No runtime data available`.
 
-See [docs/runtime-evidence.md](docs/runtime-evidence.md).
-
 ## Known static-analysis limits
 
 - Highly dynamic container resolution, reflection, runtime-generated routes, dynamic method names, and opaque package internals may remain unresolved.
@@ -146,6 +151,7 @@ logic-map:status
 logic-map:workflow
 logic-map:impact
 logic-map:export-docs
+logic-map:export-ai
 logic-map:clear
 ```
 

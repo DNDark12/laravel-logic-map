@@ -35,7 +35,7 @@ final class DocumentationCommandContractTest extends TestCase
     {
         $commands = array_keys(Artisan::all());
 
-        foreach (['logic-map:index', 'logic-map:status', 'logic-map:workflow', 'logic-map:impact', 'logic-map:export-docs', 'logic-map:clear'] as $command) {
+        foreach (['logic-map:index', 'logic-map:status', 'logic-map:workflow', 'logic-map:impact', 'logic-map:export-docs', 'logic-map:export-ai', 'logic-map:clear'] as $command) {
             self::assertContains($command, $commands, $command);
         }
 

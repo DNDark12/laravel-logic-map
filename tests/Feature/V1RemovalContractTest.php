@@ -59,7 +59,7 @@ final class V1RemovalContractTest extends TestCase
             self::assertNotContains($removed, $commands, $removed);
         }
 
-        foreach (['logic-map:index', 'logic-map:status', 'logic-map:workflow', 'logic-map:impact', 'logic-map:export-docs', 'logic-map:clear'] as $active) {
+        foreach (['logic-map:index', 'logic-map:status', 'logic-map:workflow', 'logic-map:impact', 'logic-map:export-docs', 'logic-map:export-ai', 'logic-map:clear'] as $active) {
             self::assertContains($active, $commands, $active);
         }
 
