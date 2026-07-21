@@ -197,16 +197,6 @@ final class LogicMapServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'logic-map');
 
-<<<<<<< HEAD
-        $this->autoPublishAssets();
-
-        // Share resource paths with views (Allow local override in resources/views/logic-map)
-        View::composer('logic-map::*', function ($view) {
-            $customCss = resource_path('views/logic-map/logic-map.css');
-            $customJs  = resource_path('views/logic-map/logic-map.js');
-
-            $jsPath  = file_exists($customJs)  ? $customJs  : __DIR__ . '/../resources/dist/js/core.js';
-=======
         if ((bool) config('logic-map.runtime.enabled', false)) {
             $this->bootRuntimeEvidence();
         }
@@ -215,52 +205,11 @@ final class LogicMapServiceProvider extends ServiceProvider
     private function bootRuntimeEvidence(): void
     {
         $marker = 'logic-map.runtime-hooks-registered';
->>>>>>> origin/feature/v2-semantic-impact-engine
 
         if ($this->app->bound($marker)) {
             return;
         }
 
-<<<<<<< HEAD
-            // Resolve CSS (Inline User Custom OR Explicitly Structured Core CSS)
-            $cssContent = '';
-            if (file_exists($customCss)) {
-                $cssContent = file_get_contents($customCss);
-            } else {
-                $coreCssFiles = [
-                    'variables.css',
-                    'base.css',
-                    'topbar.css',
-                    'panels.css',
-                    'dropdowns-overlays.css',
-                    'health-panel.css',
-                    'subgraph-mobile.css',
-                ];
-                foreach ($coreCssFiles as $file) {
-                    $path = __DIR__ . '/../resources/dist/css/' . $file;
-                    if (file_exists($path)) {
-                        $cssContent .= file_get_contents($path) . "\n";
-                    }
-                }
-            }
-            $view->with('logicMapCss', $cssContent);
-            
-            // Support legacy inline custom JS. Otherwise expose module URL.
-            if (file_exists($customJs)) {
-                $view->with('logicMapJsInline', file_get_contents($customJs));
-                $view->with('logicMapJsUrl', null);
-            } else {
-                $view->with('logicMapJsInline', null);
-                // We use dynamic chunk loading base
-                $view->with('logicMapJsBase', asset('vendor/logic-map/js'));
-                // Appended by timestamp query var if we wanted cache busting, but autoPublishAssets relies on directory replacement
-                $view->with('logicMapJsUrl', asset('vendor/logic-map/js/core.js'));
-            }
-
-            $view->with('reportPageCss', file_exists($reportCssPath) ? file_get_contents($reportCssPath) : '');
-            $view->with('reportPageJs',  file_exists($reportJsPath)  ? file_get_contents($reportJsPath)  : '');
-        });
-=======
         $this->app->instance($marker, true);
         $this->app->singleton(RuntimeTraceContext::class);
         $this->app->singleton(SqlTableObservationParser::class);
@@ -334,47 +283,5 @@ final class LogicMapServiceProvider extends ServiceProvider
         $name = config('logic-map.storage.connection');
 
         return $app->make('db')->connection(is_string($name) && $name !== '' ? $name : null);
->>>>>>> origin/feature/v2-semantic-impact-engine
-    }
-
-    private function autoPublishAssets(): void
-    {
-        static $publishChecked = false;
-        if ($publishChecked) {
-            return;
-        }
-        $publishChecked = true;
-
-        $versionStamp = '1.3.1'; // Update when structure changes
-        $publicDir = public_path('vendor/logic-map/js');
-        $marker = $publicDir . '/.manifest-' . $versionStamp;
-
-        if (!file_exists($marker)) {
-            $distJsDir = __DIR__ . '/../resources/dist/js';
-            if (is_dir($distJsDir)) {
-                $this->copyDirectory($distJsDir, $publicDir);
-                file_put_contents($marker, time());
-            }
-        }
-    }
-
-    private function copyDirectory(string $src, string $dst): void
-    {
-        if (!is_dir($dst)) {
-            @mkdir($dst, 0777, true);
-        }
-        $dir = opendir($src);
-        if ($dir) {
-            while (false !== ($file = readdir($dir))) {
-                if (($file != '.') && ($file != '..')) {
-                    if (is_dir($src . '/' . $file)) {
-                        $this->copyDirectory($src . '/' . $file, $dst . '/' . $file);
-                    } else {
-                        @copy($src . '/' . $file, $dst . '/' . $file);
-                    }
-                }
-            }
-            closedir($dir);
-        }
     }
 }

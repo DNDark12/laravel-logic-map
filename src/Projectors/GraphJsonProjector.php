@@ -126,8 +126,10 @@ final class GraphJsonProjector
             sort($memberIds, SORT_STRING);
             $entrypointIds = array_values(array_filter(
                 $memberIds,
-                static fn (string $memberId) use ($byId): bool => isset($byId[$memberId])
-                    && in_array($byId[$memberId]->kind->value, self::ENTRYPOINT_KINDS, true),
+                static function (string $memberId) use ($byId): bool {
+                    return isset($byId[$memberId])
+                        && in_array($byId[$memberId]->kind->value, self::ENTRYPOINT_KINDS, true);
+                },
             ));
 
             $modules[] = [
